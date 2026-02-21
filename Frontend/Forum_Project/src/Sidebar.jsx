@@ -101,7 +101,6 @@ export const SideBar = () => {
               Terms and Conditions
             </p>
 
-            <p></p>
           </div>
         </div>
       </div>
