@@ -1,0 +1,204 @@
+/* Paletă aliniată la Sidebar: #ffffff, #e9ecef, #1a1a1b, #7c7c7c, #f8f9fa, rgb(15, 67, 199) */
+
+.navbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  height: var(--navbar-height, 48px);
+  background-color: #ffffff;
+  border-bottom: 1px solid #e9ecef;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  z-index: 100;
+  font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+}
+
+.navbar-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.navbar-left {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.navbar-center {
+  flex: 0 1 560px; /* Search bar-ul în centru */
+  min-width: 200px;
+  padding-right: 460px;
+}
+
+.navbar-search {
+}
+
+.navbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* Logo "credit" */
+.navbar-logo {
+  font-size: 2rem;
+  font-weight: 700;
+  color: rgb(15, 67, 199);
+  text-decoration: none;
+  text-transform: lowercase;
+  letter-spacing: -0.02em;
+  flex-shrink: 0;
+  transition: opacity 0.2s ease;
+  margin-left: 46px;
+}
+
+.navbar-logo:hover {
+  opacity: 0.85;
+}
+
+/* Search bar */
+.navbar-search-wrap {
+  flex: 1;
+  min-width: 0;
+  max-width: 560px;
+  height: 36px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  background-color: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 20px;
+  padding: 0 12px 0 14px;
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease;
+  margin-left: 30%;
+}
+
+.navbar-search-wrap:focus-within {
+  background-color: #ffffff;
+  border-color: rgb(15, 67, 199);
+  box-shadow: 0 0 0 1px rgb(15, 67, 199);
+}
+
+.navbar-search-icon-left {
+  color: #7c7c7c;
+  font-size: 0.875rem;
+  margin-right: 10px;
+  flex-shrink: 0;
+}
+
+.navbar-search {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: none;
+  background: transparent;
+  font-size: 0.9375rem;
+  color: #1a1a1b;
+  outline: none;
+}
+
+.navbar-search::placeholder {
+  color: #7c7c7c;
+}
+
+.navbar-search-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  margin-left: 8px;
+  padding-left: 8px;
+  border-left: 1px solid #e9ecef;
+}
+
+.navbar-search-icon-right {
+  color: rgb(15, 67, 199);
+  font-size: 0.75rem;
+}
+
+.navbar-search-ask {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #7c7c7c;
+}
+
+/* Right: icon buttons + profile */
+.navbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.navbar-icon-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: #1a1a1b;
+  font-size: 1rem;
+  border-radius: 50%;
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.navbar-icon-btn:hover {
+  background-color: #f8f9fa;
+  color: rgb(15, 67, 199);
+}
+
+.navbar-icon-btn-plus {
+  color: rgb(15, 67, 199);
+  font-size: 1.125rem;
+}
+
+.navbar-icon-btn-plus:hover {
+  background-color: rgba(15, 67, 199, 0.08);
+  color: rgb(15, 67, 199);
+}
+
+/* Profile */
+.navbar-profile {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 8px;
+  padding: 2px 6px 2px 2px;
+  border-radius: 24px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.navbar-profile:hover {
+  background-color: #f8f9fa;
+}
+
+.navbar-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%);
+  border: 2px solid rgb(15, 67, 199);
+}
+
+.navbar-avatar-chevron {
+  color: #7c7c7c;
+  font-size: 0.625rem;
+  transition: color 0.2s ease;
+}
+
+.navbar-profile:hover .navbar-avatar-chevron {
+  color: #1a1a1b;
+}
+
+.navbar-avatar {
+  margin-right: 15px;
+}

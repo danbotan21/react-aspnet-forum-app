@@ -1,0 +1,15 @@
+#root {
+  min-height: 100vh;
+}
+
+/* Layout: navbar full-width sus, sidebar sub el stânga, main dreapta */
+:root {
+  --navbar-height: 48px;
+  --sidebar-width: 280px;
+}
+
+.app-main {
+  padding-top: var(--navbar-height);
+  margin-left: var(--sidebar-width);
+  min-height: calc(100vh - var(--navbar-height));
+}

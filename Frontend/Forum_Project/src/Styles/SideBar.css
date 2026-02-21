@@ -1,0 +1,214 @@
+.sidebar {
+  width: var(--sidebar-width, 280px);
+  height: calc(100vh - var(--navbar-height, 48px));
+  position: fixed;
+  left: 0;
+  top: var(--navbar-height, 48px);
+  background-color: #ffffff;
+  border-right: 1px solid #e9ecef;
+  overflow-y: auto;
+  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.02);
+  font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+  z-index: 50;
+}
+
+/* Personalizare scrollbar pentru o experiență mai plăcută */
+.sidebar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+.sidebar::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+.sidebar-content {
+  padding: 20px 12px;
+  display: flex;
+  flex-direction: column;
+  min-height: calc(
+    100vh - var(--navbar-height, 48px) - 40px
+  ); /* full height minus navbar și padding */
+}
+
+/* Secțiunea de navigare */
+.navigation-section {
+  margin-bottom: 24px;
+  border-bottom: 1px solid #e9ecef;
+  padding-bottom: 16px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  margin: 4px 0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  background-color: #f8f9fa;
+}
+
+.nav-item:hover {
+  background-color: rgb(226, 224, 224);
+}
+
+.nav-icon {
+  font-size: 20px;
+  margin-right: 12px;
+  color: rgb(15, 67, 199);
+}
+
+.nav-item p {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: #1a1a1b;
+}
+
+/* Secțiunea de comunități */
+.communities-section {
+  margin-bottom: 24px;
+  border-bottom: 1px solid #e9ecef;
+  padding-bottom: 16px;
+}
+
+.communities-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: background-color 0.2s ease;
+  margin-bottom: 8px;
+}
+
+.communities-header:hover {
+  background-color: #f8f9fa;
+}
+
+.communities-header h3 {
+  font-size: 12px;
+  font-weight: 600;
+  color: #7c7c7c;
+  letter-spacing: 0.5px;
+  margin: 0;
+}
+
+.arrow-icon {
+  color: #7c7c7c;
+  font-size: 14px;
+  transition: color 0.2s ease;
+}
+
+.communities-header:hover .arrow-icon {
+  color: #1a1a1b;
+}
+
+.communities {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  animation: slideDown 0.2s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.community {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.community:hover {
+  background-color: #f8f9fa;
+}
+
+.img_community {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-right: 12px;
+}
+
+.name_community {
+  flex: 1;
+  margin: 0;
+  font-size: 14px;
+  font-weight: 400;
+  color: #1a1a1b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.star-icon {
+  color: #878a8c;
+  font-size: 16px;
+  margin-left: 8px;
+  transition: color 0.2s ease;
+}
+
+.star-icon:hover {
+  color: #ff4500;
+}
+
+/* Secțiunea de resurse */
+.resources-section {
+  margin-top: auto;
+  padding-top: 20px;
+}
+
+.resources-section h3 {
+  font-size: 12px;
+
+  font-weight: 600;
+  color: #7c7c7c;
+  letter-spacing: 0.5px;
+  padding-right: 150px;
+  margin: 8px 0;
+}
+
+.resource-items p {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  margin: 4px 0;
+  border-radius: 8px;
+  background-color: #f8f9fa;
+}
+
+.resource-items p:hover {
+  background-color: rgb(226, 224, 224);
+}
+
+.resource-icon {
+  margin-right: 12px; /* Sau 10px, 14px, cât ai nevoie */
+  font-size: 15px; /* Opțional, ajustează mărimea */
+  color: white;
+  background-color: rgb(15, 67, 199);
+  border-radius: 5px;
+  padding: 0.15rem;
+}
