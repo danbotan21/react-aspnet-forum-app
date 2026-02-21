@@ -100,7 +100,6 @@ export const SideBar = () => {
               <LuScrollText className='resource-icon' />
               Terms and Conditions
             </p>
-
           </div>
         </div>
       </div>

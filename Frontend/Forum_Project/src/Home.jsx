@@ -51,7 +51,9 @@ export const Home = () => {
             </p>
 
             <div className='post-media'>
-              <div className='media-placeholder'>Image or preview goes here</div>
+              <div className='media-placeholder'>
+                Image or preview goes here
+              </div>
             </div>
           </div>
 
@@ -62,13 +64,9 @@ export const Home = () => {
               <button className='vote-button downvote'>▼</button>
             </div>
 
-            <button className='action-chip'>
-              Comment
-            </button>
+            <button className='action-chip'>Comment</button>
 
-            <button className='action-chip'>
-              Share
-            </button>
+            <button className='action-chip'>Share</button>
           </div>
         </div>
       </div>

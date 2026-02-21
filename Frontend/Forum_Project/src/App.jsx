@@ -8,13 +8,26 @@ import { Signup } from './Signup'
 
 function App() {
   return (
-    <>
-      <Navbar />
-      <SideBar />
-      <main className="app-main">
-        {/* Conținutul principal al paginii – deocamdată gol */}
-      </main>
-    </>
+    <div style={{ minHeight: '100vh', width: '100%' }}>
+      <Routes>
+        <Route path='/' element={<Navigate to='/Login' replace />} />
+        <Route path='/Login' element={<Login />} />
+        <Route path='/login' element={<Login />} />
+        <Route path='/register' element={<Signup />} />
+
+        <Route
+          path='*'
+          element={
+            <div className='app-layout'>
+              <Navbar />
+              <SideBar />
+              <Home />
+              <main className='app-main'></main>
+            </div>
+          }
+        />
+      </Routes>
+    </div>
   )
 }
 

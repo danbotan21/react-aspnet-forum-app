@@ -2,10 +2,19 @@
   min-height: 100vh;
 }
 
+* {
+}
+
 /* Layout: navbar full-width sus, sidebar sub el stânga, main dreapta */
 :root {
   --navbar-height: 48px;
   --sidebar-width: 280px;
+}
+
+/* Fundal pe tot layout-ul ca la scroll să rămână gri până jos */
+.app-layout {
+  min-height: 100vh;
+  background-color: #dae0e6;
 }
 
 .app-main {
