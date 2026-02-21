@@ -1,0 +1,160 @@
+/* Signup page – fundal și centrare */
+.signup-page {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  padding: 1.5rem;
+}
+
+.signup-card {
+  width: 100%;
+  max-width: 400px;
+  background: rgba(255, 255, 255, 0.98);
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+  padding: 2.5rem;
+}
+
+.signup-title {
+  margin: 0 0 0.25rem 0;
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #1a1a2e;
+  text-align: center;
+}
+
+.signup-subtitle {
+  margin: 0 0 1.75rem 0;
+  font-size: 0.95rem;
+  color: #5a5a72;
+  text-align: center;
+}
+
+.signup-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.signup-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #2d2d3a;
+}
+
+.signup-input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
+  border: 2px solid #e2e2ea;
+  border-radius: 10px;
+  background: #fafafa;
+  color: #1a1a2e;
+  box-sizing: border-box;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.signup-input::placeholder {
+  color: #9a9aad;
+}
+
+.signup-input:hover {
+  background: #fff;
+}
+
+.signup-input:focus {
+  outline: none;
+  border-color: #0f3460;
+  background: #fff;
+}
+
+.signup-btn {
+  margin-top: 0.5rem;
+  padding: 0.9rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+  background: linear-gradient(135deg, #0f3460 0%, #16213e 100%);
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.2s;
+}
+
+.signup-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px rgba(15, 52, 96, 0.4);
+}
+
+.signup-btn:active {
+  transform: translateY(0);
+}
+
+/* Divider și buton Google */
+.signup-divider {
+  margin: 1rem 0 0.75rem 0;
+  font-size: 0.875rem;
+  color: #9a9aad;
+  text-align: center;
+}
+
+.signup-google-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: #fff;
+  border: 2px solid #e2e2ea;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.signup-google-btn:hover {
+  border-color: #0f3460;
+  box-shadow: 0 4px 12px rgba(15, 52, 96, 0.15);
+}
+
+.signup-google-icon {
+  font-size: 1.5rem;
+  color: #4285f4;
+}
+
+/* Secțiune comună: logare (pe Signup) / creare cont (pe Login) */
+.auth-section {
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid #e2e2ea;
+  text-align: center;
+}
+
+.auth-section-login .auth-section-text {
+  margin: 0 0 0.75rem 0;
+  font-size: 0.95rem;
+  color: #5a5a72;
+}
+
+.auth-section-btn {
+  display: inline-block;
+  padding: 0.6rem 1.25rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #fff;
+  background: linear-gradient(135deg, #0f3460 0%, #16213e 100%);
+  border-radius: 10px;
+  text-decoration: none;
+  transition: transform 0.15s, box-shadow 0.2s;
+}
+
+.auth-section-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(15, 52, 96, 0.35);
+  color: #fff;
+}
+
+.auth-section-btn:active {
+  transform: translateY(0);
+}

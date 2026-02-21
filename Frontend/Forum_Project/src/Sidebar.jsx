@@ -64,7 +64,7 @@ export const SideBar = () => {
                   alt='imagine din comunitate'
                   className='img_community'
                 />
-                <p className='name_community'>League of Legend Nikita</p>
+                <p className='name_community'>League of Legends Nikita</p>
                 <FaRegStar className='star-icon' />
               </div>
 
