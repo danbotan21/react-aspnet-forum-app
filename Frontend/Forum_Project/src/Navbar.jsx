@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import {
   FaSearch,
   FaEdit,
@@ -31,7 +32,6 @@ export const Navbar = () => {
           </span>
         </div>
 
-        {/* Actions + profile */}
         <div className='navbar-actions'>
           <button type='button' className='navbar-icon-btn' aria-label='Posts'>
             <FaEdit />
@@ -43,20 +43,20 @@ export const Navbar = () => {
           >
             <FaComment />
           </button>
-          <button
-            type='button'
+          <Link
+            to='/create-post'
             className='navbar-icon-btn navbar-icon-btn-plus'
-            aria-label='Create'
+            aria-label='Create post'
           >
             <FaPlus />
-          </button>
-          <button
-            type='button'
+          </Link>
+          <Link
+            to='/notification'
             className='navbar-icon-btn'
             aria-label='Notifications'
           >
             <FaBell />
-          </button>
+          </Link>
           <div className='navbar-profile'>
             <img src={avatar} alt='avatar' className='navbar-avatar' />
           </div>

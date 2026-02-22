@@ -11,7 +11,6 @@
   --sidebar-width: 280px;
 }
 
-/* Fundal pe tot layout-ul ca la scroll să rămână gri până jos */
 .app-layout {
   min-height: 100vh;
   background-color: #dae0e6;
@@ -20,5 +19,4 @@
 .app-main {
   padding-top: var(--navbar-height);
   margin-left: var(--sidebar-width);
-  min-height: calc(100vh - var(--navbar-height));
 }

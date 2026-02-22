@@ -2,12 +2,106 @@
   padding-top: 82px;
   padding-left: 296px;
   padding-right: 24px;
-  padding-bottom: 48px;
+  /* respirație la final: puțin spațiu sub ultima postare, fără scroll imens */
+  padding-bottom: 56px;
   /* fundalul e pe .app-layout ca să se extindă la scroll; aici doar pentru suprapunere */
   background-color: #dae0e6;
-  min-height: 100vh;
+  /* NU min-height: 100vh – altfel secțiunea e forțată la o înălțime de tot ecranul
+     și sub posturi rămâne mult spațiu gol. Înălțimea o dă conținutul. */
   box-sizing: border-box;
   font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+}
+
+/* ----- Sort bar (toggle dropdown) ----- */
+.home-sort-bar {
+  width: 800px;
+  max-width: 100%;
+  margin: 0 auto 16px auto;
+  position: relative;
+}
+
+.sort-trigger-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.sort-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: 1px solid #e9ecef;
+  border-radius: 999px;
+  background-color: #f6f7f8;
+  color: #1a1a1b;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.sort-trigger:hover {
+  background-color: #edeff1;
+  border-color: #d5d8dc;
+}
+
+.sort-trigger-label {
+  line-height: 1.2;
+}
+
+.sort-trigger-chevron {
+  font-size: 10px;
+  color: #787c7e;
+  line-height: 1;
+}
+
+.sort-dropdown {
+  position: absolute;
+  left: 0;
+  top: calc(100% + 6px);
+  min-width: 180px;
+  background-color: #fff;
+  border: 1px solid #e9ecef;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  padding: 6px 0;
+  z-index: 20;
+}
+
+.sort-dropdown-header {
+  padding: 8px 14px 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #787c7e;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.sort-dropdown-item {
+  display: block;
+  width: 100%;
+  padding: 8px 14px;
+  border: none;
+  background: none;
+  text-align: left;
+  font-size: 14px;
+  color: #1a1a1b;
+  cursor: pointer;
+  font-family: inherit;
+  border-radius: 6px;
+  margin: 0 6px;
+  box-sizing: border-box;
+}
+
+.sort-dropdown-item:hover {
+  background-color: #f6f7f8;
+}
+
+.sort-dropdown-item--active {
+  background-color: #edeff1;
+  font-weight: 500;
+  color: #1a1a1b;
 }
 
 .post {

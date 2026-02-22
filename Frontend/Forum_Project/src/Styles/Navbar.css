@@ -147,6 +147,7 @@
   font-size: 1rem;
   border-radius: 50%;
   cursor: pointer;
+  text-decoration: none;
   transition:
     background-color 0.2s ease,
     color 0.2s ease;

@@ -3,8 +3,20 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import { Navbar } from './Navbar'
 import { SideBar } from './Sidebar'
 import { Home } from './Home'
+import { CreatePost } from './CreatePost'
 import { Login } from './Login'
 import { Signup } from './Signup'
+import { Notification } from './Notification'
+
+function AppLayout({ children }) {
+  return (
+    <div className='app-layout'>
+      <Navbar />
+      <SideBar />
+      {children}
+    </div>
+  )
+}
 
 function App() {
   return (
@@ -16,14 +28,27 @@ function App() {
         <Route path='/register' element={<Signup />} />
 
         <Route
+          path='/create-post'
+          element={
+            <AppLayout>
+              <CreatePost />
+            </AppLayout>
+          }
+        />
+        <Route
+          path='/notification'
+          element={
+            <AppLayout>
+              <Notification />
+            </AppLayout>
+          }
+        />
+        <Route
           path='*'
           element={
-            <div className='app-layout'>
-              <Navbar />
-              <SideBar />
+            <AppLayout>
               <Home />
-              <main className='app-main'></main>
-            </div>
+            </AppLayout>
           }
         />
       </Routes>

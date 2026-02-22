@@ -1,18 +1,79 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import './Styles/Home.css'
 import avatar from './img/avatar.webp'
 import coding from './img/coding.jpg'
 import nature from './img/nature.jpg'
 
+const SORT_OPTIONS = [
+  { id: 'popular', label: 'Popular' },
+  { id: 'new', label: 'New' },
+  { id: 'mostComments', label: 'Most comments' },
+]
+
 export const Home = () => {
   const [isMoreOpen, setIsMoreOpen] = useState(false)
+  const [sortBy, setSortBy] = useState('popular')
+  const [isSortOpen, setIsSortOpen] = useState(false)
+  const sortRef = useRef(null)
 
   const handleToggleMore = () => {
     setIsMoreOpen((prev) => !prev)
   }
 
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (sortRef.current && !sortRef.current.contains(e.target)) {
+        setIsSortOpen(false)
+      }
+    }
+    if (isSortOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [isSortOpen])
+
+  const currentSortLabel =
+    SORT_OPTIONS.find((o) => o.id === sortBy)?.label ?? 'Popular'
+
   return (
     <div className='home'>
+      <div className='home-sort-bar' ref={sortRef}>
+        <div className='sort-trigger-wrapper'>
+          <button
+            type='button'
+            className='sort-trigger'
+            onClick={() => setIsSortOpen((prev) => !prev)}
+            aria-expanded={isSortOpen}
+            aria-haspopup='listbox'
+          >
+            <span className='sort-trigger-label'>{currentSortLabel}</span>
+            <span className='sort-trigger-chevron' aria-hidden>
+              ▼
+            </span>
+          </button>
+          {isSortOpen && (
+            <div className='sort-dropdown' role='listbox'>
+              <div className='sort-dropdown-header'>Sort by</div>
+              {SORT_OPTIONS.map((opt) => (
+                <button
+                  key={opt.id}
+                  type='button'
+                  role='option'
+                  aria-selected={sortBy === opt.id}
+                  className={`sort-dropdown-item ${sortBy === opt.id ? 'sort-dropdown-item--active' : ''}`}
+                  onClick={() => {
+                    setSortBy(opt.id)
+                    setIsSortOpen(false)
+                  }}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
       <div className='post'>
         <div className='post-main'>
           <div className='post-header'>
