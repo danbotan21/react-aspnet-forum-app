@@ -14,7 +14,11 @@ export const Navbar = () => {
   return (
     <header className='navbar'>
       <div className='navbar-inner'>
-        <a href='http://localhost:5173/Home' className='navbar-logo' aria-label='credit - home'>
+        <a
+          href='http://localhost:5173/Home'
+          className='navbar-logo'
+          aria-label='credit - home'
+        >
           credit
         </a>
 
