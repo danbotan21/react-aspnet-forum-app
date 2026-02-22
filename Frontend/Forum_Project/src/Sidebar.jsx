@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom' // ← adaugă asta
 import './Styles/SideBar.css'
 import man from './img/man.jpg'
 import shreck from './img/shreck.png'
@@ -15,9 +16,9 @@ import {
 } from 'react-icons/fa'
 import { RiTeamLine } from 'react-icons/ri'
 import { LuScrollText } from 'react-icons/lu'
-import { FaBiohazard } from 'react-icons/fa6'
 
 export const SideBar = () => {
+  const navigate = useNavigate() // ← hook-ul pentru navigare
   const [showCommunities, setShowCommunities] = useState(false)
 
   const toggleCommunities = () => {
@@ -28,24 +29,32 @@ export const SideBar = () => {
     <div className='sidebar'>
       <div className='sidebar-content'>
         <div className='navigation-section'>
-          <div className='nav-item'>
+          {/* Acum div-ul întreg e clickabil și duce la route */}
+          <div className='nav-item' onClick={() => navigate('/home')}>
             <FaHome className='nav-icon' />
             <p>Home</p>
           </div>
-          <div className='nav-item'>
+
+          <div className='nav-item' onClick={() => navigate('/popular')}>
             <FaFire className='nav-icon' />
             <p>Popular</p>
           </div>
-          <div className='nav-item'>
+
+          <div className='nav-item' onClick={() => navigate('/explore')}>
             <FaCompass className='nav-icon' />
             <p>Explore</p>
           </div>
-          <div className='nav-item'>
+
+          <div
+            className='nav-item'
+            onClick={() => navigate('/start-community')}
+          >
             <FaPlusCircle className='nav-icon' />
             <p>Start Community</p>
           </div>
         </div>
 
+        {/* Restul codului rămâne la fel */}
         <div className='communities-section'>
           <div className='communities-header' onClick={toggleCommunities}>
             <h3>COMMUNITIES</h3>
@@ -58,7 +67,10 @@ export const SideBar = () => {
 
           {showCommunities && (
             <div className='communities'>
-              <div className='community'>
+              <div
+                className='community'
+                onClick={() => navigate('/community/1')}
+              >
                 <img
                   src={man}
                   alt='imagine din comunitate'
@@ -68,7 +80,10 @@ export const SideBar = () => {
                 <FaRegStar className='star-icon' />
               </div>
 
-              <div className='community'>
+              <div
+                className='community'
+                onClick={() => navigate('/community/2')}
+              >
                 <img
                   src={shreck}
                   alt='imagine din comunitate'
@@ -84,19 +99,19 @@ export const SideBar = () => {
         <div className='resources-section'>
           <h3>RESOURCES</h3>
           <div className='resource-items'>
-            <p>
+            <p onClick={() => navigate('/about')}>
               <RiTeamLine className='resource-icon' />
               About us
             </p>
-            <p>
+            <p onClick={() => navigate('/contact')}>
               <FaPhone className='resource-icon' />
               Contact us
             </p>
-            <p>
+            <p onClick={() => navigate('/faq')}>
               <FaQuestion className='resource-icon' />
               FAQ
             </p>
-            <p>
+            <p onClick={() => navigate('/terms')}>
               <LuScrollText className='resource-icon' />
               Terms and Conditions
             </p>
