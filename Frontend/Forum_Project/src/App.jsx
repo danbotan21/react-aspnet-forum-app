@@ -7,6 +7,8 @@ import { CreatePost } from './CreatePost'
 import { Login } from './Login'
 import { Signup } from './Signup'
 import { Notification } from './Notification'
+import { AboutUs } from './AboutUs'
+import { FAQ } from './FAQ'
 import { Popular } from './Popular'
 
 function AppLayout({ children }) {
@@ -41,6 +43,22 @@ function App() {
           element={
             <AppLayout>
               <Notification />
+            </AppLayout>
+          }
+        />
+        <Route
+          path='/about'
+          element={
+            <AppLayout>
+              <AboutUs />
+            </AppLayout>
+          }
+        />
+        <Route
+          path='/faq'
+          element={
+            <AppLayout>
+              <FAQ />
             </AppLayout>
           }
         />
