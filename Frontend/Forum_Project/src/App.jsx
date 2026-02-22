@@ -46,6 +46,22 @@ function App() {
           }
         />
         <Route
+          path='/popular'
+          element={
+            <AppLayout>
+              <Popular />
+            </AppLayout>
+          }
+        />
+        <Route
+          path='/about'
+          element={
+            <AppLayout>
+              <AboutUs />
+            </AppLayout>
+          }
+        />
+        <Route
           path='*'
           element={
             <AppLayout>
