@@ -41,6 +41,8 @@
 
 /* Secțiunea de navigare */
 .navigation-section {
+  display: flex;
+  flex-direction: column; /* Le așază pe verticală */
   margin-bottom: 24px;
   border-bottom: 1px solid #e9ecef;
   padding-bottom: 16px;
@@ -55,6 +57,10 @@
   cursor: pointer;
   transition: background-color 0.2s ease;
   background-color: #f8f9fa;
+  
+  /* Resetare stiluri Link */
+  text-decoration: none; /* Elimină linia de sub text */
+  color: inherit;       /* Preia culoarea de la părinte, elimină movul/albastrul */
 }
 
 .nav-item:hover {
@@ -64,7 +70,14 @@
 .nav-icon {
   font-size: 20px;
   margin-right: 12px;
-  color: rgb(15, 67, 199);
+  color: rgb(15, 67, 199); /* Culoarea albastră a iconiței rămâne */
+}
+
+.nav-item span {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: #1a1a1b; /* Textul rămâne negru închis ca în poză */
 }
 
 .nav-item p {

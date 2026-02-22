@@ -16,6 +16,7 @@ import {
 import { RiTeamLine } from 'react-icons/ri'
 import { LuScrollText } from 'react-icons/lu'
 import { FaBiohazard } from 'react-icons/fa6'
+import { Link } from 'react-router-dom';
 
 export const SideBar = () => {
   const [showCommunities, setShowCommunities] = useState(false)
@@ -28,22 +29,25 @@ export const SideBar = () => {
     <div className='sidebar'>
       <div className='sidebar-content'>
         <div className='navigation-section'>
-          <div className='nav-item'>
+          <Link to="/home" className='nav-item'>
             <FaHome className='nav-icon' />
-            <p>Home</p>
-          </div>
-          <div className='nav-item'>
+            <span>Home</span>
+          </Link>
+          
+          <Link to="/popular" className='nav-item'>
             <FaFire className='nav-icon' />
-            <p>Popular</p>
-          </div>
-          <div className='nav-item'>
+            <span>Popular</span>
+          </Link>
+          
+          <Link to="/explore" className='nav-item'>
             <FaCompass className='nav-icon' />
-            <p>Explore</p>
-          </div>
-          <div className='nav-item'>
+            <span>Explore</span>
+          </Link>
+          
+          <Link to="/start-community" className='nav-item'>
             <FaPlusCircle className='nav-icon' />
-            <p>Start Community</p>
-          </div>
+            <span>Start Community</span>
+          </Link>
         </div>
 
         <div className='communities-section'>
