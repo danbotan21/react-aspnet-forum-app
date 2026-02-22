@@ -3,12 +3,24 @@ import './Styles/Home.css'
 import avatar from './img/avatar.webp'
 import coding from './img/coding.jpg'
 import nature from './img/nature.jpg'
+import {FaCaretUp, FaCaretDown, FaComment, FaShare} from "react-icons/fa";
+
 
 const SORT_OPTIONS = [
   { id: 'popular', label: 'Popular' },
   { id: 'new', label: 'New' },
   { id: 'mostComments', label: 'Most comments' },
 ]
+
+const handleVote = (type) => {
+  if (type === 'up') {
+    console.log('Upvoted')
+    // Upvote logic
+  } else if (type === 'down') {
+    console.log('Downvoted')
+    // Downvote logic
+  }
+}
 
 export const Home = () => {
   const [isMoreOpen, setIsMoreOpen] = useState(false)
@@ -48,7 +60,7 @@ export const Home = () => {
           >
             <span className='sort-trigger-label'>{currentSortLabel}</span>
             <span className='sort-trigger-chevron' aria-hidden>
-              ▼
+              <FaCaretDown size={16} />
             </span>
           </button>
           {isSortOpen && (
@@ -119,14 +131,26 @@ export const Home = () => {
 
           <div className='post-footer'>
             <div className='action-chip vote-chip'>
-              <button className='vote-button upvote'>▲</button>
+              <FaCaretUp 
+                className='vote-icon upvote' 
+                onClick={() => handleVote('up')}
+              />
               <span className='vote-count'>324</span>
-              <button className='vote-button downvote'>▼</button>
+              <FaCaretDown
+                className='vote-icon downvote' 
+                onClick={() => handleVote('down')}
+              />
             </div>
+            
+            <button className='action-chip'>
+              <FaComment className='comment-icon' />
+              <span className='comment-count'>67</span>
+            </button>
 
-            <button className='action-chip'>Comment</button>
+            <button className='action-chip'>
+              <FaShare className='share-icon' />
+            </button>
 
-            <button className='action-chip'>Share</button>
           </div>
         </div>
       </div>
@@ -176,14 +200,25 @@ export const Home = () => {
 
           <div className='post-footer'>
             <div className='action-chip vote-chip'>
-              <button className='vote-button upvote'>▲</button>
+              <FaCaretUp 
+                className='vote-icon upvote' 
+                onClick={() => handleVote('up')}
+              />
               <span className='vote-count'>324</span>
-              <button className='vote-button downvote'>▼</button>
+              <FaCaretDown
+                className='vote-icon downvote' 
+                onClick={() => handleVote('down')}
+              />
             </div>
+            
+            <button className='action-chip'>
+              <FaComment className='comment-icon' />
+              <span className='comment-count'>67</span>
+            </button>
 
-            <button className='action-chip'>Comment</button>
-
-            <button className='action-chip'>Share</button>
+            <button className='action-chip'>
+              <FaShare className='share-icon' />
+            </button>
           </div>
         </div>
       </div>
@@ -233,14 +268,25 @@ export const Home = () => {
 
           <div className='post-footer'>
             <div className='action-chip vote-chip'>
-              <button className='vote-button upvote'>▲</button>
+              <FaCaretUp 
+                className='vote-icon upvote' 
+                onClick={() => handleVote('up')}
+              />
               <span className='vote-count'>324</span>
-              <button className='vote-button downvote'>▼</button>
+              <FaCaretDown
+                className='vote-icon downvote' 
+                onClick={() => handleVote('down')}
+              />
             </div>
+            
+            <button className='action-chip'>
+              <FaComment className='comment-icon' />
+              <span className='comment-count'>67</span>
+            </button>
 
-            <button className='action-chip'>Comment</button>
-
-            <button className='action-chip'>Share</button>
+            <button className='action-chip'>
+              <FaShare className='share-icon' />
+            </button>
           </div>
         </div>
       </div>
@@ -290,14 +336,25 @@ export const Home = () => {
 
           <div className='post-footer'>
             <div className='action-chip vote-chip'>
-              <button className='vote-button upvote'>▲</button>
+              <FaCaretUp 
+                className='vote-icon upvote' 
+                onClick={() => handleVote('up')}
+              />
               <span className='vote-count'>324</span>
-              <button className='vote-button downvote'>▼</button>
+              <FaCaretDown
+                className='vote-icon downvote' 
+                onClick={() => handleVote('down')}
+              />
             </div>
+            
+            <button className='action-chip'>
+              <FaComment className='comment-icon' />
+              <span className='comment-count'>67</span>
+            </button>
 
-            <button className='action-chip'>Comment</button>
-
-            <button className='action-chip'>Share</button>
+            <button className='action-chip'>
+              <FaShare className='share-icon' />
+            </button>
           </div>
         </div>
       </div>
@@ -347,14 +404,25 @@ export const Home = () => {
 
           <div className='post-footer'>
             <div className='action-chip vote-chip'>
-              <button className='vote-button upvote'>▲</button>
+              <FaCaretUp 
+                className='vote-icon upvote' 
+                onClick={() => handleVote('up')}
+              />
               <span className='vote-count'>324</span>
-              <button className='vote-button downvote'>▼</button>
+              <FaCaretDown
+                className='vote-icon downvote' 
+                onClick={() => handleVote('down')}
+              />
             </div>
+            
+            <button className='action-chip'>
+              <FaComment className='comment-icon' />
+              <span className='comment-count'>67</span>
+            </button>
 
-            <button className='action-chip'>Comment</button>
-
-            <button className='action-chip'>Share</button>
+            <button className='action-chip'>
+              <FaShare className='share-icon' />
+            </button>
           </div>
         </div>
       </div>
@@ -404,14 +472,25 @@ export const Home = () => {
 
           <div className='post-footer'>
             <div className='action-chip vote-chip'>
-              <button className='vote-button upvote'>▲</button>
+              <FaCaretUp 
+                className='vote-icon upvote' 
+                onClick={() => handleVote('up')}
+              />
               <span className='vote-count'>324</span>
-              <button className='vote-button downvote'>▼</button>
+              <FaCaretDown
+                className='vote-icon downvote' 
+                onClick={() => handleVote('down')}
+              />
             </div>
+            
+            <button className='action-chip'>
+              <FaComment className='comment-icon' />
+              <span className='comment-count'>67</span>
+            </button>
 
-            <button className='action-chip'>Comment</button>
-
-            <button className='action-chip'>Share</button>
+            <button className='action-chip'>
+              <FaShare className='share-icon' />
+            </button>
           </div>
         </div>
       </div>

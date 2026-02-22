@@ -259,7 +259,7 @@
   max-width: 100%;
   width: 100%;
   height: auto;
-  vertical-align: middle;
+  /* vertical-align: middle; */
   object-fit: contain;
 }
 
@@ -292,6 +292,15 @@
 .action-chip:hover {
   background-color: #edeff1;
   border-color: #e9ecef;
+  color: #1a1a1b;
+}
+
+.action-chip:hover .comment-icon {
+  color: #7193ff;
+}
+
+.action-chip:hover .share-icon {
+  color: #7193ff;
 }
 
 .vote-chip {
@@ -311,21 +320,53 @@
   align-items: center;
 }
 
-.vote-button.upvote.active,
-.vote-button.upvote:hover {
-  color: #7193ff;
-}
-
-.vote-button.downvote.active,
-.vote-button.downvote:hover {
-  color: #ff4500;
-}
-
 .vote-count {
   font-size: 12px;
   font-weight: 600;
   color: #1a1a1b;
   line-height: 1;
+  font-family: sans-serif;
 }
+
+.vote-icon {
+  font-size: 20px;
+  color: #878a8c;
+  cursor: pointer;
+  transition: color 0.2s;
+  display: inline-flex;
+  align-items: center;
+}
+
+.vote-icon.upvote:hover,
+.vote-icon.upvote.active {
+  color: #7193ff; 
+}
+
+.vote-icon.downvote:hover,
+.vote-icon.downvote.active {
+  color: #ff4500;  
+}
+
+.vote-icon:active {
+  transform: scale(1.1);
+}
+
+.comment-count {
+  font-size: 12px;
+  font-weight: 600;
+  color: #1a1a1b;
+  line-height: 1;
+}
+
+.comment-icon {
+  color: #878a8c;
+  font-size: 14px;
+}
+
+.share-icon {
+  color: #878a8c;
+  font-size: 14px;
+}
+
 
 /* Clasa .coding nu mai forțează dimensiuni; imaginile folosesc regulile din .media-placeholder img */

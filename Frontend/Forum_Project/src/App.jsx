@@ -7,6 +7,7 @@ import { CreatePost } from './CreatePost'
 import { Login } from './Login'
 import { Signup } from './Signup'
 import { Notification } from './Notification'
+import { Popular } from './Popular'
 
 function AppLayout({ children }) {
   return (
@@ -40,6 +41,14 @@ function App() {
           element={
             <AppLayout>
               <Notification />
+            </AppLayout>
+          }
+        />
+        <Route
+          path='/popular'
+          element={
+            <AppLayout>
+              <Popular />
             </AppLayout>
           }
         />
