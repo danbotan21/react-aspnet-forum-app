@@ -32,6 +32,7 @@ export const Navbar = () => {
           </span>
         </div>
 
+        {/* Actions + profile */}
         <div className='navbar-actions'>
           <button type='button' className='navbar-icon-btn' aria-label='Posts'>
             <FaEdit />
@@ -50,13 +51,13 @@ export const Navbar = () => {
           >
             <FaPlus />
           </Link>
-          <Link
-            to='/notification'
+          <button
+            type='button'
             className='navbar-icon-btn'
             aria-label='Notifications'
           >
             <FaBell />
-          </Link>
+          </button>
           <div className='navbar-profile'>
             <img src={avatar} alt='avatar' className='navbar-avatar' />
           </div>
