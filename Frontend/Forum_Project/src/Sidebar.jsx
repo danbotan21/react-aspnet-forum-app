@@ -51,7 +51,7 @@ export const SideBar = () => {
           >
             <FaPlusCircle className='nav-icon' />
             <span>Start Community</span>
-          </Link>
+          </div>
         </div>
 
         {/* Restul codului rămâne la fel */}
