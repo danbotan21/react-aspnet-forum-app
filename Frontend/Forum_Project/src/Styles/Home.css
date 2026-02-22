@@ -15,11 +15,10 @@
   max-width: 100%;
   background-color: #fff;
   border: 1px solid #e9ecef;
-  border-radius: 8px;
-  margin-bottom: 16px;
+  border-radius: 30px;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
   overflow: hidden;
-  margin: 0 auto;
+  margin: 0 auto 24px auto; /* top right bottom left – bottom face spațiul dintre posturi */
 }
 
 .post-main {
@@ -129,37 +128,45 @@
 }
 
 .post-title {
-  font-size: 16px;
+  font-size: 20px;
   font-weight: 600;
   margin: 0 0 6px 0;
   color: #1a1a1b;
 }
 
 .post-text {
-  font-size: 14px;
+  font-size: 15px;
   color: #1a1a1b;
-  margin: 0 0 8px 0;
+  margin: 0 0 20px 0;
 }
 
 .post-media {
   margin-bottom: 4px;
 }
 
+/* Containerul se mulează pe conținut; fără înălțime fixă ca imaginile să poată fi afișate natural */
 .media-placeholder {
-  height: 160px;
   border-radius: 8px;
-  background: repeating-linear-gradient(
-    45deg,
-    #f8f9fa,
-    #f8f9fa 10px,
-    #e9ecef 10px,
-    #e9ecef 20px
-  );
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  overflow: hidden;
+  background: #f8f9fa;
+  display: block;
   font-size: 12px;
   color: #6c757d;
+}
+
+/* Când există imagine: fundal neutru, înălțimea o dă imaginea */
+.media-placeholder:has(img) {
+  background: #f1f3f4;
+}
+
+/* Imagini responsive: ocupă lățimea postului, păstrează raportul, nu mai stau în „cutie” fixă */
+.media-placeholder img {
+  display: block;
+  max-width: 100%;
+  width: 100%;
+  height: auto;
+  vertical-align: middle;
+  object-fit: contain;
 }
 
 .post-footer {
@@ -227,9 +234,4 @@
   line-height: 1;
 }
 
-@media (max-width: 900px) {
-  .home {
-    padding-left: 16px;
-    padding-right: 16px;
-  }
-}
+/* Clasa .coding nu mai forțează dimensiuni; imaginile folosesc regulile din .media-placeholder img */
