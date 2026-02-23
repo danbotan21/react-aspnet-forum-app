@@ -5,7 +5,7 @@
   --faq-bg: #dae0e6;
   --faq-card-bg: #ffffff;
   --faq-accent: green;
-  --faq-accent-light: #fff4ed;
+  --faq-accent-light: #effce0;
   --faq-accent-hover: green;
   --faq-border: #edeff1;
   --faq-border-strong: #d3d9de;
@@ -129,7 +129,7 @@
 }
 
 .faq-question:hover {
-  background: rgb(187, 251, 187);
+  background: #effce0;
   color: var(blue);
 }
 
