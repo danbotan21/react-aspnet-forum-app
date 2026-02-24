@@ -20,37 +20,58 @@ const MOCK_NOTIFICATIONS = [
   },
   {
     id: 3,
-    title: 'Your post is trending',
-    description:
-      '“Building a Reddit-style forum in React” is gaining more upvotes.',
-    time: '1 h ago',
+    title: 'New follower',
+    description: 'JohnDoe started following you.',
+    time: '2 h ago',
     badge: null,
   },
-
   {
-    id: 3,
-    title: 'Your post is trending',
-    description:
-      '“Building a Reddit-style forum in React” is gaining more upvotes.',
-    time: '1 h ago',
+    id: 4,
+    title: 'Post approved',
+    description: 'Your post in r/WebDev has been approved by moderators.',
+    time: '3 h ago',
     badge: null,
   },
-
   {
-    id: 3,
-    title: 'Your post is trending',
-    description:
-      '“Building a Reddit-style forum in React” is gaining more upvotes.',
-    time: '1 h ago',
+    id: 5,
+    title: 'Comment upvoted',
+    description: 'Your comment received 10 upvotes.',
+    time: '4 h ago',
     badge: null,
   },
-
   {
-    id: 3,
-    title: 'Your post is trending',
-    description:
-      '“Building a Reddit-style forum in React” is gaining more upvotes.',
-    time: '1 h ago',
+    id: 6,
+    title: 'Mention in post',
+    description: 'You were mentioned in a post by SarahTech.',
+    time: '5 h ago',
+    badge: null,
+  },
+  {
+    id: 7,
+    title: 'Community update',
+    description: 'New rules have been posted in r/FrontendDesign.',
+    time: '6 h ago',
+    badge: null,
+  },
+  {
+    id: 8,
+    title: 'Post shared',
+    description: 'Your post was shared by 3 users.',
+    time: '1 day ago',
+    badge: null,
+  },
+  {
+    id: 9,
+    title: 'Achievement unlocked',
+    description: 'You reached 100 karma points!',
+    time: '1 day ago',
+    badge: 'New',
+  },
+  {
+    id: 10,
+    title: 'Weekly summary',
+    description: 'Your posts received 50 upvotes this week.',
+    time: '2 days ago',
     badge: null,
   },
 ]
