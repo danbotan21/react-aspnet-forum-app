@@ -255,7 +255,7 @@
   max-width: 100%;
   width: 100%;
   height: auto;
-  vertical-align: middle;
+  /* vertical-align: middle; */
   object-fit: contain;
 }
 
@@ -288,6 +288,15 @@
 .action-chip:hover {
   background-color: #edeff1;
   border-color: #e9ecef;
+  color: #1a1a1b;
+}
+
+.action-chip:hover .comment-icon {
+  color: #7193ff;
+}
+
+.action-chip:hover .share-icon {
+  color: #7193ff;
 }
 
 .vote-chip {
@@ -334,7 +343,11 @@
   color: #ff4500;
 }
 
-.vote-count {
+.vote-icon:active {
+  transform: scale(1.1);
+}
+
+.comment-count {
   font-size: 12px;
   font-weight: 600;
   color: #1a1a1b;

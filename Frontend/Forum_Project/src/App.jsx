@@ -7,6 +7,7 @@ import { CreatePost } from './CreatePost'
 import { Login } from './Login'
 import { Signup } from './Signup'
 import { Notification } from './Notification'
+import { Popular } from './Popular'
 import { AboutUs } from './AboutUs'
 import { FAQ } from './FAQ'
 import { ExploreCommunities } from './ExploreCommunities'
@@ -48,7 +49,11 @@ function App() {
         />
         <Route
           path='/popular'
-          element={<AppLayout>{/* <Popular /> */}</AppLayout>}
+          element={
+            <AppLayout>
+              <Popular />
+            </AppLayout>
+          }
         />
         <Route
           path='/explore'

@@ -14,7 +14,11 @@ export const Navbar = () => {
   return (
     <header className='navbar'>
       <div className='navbar-inner'>
-        <a href='/' className='navbar-logo' aria-label='credit - home'>
+        <a
+          href='http://localhost:5173/Home'
+          className='navbar-logo'
+          aria-label='credit - home'
+        >
           credit
         </a>
 
@@ -32,6 +36,7 @@ export const Navbar = () => {
           </span>
         </div>
 
+        {/* Actions + profile */}
         <div className='navbar-actions'>
           <button type='button' className='navbar-icon-btn' aria-label='Posts'>
             <FaEdit />

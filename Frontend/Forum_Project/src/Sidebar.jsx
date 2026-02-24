@@ -50,7 +50,7 @@ export const SideBar = () => {
             onClick={() => navigate('/start-community')}
           >
             <FaPlusCircle className='nav-icon' />
-            <p>Start Community</p>
+            <span>Start Community</span>
           </div>
         </div>
 

@@ -11,6 +11,16 @@ const SORT_OPTIONS = [
   { id: 'mostComments', label: 'Most comments' },
 ]
 
+const handleVote = (type) => {
+  if (type === 'up') {
+    console.log('Upvoted')
+    // Upvote logic
+  } else if (type === 'down') {
+    console.log('Downvoted')
+    // Downvote logic
+  }
+}
+
 export const Home = () => {
   const [isMoreOpen, setIsMoreOpen] = useState(false)
   const [sortBy, setSortBy] = useState('popular')
@@ -49,7 +59,7 @@ export const Home = () => {
           >
             <span className='sort-trigger-label'>{currentSortLabel}</span>
             <span className='sort-trigger-chevron' aria-hidden>
-              ▼
+              <FaCaretDown size={16} />
             </span>
           </button>
           {isSortOpen && (
@@ -204,7 +214,9 @@ export const Home = () => {
               <span className='comment-count'>67</span>
             </button>
 
-            <button className='action-chip'>Share</button>
+            <button className='action-chip'>
+              <FaShare className='share-icon' />
+            </button>
           </div>
         </div>
       </div>
@@ -270,7 +282,9 @@ export const Home = () => {
               <span className='comment-count'>67</span>
             </button>
 
-            <button className='action-chip'>Share</button>
+            <button className='action-chip'>
+              <FaShare className='share-icon' />
+            </button>
           </div>
         </div>
       </div>
@@ -336,7 +350,9 @@ export const Home = () => {
               <span className='comment-count'>67</span>
             </button>
 
-            <button className='action-chip'>Share</button>
+            <button className='action-chip'>
+              <FaShare className='share-icon' />
+            </button>
           </div>
         </div>
       </div>
@@ -402,7 +418,9 @@ export const Home = () => {
               <span className='comment-count'>67</span>
             </button>
 
-            <button className='action-chip'>Share</button>
+            <button className='action-chip'>
+              <FaShare className='share-icon' />
+            </button>
           </div>
         </div>
       </div>
@@ -468,7 +486,9 @@ export const Home = () => {
               <span className='comment-count'>67</span>
             </button>
 
-            <button className='action-chip'>Share</button>
+            <button className='action-chip'>
+              <FaShare className='share-icon' />
+            </button>
           </div>
         </div>
       </div>
