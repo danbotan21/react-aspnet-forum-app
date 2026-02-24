@@ -1,65 +1,56 @@
-/* FAQ — redesigned to match platform aesthetic (Navbar + Sidebar) */
+/* FAQ — design complet consistent, fără variabile de culoare */
 @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&display=swap');
 
-:root {
-  --faq-bg: #dae0e6;
-  --faq-card-bg: #ffffff;
-  --faq-accent: green;
-  --faq-accent-light: #effce0;
-  --faq-accent-hover: green;
-  --faq-border: #edeff1;
-  --faq-border-strong: #d3d9de;
-  --faq-text-primary: #1a1a1b;
-  --faq-text-secondary: #4a5568;
-  --faq-text-muted: #8a8f9a;
-  --faq-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 14px rgba(0,0,0,0.05);
-}
-
-/* ── Page wrapper ── */
+/* Page wrapper */
 .faq-page {
   padding: 2rem 1.5rem 4rem;
-  padding-top: 4.67rem;
-  min-height: calc(100vh - var(--navbar-height, 48px));
-  background-color: var(--faq-bg);
+  padding-top: 5rem;
+  min-height: 100vh;
+  background-color: #dae0e6;
   font-family: 'DM Sans', sans-serif;
+  margin-left: var(--sidebar-width, 0);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-/* ── Layout ── */
+/* Layout */
 .faq-container {
-  max-width: 860px;
+  max-width: 1200px;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 1.5rem;
+  padding: 0 2rem;
 }
 
-/* ── Hero banner ── */
+/* Hero banner */
 .faq-hero {
-  background: var(--faq-card-bg);
-  border-radius: 4px;
-  border: 1px solid var(--faq-border-strong);
-  box-shadow: var(--faq-shadow);
-  padding: 1.75rem 2rem;
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #d3d9de;
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.06),
+    0 4px 14px rgba(0, 0, 0, 0.05);
+  padding: 2.5rem 3rem;
   display: flex;
   align-items: center;
-  gap: 1.5rem;
+  gap: 2rem;
   position: relative;
   overflow: hidden;
+  width: 100%;
+  box-sizing: border-box;
 }
-
-
 
 .faq-hero-icon {
   flex-shrink: 0;
   width: 52px;
   height: 52px;
-  background: var(--faq-accent-light);
-  border-radius: 50%;
+  color: #0f43c7;
+  font-size: 1.4rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--faq-accent);
-  font-size: 1.4rem;
 }
 
 .faq-hero-text {
@@ -67,37 +58,41 @@
 }
 
 .faq-title {
-  margin: 0 0 0.3rem;
+  margin: 0 0 0.5rem;
   font-family: 'Sora', sans-serif;
-  font-size: 1.5rem;
+  font-size: 2.2rem;
   font-weight: 700;
-  color: var(--faq-text-primary);
+  color: #1a1a1b;
   letter-spacing: -0.02em;
   line-height: 1.2;
 }
 
 .faq-tagline {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: 1.1rem;
   line-height: 1.5;
-  color: var(--faq-text-muted);
+  color: #8a8f9a;
 }
 
-/* ── Accordion ── */
+/* Accordion */
 .faq-accordion-wrapper {
   width: 100%;
 }
 
 .faq-accordion {
-  background: var(--faq-card-bg);
-  border-radius: 4px;
-  box-shadow: var(--faq-shadow);
-  border: 1px solid var(--faq-border-strong);
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.06),
+    0 4px 14px rgba(0, 0, 0, 0.05);
+  border: 1px solid #d3d9de;
   overflow: hidden;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .faq-item {
-  border-bottom: 1px solid var(--faq-border);
+  border-bottom: 1px solid #edeff1;
   transition: background 0.15s;
 }
 
@@ -105,41 +100,44 @@
   border-bottom: none;
 }
 
+/* Design complet identic pentru ambele stări - fără schimbări de dimensiuni sau background */
 .faq-item--open {
-  background: var(--faq-accent-light);
+  background: transparent; /* Background identic cu starea închisă */
 }
 
-/* ── Question button ── */
+/* Question button - ACELEAȘI dimensiuni și culori indiferent de stare */
 .faq-question {
   width: 100%;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: 1rem 1.25rem;
-  font-size: 0.94rem;
+  padding: 1.5rem 2rem;
+  font-size: 1.05rem;
   font-weight: 500;
   font-family: 'DM Sans', sans-serif;
   text-align: left;
-  color: var(--faq-text-secondary);
+  color: #4a5568; /* Culoare identică pentru ambele stări */
   background: transparent;
   border: none;
   cursor: pointer;
-  transition: color 0.15s, background 0.15s;
+  transition: background 0.15s;
 }
 
 .faq-question:hover {
-  background: #effce0;
-  color: var(blue);
+  background: #f8f9fa;
 }
 
+/* Nicio schimbare de dimensiuni sau culoare pentru stare deschisă */
 .faq-item--open .faq-question {
-  color: var(#e6f7ff);
-  font-weight: 600;
+  color: #4a5568; /* Aceeași culoare ca starea închisă */
+  font-weight: 500; /* Aceeași greutate */
+  font-size: 1.05rem; /* Aceeași dimensiune */
+  padding: 1.5rem 2rem; /* Același padding */
 }
 
 .faq-item--open .faq-question:hover {
-  background: transparent;
+  background: #f8f9fa; /* Același hover */
 }
 
 .faq-question-left {
@@ -149,42 +147,42 @@
   flex: 1;
 }
 
-/* Number badge — mirrors Sidebar's style */
+/* Number badge - design identic */
 .faq-question-num {
   flex-shrink: 0;
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: var(blue);
-  color: var(blue);
+  background: #e7f0ff;
+  color: #0f43c7;
   font-size: 0.7rem;
   font-weight: 600;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.2s, color 0.2s;
+  transition:
+    background 0.2s,
+    color 0.2s;
 }
 
+/* Badge-ul păstrează designul constant - fără schimbări de culoare */
 .faq-item--open .faq-question-num {
-  background: var(--faq-accent);
-  color: #fff;
+  background: #e7f0ff; /* Aceeași culoare ca starea închisă */
+  color: #0f43c7; /* Aceeași culoare ca starea închisă */
 }
 
 .faq-question-text {
   flex: 1;
+  font-size: 1.05rem; /* Dimensiune constantă */
+  color: #4a5568; /* Culoare constantă */
 }
 
 .faq-question-icon {
   flex-shrink: 0;
   display: flex;
   align-items: center;
-  color: var(blue);
-  transition: color 0.2s, transform 0.25s ease;
-}
-
-.faq-item--open .faq-question-icon {
-  color: var(blue);
-  transform: rotate(180deg);
+  color: #0f43c7;
+  transition: transform 0.25s ease;
 }
 
 .faq-chevron {
@@ -192,44 +190,60 @@
   height: 0.8rem;
 }
 
-/* ── Answer ── */
+/* Înlocuiește secțiunea .faq-answer și .faq-answer-text cu: */
+
 .faq-answer {
   overflow: hidden;
+  transition: max-height 0.25s ease;
+  max-height: 0;
+}
+
+.faq-answer:not([hidden]) {
+  max-height: 500px;
 }
 
 .faq-answer[hidden] {
-  display: none;
+  display: block;
+  max-height: 0;
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .faq-answer-text {
   margin: 0;
-  padding: 0 1.25rem 1.25rem 3.25rem;
-  font-size: 0.91rem;
-  line-height: 1.65;
-  color: var(--faq-text-secondary);
+  padding: 0 2rem 2rem 4rem;
+  font-size: 1rem;
+  line-height: 1.7;
+  color: #4a5568;
+}
+
+.faq-answer-text {
   animation: faq-fade-in 0.2s ease;
 }
 
 @keyframes faq-fade-in {
-  from { opacity: 0; transform: translateY(-3px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
-
-.faq-item--open .faq-answer-text {
-  color: var(--faq-text-primary);
-}
-
-/* ── Contact footer card ── */
+/* Contact footer card */
 .faq-contact-card {
-  background: var(--faq-card-bg);
-  border-radius: 4px;
-  border: 1px solid var(--faq-border-strong);
-  box-shadow: var(--faq-shadow);
-  padding: 1.25rem 1.5rem;
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #d3d9de;
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.06),
+    0 4px 14px rgba(0, 0, 0, 0.05);
+  padding: 2rem 2.5rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1.25rem;
+  gap: 1.5rem;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .faq-contact-text h3 {
@@ -237,27 +251,29 @@
   font-family: 'Sora', sans-serif;
   font-size: 0.95rem;
   font-weight: 600;
-  color: var(--faq-text-primary);
+  color: #1a1a1b;
 }
 
 .faq-contact-text p {
   margin: 0;
   font-size: 0.84rem;
-  color: var(--faq-text-muted);
+  color: #8a8f9a;
 }
 
 .faq-contact-btn {
   flex-shrink: 0;
   padding: 0.55rem 1.2rem;
   border-radius: 999px;
-  background: var(--faq-accent);
-  color: #fff;
+  background: #0f43c7;
+  color: #ffffff;
   font-family: 'DM Sans', sans-serif;
   font-size: 0.85rem;
   font-weight: 600;
   border: none;
   cursor: pointer;
-  transition: background 0.18s, transform 0.15s;
+  transition:
+    background 0.18s,
+    transform 0.15s;
   text-decoration: none;
   display: inline-flex;
   align-items: center;
@@ -265,11 +281,11 @@
 }
 
 .faq-contact-btn:hover {
-  background: var(--faq-accent-hover);
+  background: #0d3ab0;
   transform: translateY(-1px);
 }
 
-/* ── Responsive ── */
+/* Responsive */
 @media (max-width: 600px) {
   .faq-page {
     padding: 1rem 0.75rem 2.5rem;

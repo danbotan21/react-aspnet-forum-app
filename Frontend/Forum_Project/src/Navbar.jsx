@@ -43,6 +43,7 @@ export const Navbar = () => {
           >
             <FaComment />
           </button>
+
           <Link
             to='/create-post'
             className='navbar-icon-btn navbar-icon-btn-plus'
@@ -50,11 +51,8 @@ export const Navbar = () => {
           >
             <FaPlus />
           </Link>
-          <Link
-            to='/notification'
-            className='navbar-icon-btn'
-            aria-label='Notifications'
-          >
+
+          <Link to='/notification' className='navbar-icon-btn'>
             <FaBell />
           </Link>
           <div className='navbar-profile'>

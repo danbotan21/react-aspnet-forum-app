@@ -9,6 +9,7 @@ import { Signup } from './Signup'
 import { Notification } from './Notification'
 import { AboutUs } from './AboutUs'
 import { FAQ } from './FAQ'
+import { ExploreCommunities } from './ExploreCommunities'
 
 function AppLayout({ children }) {
   return (
@@ -42,6 +43,18 @@ function App() {
           element={
             <AppLayout>
               <Notification />
+            </AppLayout>
+          }
+        />
+        <Route
+          path='/popular'
+          element={<AppLayout>{/* <Popular /> */}</AppLayout>}
+        />
+        <Route
+          path='/explore'
+          element={
+            <AppLayout>
+              <ExploreCommunities />
             </AppLayout>
           }
         />

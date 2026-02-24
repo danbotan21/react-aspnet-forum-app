@@ -100,9 +100,9 @@ export const AboutUs = () => {
           <div className='about-section-content'>
             <h2 className='about-section-title'>Comunități și siguranță</h2>
             <p className='about-section-desc'>
-              Poți crea și administra comunități tematice. Un sistem de
-              moderare menține mediul sigur și respectuos. Profilul tău și
-              documentația tehnică susțin un proces orientat spre calitate.
+              Poți crea și administra comunități tematice. Un sistem de moderare
+              menține mediul sigur și respectuos. Profilul tău și documentația
+              tehnică susțin un proces orientat spre calitate.
             </p>
           </div>
           <div className='about-section-visual about-visual-frame about-visual-frame--soft'>

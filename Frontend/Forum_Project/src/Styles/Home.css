@@ -2,17 +2,13 @@
   padding-top: 82px;
   padding-left: 296px;
   padding-right: 24px;
-  /* respirație la final: puțin spațiu sub ultima postare, fără scroll imens */
   padding-bottom: 56px;
-  /* fundalul e pe .app-layout ca să se extindă la scroll; aici doar pentru suprapunere */
   background-color: #dae0e6;
-  /* NU min-height: 100vh – altfel secțiunea e forțată la o înălțime de tot ecranul
-     și sub posturi rămâne mult spațiu gol. Înălțimea o dă conținutul. */
+
   box-sizing: border-box;
   font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
 }
 
-/* ----- Sort bar (toggle dropdown) ----- */
 .home-sort-bar {
   width: 800px;
   max-width: 100%;
@@ -112,7 +108,7 @@
   border-radius: 30px;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
   overflow: hidden;
-  margin: 0 auto 24px auto; /* top right bottom left – bottom face spațiul dintre posturi */
+  margin: 0 auto 24px auto;
 }
 
 .post-main {
@@ -311,13 +307,30 @@
   align-items: center;
 }
 
-.vote-button.upvote.active,
-.vote-button.upvote:hover {
+.vote-count {
+  font-size: 12px;
+  font-weight: 600;
+  color: #1a1a1b;
+  line-height: 1;
+  font-family: sans-serif;
+}
+
+.vote-icon {
+  font-size: 20px;
+  color: #878a8c;
+  cursor: pointer;
+  transition: color 0.2s;
+  display: inline-flex;
+  align-items: center;
+}
+
+.vote-icon.upvote:hover,
+.vote-icon.upvote.active {
   color: #7193ff;
 }
 
-.vote-button.downvote.active,
-.vote-button.downvote:hover {
+.vote-icon.downvote:hover,
+.vote-icon.downvote.active {
   color: #ff4500;
 }
 
@@ -326,6 +339,16 @@
   font-weight: 600;
   color: #1a1a1b;
   line-height: 1;
+}
+
+.comment-icon {
+  color: #878a8c;
+  font-size: 14px;
+}
+
+.share-icon {
+  color: #878a8c;
+  font-size: 14px;
 }
 
 /* Clasa .coding nu mai forțează dimensiuni; imaginile folosesc regulile din .media-placeholder img */
