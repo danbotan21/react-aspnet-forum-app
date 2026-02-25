@@ -1,17 +1,30 @@
-.home {
+.popular-page {
+  --feed-text: #10233f;
+  --feed-muted: #64748b;
+  --feed-border: #d7e1ef;
+  --feed-primary: #295ad6;
+
   padding-top: 82px;
   padding-left: 296px;
   padding-right: 24px;
-  /* respirație la final: puțin spațiu sub ultima postare, fără scroll imens */
   padding-bottom: 56px;
-  /* fundalul e pe .app-layout ca să se extindă la scroll; aici doar pentru suprapunere */
-  background-color: #dae0e6;
-
+  min-height: 100vh;
+  background:
+    radial-gradient(
+      980px 320px at 88% -44%,
+      rgba(15, 67, 199, 0.14),
+      transparent 62%
+    ),
+    radial-gradient(
+      760px 280px at 10% -10%,
+      rgba(56, 189, 248, 0.14),
+      transparent 56%
+    ),
+    linear-gradient(180deg, #edf3fb 0%, #dde7f3 100%);
   box-sizing: border-box;
   font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
 }
 
-/* ----- Sort bar (toggle dropdown) ----- */
 .home-sort-bar {
   width: 800px;
   max-width: 100%;
@@ -29,20 +42,25 @@
   align-items: center;
   gap: 6px;
   padding: 8px 14px;
-  border: 1px solid #e9ecef;
+  border: 1px solid var(--feed-border);
   border-radius: 999px;
-  background-color: #f6f7f8;
+  background: #f7faff;
   color: #1a1a1b;
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   font-family: inherit;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
 }
 
 .sort-trigger:hover {
-  background-color: #edeff1;
-  border-color: #d5d8dc;
+  background-color: #edf4ff;
+  border-color: #bfd4f5;
+  color: #163566;
 }
 
 .sort-trigger-label {
@@ -51,19 +69,19 @@
 
 .sort-trigger-chevron {
   font-size: 10px;
-  color: #787c7e;
+  color: #5f7394;
   line-height: 1;
 }
 
 .sort-dropdown {
   position: absolute;
   left: 0;
-  top: calc(100% + 6px);
+  top: calc(100% + 8px);
   min-width: 180px;
-  background-color: #fff;
-  border: 1px solid #e9ecef;
+  background: linear-gradient(180deg, #ffffff 0%, #f7fbff 100%);
+  border: 1px solid var(--feed-border);
   border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 10px 24px rgba(12, 28, 61, 0.13);
   padding: 6px 0;
   z-index: 20;
 }
@@ -72,14 +90,12 @@
   padding: 8px 14px 6px;
   font-size: 12px;
   font-weight: 600;
-  color: #787c7e;
-  text-transform: none;
-  letter-spacing: 0;
+  color: #5f7394;
 }
 
 .sort-dropdown-item {
   display: block;
-  width: 100%;
+  width: calc(100% - 12px);
   padding: 8px 14px;
   border: none;
   background: none;
@@ -88,34 +104,44 @@
   color: #1a1a1b;
   cursor: pointer;
   font-family: inherit;
-  border-radius: 6px;
+  border-radius: 8px;
   margin: 0 6px;
   box-sizing: border-box;
 }
 
 .sort-dropdown-item:hover {
-  background-color: #f6f7f8;
+  background-color: #edf4ff;
 }
 
 .sort-dropdown-item--active {
-  background-color: #edeff1;
-  font-weight: 500;
-  color: #1a1a1b;
+  background: linear-gradient(135deg, #e4efff 0%, #dce9ff 100%);
+  font-weight: 600;
+  color: var(--feed-primary);
 }
 
 .post {
   width: 800px;
   max-width: 100%;
-  background-color: #fff;
-  border: 1px solid #e9ecef;
+  background: linear-gradient(145deg, #ffffff 0%, #f3f8ff 100%);
+  border: 1px solid var(--feed-border);
   border-radius: 30px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 10px 24px rgba(12, 28, 61, 0.08);
   overflow: hidden;
-  margin: 0 auto 24px auto; /* top right bottom left – bottom face spațiul dintre posturi */
+  margin: 0 auto 24px auto;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+
+.post:hover {
+  border-color: #bfd4f5;
+  box-shadow: 0 14px 30px rgba(15, 67, 199, 0.12);
+  transform: translateY(-1px);
 }
 
 .post-main {
-  padding: 12px 16px 8px 16px;
+  padding: 14px 16px 10px;
 }
 
 .post-header {
@@ -124,7 +150,7 @@
   gap: 8px;
   margin-bottom: 8px;
   font-size: 12px;
-  color: #787c7e;
+  color: #5f7394;
 }
 
 .avatar {
@@ -149,11 +175,11 @@
 
 .community-name {
   font-weight: 600;
-  color: #1a1a1b;
+  color: var(--feed-text);
 }
 
 .author {
-  color: #787c7e;
+  color: #5f7394;
 }
 
 .meta-separator {
@@ -168,11 +194,11 @@
   cursor: pointer;
   color: #0f43c7;
   padding: 4px 6px;
-  border-radius: 4px;
+  border-radius: 6px;
 }
 
 .more-button:hover {
-  background-color: #f6f7f8;
+  background-color: #e8f1ff;
 }
 
 .more-menu {
@@ -180,17 +206,17 @@
   right: 0;
   top: 100%;
   margin-top: 4px;
-  background-color: #fff;
-  border: 1px solid #e9ecef;
-  border-radius: 8px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
+  background: linear-gradient(180deg, #ffffff 0%, #f7fbff 100%);
+  border: 1px solid var(--feed-border);
+  border-radius: 10px;
+  box-shadow: 0 8px 20px rgba(12, 28, 61, 0.15);
   min-width: 140px;
   z-index: 10;
   padding: 4px 0;
 }
 
 .more-menu-item {
-  width: 90%;
+  width: calc(100% - 12px);
   padding: 6px 12px;
   border: none;
   background: none;
@@ -198,18 +224,14 @@
   font-size: 13px;
   color: #1a1a1b;
   cursor: pointer;
-  /* round the corners */
   border-radius: 8px;
   margin-left: 6px;
-  /* keep the text on the left but center the border*/
-  text-align: left;
   display: flex;
-  justify-content: left;
   align-items: center;
 }
 
 .more-menu-item:hover {
-  background-color: #f6f7f8;
+  background-color: #edf4ff;
 }
 
 .more-menu-danger {
@@ -222,44 +244,34 @@
 
 .post-title {
   font-size: 20px;
-  font-weight: 600;
-  margin: 0 0 6px 0;
-  color: #1a1a1b;
+  font-weight: 700;
+  margin: 0 0 6px;
+  color: #173464;
 }
 
 .post-text {
   font-size: 15px;
-  color: #1a1a1b;
-  margin: 0 0 20px 0;
+  color: #253e63;
+  margin: 0 0 18px;
 }
 
 .post-media {
   margin-bottom: 4px;
 }
 
-/* Containerul se mulează pe conținut; fără înălțime fixă ca imaginile să poată fi afișate natural */
 .media-placeholder {
-  border-radius: 8px;
+  border-radius: 10px;
   overflow: hidden;
-  background: #f8f9fa;
+  background: #f0f5ff;
   display: block;
-  font-size: 12px;
-  color: #6c757d;
 }
 
-/* Când există imagine: fundal neutru, înălțimea o dă imaginea */
-.media-placeholder:has(img) {
-  background: #f1f3f4;
-}
-
-/* Imagini responsive: ocupă lățimea postului, păstrează raportul, nu mai stau în „cutie” fixă */
 .media-placeholder img {
   display: block;
   max-width: 100%;
   width: 100%;
   height: auto;
-  /* vertical-align: middle; */
-  object-fit: contain;
+  object-fit: cover;
 }
 
 .post-footer {
@@ -267,7 +279,7 @@
   align-items: center;
   gap: 6px;
   font-size: 12px;
-  color: #878a8c;
+  color: #5f7394;
   padding-top: 4px;
   padding-bottom: 2px;
 }
@@ -276,30 +288,27 @@
   height: 32px;
   min-height: 32px;
   border: 1px solid transparent;
-  background-color: #f6f7f8;
+  background-color: #f7faff;
   cursor: pointer;
   padding: 4px 10px;
   border-radius: 999px;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: #878a8c;
+  color: #5f7394;
   font-size: 12px;
   box-sizing: border-box;
 }
 
 .action-chip:hover {
-  background-color: #edeff1;
-  border-color: #e9ecef;
+  background-color: #edf4ff;
+  border-color: #bfd4f5;
   color: #1a1a1b;
 }
 
-.action-chip:hover .comment-icon {
-  color: #7193ff;
-}
-
+.action-chip:hover .comment-icon,
 .action-chip:hover .share-icon {
-  color: #7193ff;
+  color: #3f76ef;
 }
 
 .vote-chip {
@@ -307,29 +316,17 @@
   padding-right: 8px;
 }
 
-.vote-button {
-  border: none;
-  background: none;
-  cursor: pointer;
-  font-size: 14px;
-  line-height: 1;
-  padding: 0 2px;
-  color: #878a8c;
-  display: inline-flex;
-  align-items: center;
-}
-
-.vote-count {
+.vote-count,
+.comment-count {
   font-size: 12px;
   font-weight: 600;
   color: #1a1a1b;
   line-height: 1;
-  font-family: sans-serif;
 }
 
 .vote-icon {
   font-size: 20px;
-  color: #878a8c;
+  color: #5f7394;
   cursor: pointer;
   transition: color 0.2s;
   display: inline-flex;
@@ -346,25 +343,25 @@
   color: #ff4500;
 }
 
-.vote-icon:active {
-  transform: scale(1.1);
-}
-
-.comment-count {
-  font-size: 12px;
-  font-weight: 600;
-  color: #1a1a1b;
-  line-height: 1;
-}
-
-.comment-icon {
-  color: #878a8c;
-  font-size: 14px;
-}
-
+.comment-icon,
 .share-icon {
-  color: #878a8c;
+  color: #5f7394;
   font-size: 14px;
 }
 
-/* Clasa .coding nu mai forțează dimensiuni; imaginile folosesc regulile din .media-placeholder img */
+@media (max-width: 900px) {
+  .popular-page {
+    padding-left: 24px;
+  }
+}
+
+@media (max-width: 640px) {
+  .popular-page {
+    padding-right: 16px;
+    padding-left: 16px;
+  }
+
+  .post {
+    border-radius: 22px;
+  }
+}

@@ -13,6 +13,7 @@ import { FAQ } from './FAQ'
 import { ExploreCommunities } from './ExploreCommunities'
 import { ContactUs } from './ContactUs'
 import { TermsAndConditions } from './Terms&Conditions'
+import { StartCommunity } from './StartCommunity'
 
 function AppLayout({ children }) {
   return (
@@ -33,6 +34,14 @@ function App() {
         <Route path='/login' element={<Login />} />
         <Route path='/register' element={<Signup />} />
 
+        <Route 
+          path='/start-community'
+          element={
+            <AppLayout>
+              <StartCommunity />
+            </AppLayout>
+          }
+        />
         <Route
           path='/create-post'
           element={
@@ -89,7 +98,7 @@ function App() {
             </AppLayout>
           }
         />
-        <Route
+        <Route 
           path='/terms'
           element={
             <AppLayout>
