@@ -45,12 +45,9 @@ export const SideBar = () => {
             <p>Explore</p>
           </div>
 
-          <div
-            className='nav-item'
-            onClick={() => navigate('/start-community')}
-          >
+          <div className='nav-item' onClick={() => navigate('/start-community')}>
             <FaPlusCircle className='nav-icon' />
-            <span>Start Community</span>
+            <p>Start Community</p>
           </div>
         </div>
 

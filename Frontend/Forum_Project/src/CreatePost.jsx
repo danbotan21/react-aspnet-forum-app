@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import {
   FaSearch,
   FaTimes,
@@ -12,33 +12,52 @@ export const CreatePost = () => {
   const [activeTab, setActiveTab] = useState('Text')
   const [isDraftsOpen, setIsDraftsOpen] = useState(false)
   const [dragActive, setDragActive] = useState(false)
+  const [community, setCommunity] = useState('')
+  const [postTitle, setPostTitle] = useState('')
+  const [postBody, setPostBody] = useState('')
+  const [postUrl, setPostUrl] = useState('')
+  const [selectedImageName, setSelectedImageName] = useState('')
+  const [uploadError, setUploadError] = useState('')
+  const [previewUrl, setPreviewUrl] = useState('')
 
-  // 1. DEFINIM MAI ÎNTÂI handleFile
-  const handleFile = useCallback((file) => {
-    // Verifică dacă e imagine
-    if (!file.type.startsWith('image/')) {
-      console.log('❌ Fișierul selectat nu este o imagine:', file.name)
-      alert('Te rog selectează o imagine!')
-      return
-    }
+  const dragCounterRef = useRef(0)
+  const fileInputRef = useRef(null)
 
-    // Afișează în consolă numele fișierului
-    console.log('✅ Imagine încărcată cu succes:', file.name)
-    console.log('📊 Detalii fișier:', {
-      nume: file.name,
-      tip: file.type,
-      dimensiune: `${(file.size / 1024).toFixed(2)} KB`,
-      data_modificare: new Date(file.lastModified).toLocaleString(),
-    })
-  }, []) // handleFile nu are dependențe
+  const handleFile = useCallback(
+    (file) => {
+      if (!file || !file.type.startsWith('image/')) {
+        setUploadError('Please choose an image file.')
+        return
+      }
 
-  // 2. APOI DEFINIM FUNCȚIILE CARE FOLOSESC handleFile
-  const handleDrag = useCallback((e) => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl)
+      setUploadError('')
+      setSelectedImageName(file.name)
+      setPreviewUrl(URL.createObjectURL(file))
+    },
+    [previewUrl],
+  )
+
+  const handleDragEnter = useCallback((e) => {
     e.preventDefault()
     e.stopPropagation()
-    if (e.type === 'dragenter' || e.type === 'dragover') {
+    if (e.dataTransfer?.items?.length) {
+      dragCounterRef.current += 1
       setDragActive(true)
-    } else if (e.type === 'dragleave') {
+    }
+  }, [])
+
+  const handleDragOver = useCallback((e) => {
+    e.preventDefault()
+    e.stopPropagation()
+  }, [])
+
+  const handleDragLeave = useCallback((e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    dragCounterRef.current -= 1
+    if (dragCounterRef.current <= 0) {
+      dragCounterRef.current = 0
       setDragActive(false)
     }
   }, [])
@@ -47,35 +66,64 @@ export const CreatePost = () => {
     (e) => {
       e.preventDefault()
       e.stopPropagation()
+      dragCounterRef.current = 0
       setDragActive(false)
 
       if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-        const file = e.dataTransfer.files[0]
-        handleFile(file)
+        handleFile(e.dataTransfer.files[0])
       }
     },
-    [handleFile], // Acum handleFile există aici
+    [handleFile],
   )
 
   const handleFileSelect = useCallback(
     (e) => {
       if (e.target.files && e.target.files[0]) {
-        const file = e.target.files[0]
-        handleFile(file)
+        handleFile(e.target.files[0])
       }
     },
-    [handleFile], // Acum handleFile există aici
+    [handleFile],
   )
 
   const handleUploadClick = useCallback(() => {
-    document.getElementById('file-upload').click()
+    fileInputRef.current?.click()
   }, [])
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl)
+    }
+  }, [previewUrl])
+
+  useEffect(() => {
+    if (!isDraftsOpen) return undefined
+
+    const handleEscape = (e) => {
+      if (e.key === 'Escape') setIsDraftsOpen(false)
+    }
+
+    document.addEventListener('keydown', handleEscape)
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+
+    return () => {
+      document.removeEventListener('keydown', handleEscape)
+      document.body.style.overflow = previousOverflow
+    }
+  }, [isDraftsOpen])
 
   return (
     <div className='create-post-page'>
       <div className='create-post-card'>
         <header className='create-post-header'>
-          <h1 className='create-post-title'>Create Post</h1>
+          <div>
+            <p className='create-post-eyebrow'>Community publishing</p>
+            <h1 className='create-post-title'>Create a Post</h1>
+            <p className='create-post-subtitle'>
+              Publish text, links or media using the same polished flow as your
+              community pages.
+            </p>
+          </div>
           <button
             type='button'
             className='create-post-drafts'
@@ -95,15 +143,18 @@ export const CreatePost = () => {
             placeholder='Choose a community'
             className='create-post-community-input'
             aria-label='Search community'
+            value={community}
+            onChange={(e) => setCommunity(e.target.value)}
           />
         </div>
 
         <div className='create-post-editor'>
-          <div className='create-post-tabs' role='tablist'>
+          <div className='create-post-tabs' role='tablist' aria-label='Post type'>
             <button
               type='button'
               role='tab'
               aria-selected={activeTab === 'Text'}
+              aria-controls='panel-text'
               className={`create-post-tab ${activeTab === 'Text' ? 'create-post-tab--active' : ''}`}
               onClick={() => setActiveTab('Text')}
             >
@@ -113,6 +164,7 @@ export const CreatePost = () => {
               type='button'
               role='tab'
               aria-selected={activeTab === 'Images'}
+              aria-controls='panel-images'
               className={`create-post-tab ${activeTab === 'Images' ? 'create-post-tab--active' : ''}`}
               onClick={() => setActiveTab('Images')}
             >
@@ -122,6 +174,7 @@ export const CreatePost = () => {
               type='button'
               role='tab'
               aria-selected={activeTab === 'Link'}
+              aria-controls='panel-link'
               className={`create-post-tab ${activeTab === 'Link' ? 'create-post-tab--active' : ''}`}
               onClick={() => setActiveTab('Link')}
             >
@@ -135,37 +188,50 @@ export const CreatePost = () => {
               placeholder='Title'
               className='create-post-title-input'
               aria-label='Post title'
+              value={postTitle}
+              onChange={(e) => setPostTitle(e.target.value)}
             />
           </div>
 
           <div className='create-post-body-wrap'>
             {activeTab === 'Text' && (
               <textarea
+                id='panel-text'
                 name='body'
                 rows={10}
                 placeholder='Text (optional)'
                 className='create-post-body-input'
                 aria-label='Post body'
+                value={postBody}
+                onChange={(e) => setPostBody(e.target.value)}
               />
             )}
+
             {activeTab === 'Images' && (
               <div
+                id='panel-images'
                 className={`create-post-upload-wrap ${dragActive ? 'drag-active' : ''}`}
-                onDragEnter={handleDrag}
-                onDragLeave={handleDrag}
-                onDragOver={handleDrag}
+                onDragEnter={handleDragEnter}
+                onDragLeave={handleDragLeave}
+                onDragOver={handleDragOver}
                 onDrop={handleDrop}
               >
                 <div className='create-post-upload-content'>
                   <span className='create-post-upload-text'>
-                    Drag and Drop or upload media
+                    Drag and drop or upload media
                   </span>
+                  {selectedImageName && (
+                    <span className='create-post-upload-file'>
+                      {selectedImageName}
+                    </span>
+                  )}
                   <input
                     type='file'
                     id='file-upload'
                     accept='image/*'
                     onChange={handleFileSelect}
-                    style={{ display: 'none' }}
+                    ref={fileInputRef}
+                    className='create-post-file-input'
                   />
                   <button
                     type='button'
@@ -175,15 +241,33 @@ export const CreatePost = () => {
                     <FaCloudUploadAlt />
                   </button>
                 </div>
+
+                {uploadError && (
+                  <p className='create-post-upload-error'>{uploadError}</p>
+                )}
+
+                {previewUrl && (
+                  <div className='create-post-preview-wrap'>
+                    <img
+                      src={previewUrl}
+                      alt='Selected upload preview'
+                      className='create-post-preview'
+                    />
+                  </div>
+                )}
               </div>
             )}
+
             {activeTab === 'Link' && (
               <textarea
+                id='panel-link'
                 name='url'
                 rows={2}
-                placeholder='Url'
+                placeholder='URL'
                 className='create-post-body-input create-post-link-input'
                 aria-label='Post URL'
+                value={postUrl}
+                onChange={(e) => setPostUrl(e.target.value)}
               />
             )}
           </div>
@@ -226,8 +310,9 @@ export const CreatePost = () => {
           role='dialog'
           aria-modal='true'
           aria-label='Drafts'
+          onClick={() => setIsDraftsOpen(false)}
         >
-          <div className='drafts-modal'>
+          <div className='drafts-modal' onClick={(e) => e.stopPropagation()}>
             <div className='drafts-header'>
               <div className='drafts-title'>
                 <span>Drafts</span>
@@ -244,18 +329,13 @@ export const CreatePost = () => {
             </div>
 
             <ul className='drafts-list'>
-              {/* Primul draft */}
               <li className='drafts-item'>
                 <div className='drafts-item-main'>
                   <div className='drafts-item-title'>Incerc Draft</div>
                   <div className='drafts-item-sub'>
-                    <span className='drafts-item-community'>
-                      r/15minutefood
-                    </span>
-                    <span className='drafts-dot'>•</span>
-                    <span className='drafts-item-edited'>
-                      Edited 44 min. ago
-                    </span>
+                    <span className='drafts-item-community'>r/15minutefood</span>
+                    <span className='drafts-dot'>*</span>
+                    <span className='drafts-item-edited'>Edited 44 min. ago</span>
                   </div>
                 </div>
                 <div className='drafts-item-actions'>
@@ -276,7 +356,6 @@ export const CreatePost = () => {
                 </div>
               </li>
 
-              {/* Al doilea draft */}
               <li className='drafts-item'>
                 <div className='drafts-item-main'>
                   <div className='drafts-item-title'>
@@ -284,10 +363,8 @@ export const CreatePost = () => {
                   </div>
                   <div className='drafts-item-sub'>
                     <span className='drafts-item-community'>r/webdev</span>
-                    <span className='drafts-dot'>•</span>
-                    <span className='drafts-item-edited'>
-                      Edited 2 hours ago
-                    </span>
+                    <span className='drafts-dot'>*</span>
+                    <span className='drafts-item-edited'>Edited 2 hours ago</span>
                   </div>
                 </div>
                 <div className='drafts-item-actions'>
