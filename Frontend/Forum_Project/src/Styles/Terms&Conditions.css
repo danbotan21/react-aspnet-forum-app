@@ -1,0 +1,110 @@
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=DM+Sans:wght@400;500;600&display=swap');
+
+.terms-page {
+  min-height: 100vh;
+  padding: 5rem 0rem 2.5rem;
+  background:
+    radial-gradient(
+      circle at 85% 10%,
+      rgba(15, 67, 199, 0.11) 0%,
+      rgba(15, 67, 199, 0) 32%
+    ),
+    linear-gradient(180deg, #f3f6fb 0%, #e8edf5 100%);
+}
+
+.terms-shell {
+  max-width: 1120px;
+  margin: 0 auto;
+}
+
+.terms-hero {
+  margin-bottom: 1.2rem;
+}
+
+.terms-kicker {
+  margin: 0 0 0.45rem;
+  color: #0f43c7;
+  letter-spacing: 0.11em;
+  font: 700 0.75rem/1 'Sora', sans-serif;
+}
+
+.terms-title {
+  margin: 0;
+  color: #1a1a1b;
+  font: 700 2.15rem/1.15 'Sora', sans-serif;
+}
+
+.terms-subtitle {
+  margin: 0.75rem 0 0;
+  max-width: 760px;
+  color: #596273;
+  font: 500 0.98rem/1.65 'DM Sans', sans-serif;
+}
+
+.terms-updated {
+  margin: 0.8rem 0 0;
+  color: #0f43c7;
+  font: 600 0.86rem/1.4 'DM Sans', sans-serif;
+}
+
+.terms-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.95rem;
+}
+
+.terms-card {
+  border-radius: 14px;
+  border: 1px solid #d6dce6;
+  background: #ffffff;
+  box-shadow:
+    0 8px 22px rgba(16, 23, 40, 0.06),
+    0 2px 8px rgba(16, 23, 40, 0.05);
+  padding: 1.15rem 1.15rem 1.2rem;
+}
+
+.terms-card h2 {
+  margin: 0;
+  color: #182135;
+  font: 700 1.04rem/1.35 'Sora', sans-serif;
+}
+
+.terms-card p {
+  margin: 0.55rem 0 0;
+  color: #4a5568;
+  font: 500 0.93rem/1.62 'DM Sans', sans-serif;
+}
+
+.terms-footer-note {
+  margin-top: 1rem;
+  border-radius: 12px;
+  border: 1px solid #d6dce6;
+  background: linear-gradient(180deg, #ffffff 0%, #f9fbff 100%);
+  padding: 0.95rem 1rem;
+}
+
+.terms-footer-note p {
+  margin: 0;
+  color: #374151;
+  font: 600 0.9rem/1.5 'DM Sans', sans-serif;
+}
+
+@media (max-width: 900px) {
+  .terms-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .terms-page {
+    padding: 4.4rem 0.85rem 2rem;
+  }
+
+  .terms-title {
+    font-size: 1.6rem;
+  }
+
+  .terms-card {
+    padding: 1rem;
+  }
+}
