@@ -11,6 +11,7 @@ import { Popular } from './Popular'
 import { AboutUs } from './AboutUs'
 import { FAQ } from './FAQ'
 import { ExploreCommunities } from './ExploreCommunities'
+import { ContactUs } from './ContactUs'
 
 function AppLayout({ children }) {
   return (
@@ -76,6 +77,14 @@ function App() {
           element={
             <AppLayout>
               <FAQ />
+            </AppLayout>
+          }
+        />
+        <Route
+          path='/contact'
+          element={
+            <AppLayout>
+              <ContactUs />
             </AppLayout>
           }
         />
