@@ -1,160 +1,254 @@
-/* Signup page – fundal și centrare */
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap');
+
 .signup-page {
-  display: flex;
-  justify-content: center;
-  align-items: center;
   min-height: 100vh;
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-  padding: 1.5rem;
+  padding: 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(circle at 10% 8%, rgba(35, 124, 235, 0.24) 0%, transparent 35%),
+    radial-gradient(circle at 84% 10%, rgba(34, 167, 168, 0.19) 0%, transparent 32%),
+    linear-gradient(145deg, #071f4f 0%, #0c3d93 50%, #186da4 100%);
+}
+
+.signup-shell {
+  width: 100%;
+  max-width: 1080px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 24px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(10px);
+  box-shadow:
+    0 28px 54px rgba(5, 15, 40, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  display: grid;
+  grid-template-columns: 1.08fr 1fr;
+}
+
+.signup-showcase {
+  padding: 2.1rem 1.8rem;
+  color: #ffffff;
+  background: linear-gradient(165deg, rgba(7, 44, 128, 0.72) 0%, rgba(8, 98, 140, 0.42) 100%);
+}
+
+.signup-showcase-kicker {
+  margin: 0;
+  display: inline-flex;
+  padding: 0.28rem 0.7rem;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  font: 700 0.72rem/1 'Sora', sans-serif;
+  letter-spacing: 0.08em;
+}
+
+.signup-showcase h1 {
+  margin: 0.9rem 0 0;
+  font: 800 2rem/1.08 'Sora', sans-serif;
+  letter-spacing: -0.02em;
+  max-width: 430px;
+}
+
+.signup-showcase-text {
+  margin: 0.9rem 0 0;
+  color: rgba(255, 255, 255, 0.95);
+  font: 500 0.96rem/1.62 'DM Sans', sans-serif;
+  max-width: 460px;
+}
+
+.signup-showcase-list {
+  list-style: none;
+  margin: 1.15rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.signup-showcase-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.52rem;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 0.6rem 0.68rem;
+  font: 600 0.86rem/1.35 'DM Sans', sans-serif;
+}
+
+.signup-showcase-list svg {
+  flex-shrink: 0;
+  font-size: 0.9rem;
 }
 
 .signup-card {
-  width: 100%;
-  max-width: 400px;
-  background: rgba(255, 255, 255, 0.98);
-  border-radius: 16px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
-  padding: 2.5rem;
+  background: rgba(255, 255, 255, 0.97);
+  padding: 1.9rem 1.6rem;
 }
 
 .signup-title {
-  margin: 0 0 0.25rem 0;
-  font-size: 1.75rem;
-  font-weight: 700;
-  color: #1a1a2e;
-  text-align: center;
+  margin: 0;
+  color: #102842;
+  font: 700 1.62rem/1.15 'Sora', sans-serif;
 }
 
 .signup-subtitle {
-  margin: 0 0 1.75rem 0;
-  font-size: 0.95rem;
-  color: #5a5a72;
-  text-align: center;
+  margin: 0.55rem 0 1.2rem;
+  color: #5f728c;
+  font: 500 0.9rem/1.5 'DM Sans', sans-serif;
 }
 
 .signup-form {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 0.75rem;
 }
 
 .signup-label {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: #2d2d3a;
+  color: #2a3b57;
+  font: 600 0.82rem/1.3 'DM Sans', sans-serif;
 }
 
 .signup-input {
   width: 100%;
-  padding: 0.75rem 1rem;
-  font-size: 1rem;
-  border: 2px solid #e2e2ea;
-  border-radius: 10px;
-  background: #fafafa;
-  color: #1a1a2e;
+  border: 1px solid #ced8e6;
+  border-radius: 11px;
+  background: #f9fbff;
+  color: #1b2d49;
+  padding: 0.74rem 0.78rem;
+  font: 500 0.93rem/1.4 'DM Sans', sans-serif;
   box-sizing: border-box;
-  transition: border-color 0.2s, background 0.2s;
-}
-
-.signup-input::placeholder {
-  color: #9a9aad;
-}
-
-.signup-input:hover {
-  background: #fff;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background-color 0.2s ease;
 }
 
 .signup-input:focus {
   outline: none;
-  border-color: #0f3460;
-  background: #fff;
+  border-color: #1570a8;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(21, 112, 168, 0.13);
 }
 
 .signup-btn {
-  margin-top: 0.5rem;
-  padding: 0.9rem 1.5rem;
-  font-size: 1rem;
-  font-weight: 600;
-  color: #fff;
-  background: linear-gradient(135deg, #0f3460 0%, #16213e 100%);
   border: none;
-  border-radius: 10px;
+  border-radius: 11px;
+  background: linear-gradient(140deg, #0d4f8f 0%, #1570a8 100%);
+  color: #ffffff;
+  padding: 0.78rem 1rem;
   cursor: pointer;
-  transition: transform 0.15s, box-shadow 0.2s;
+  font: 700 0.9rem/1 'DM Sans', sans-serif;
+  transition:
+    transform 0.16s ease,
+    box-shadow 0.2s ease;
 }
 
 .signup-btn:hover {
   transform: translateY(-1px);
-  box-shadow: 0 8px 24px rgba(15, 52, 96, 0.4);
+  box-shadow: 0 10px 18px rgba(13, 79, 143, 0.28);
 }
 
-.signup-btn:active {
-  transform: translateY(0);
-}
-
-/* Divider și buton Google */
 .signup-divider {
-  margin: 1rem 0 0.75rem 0;
-  font-size: 0.875rem;
-  color: #9a9aad;
+  margin: 0.2rem 0 0.12rem;
+  color: #7989a4;
   text-align: center;
+  font: 600 0.76rem/1 'DM Sans', sans-serif;
+  letter-spacing: 0.03em;
 }
 
 .signup-google-btn {
-  display: flex;
+  border: 1px solid #d3dceb;
+  border-radius: 11px;
+  background: #ffffff;
+  color: #223555;
+  padding: 0.66rem 0.86rem;
+  cursor: pointer;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 100%;
-  padding: 0.75rem 1rem;
-  background: #fff;
-  border: 2px solid #e2e2ea;
-  border-radius: 10px;
-  cursor: pointer;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  gap: 0.45rem;
+  font: 600 0.85rem/1 'DM Sans', sans-serif;
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease;
 }
 
 .signup-google-btn:hover {
-  border-color: #0f3460;
-  box-shadow: 0 4px 12px rgba(15, 52, 96, 0.15);
+  border-color: #bad7e9;
+  background: #f4fbff;
 }
 
 .signup-google-icon {
-  font-size: 1.5rem;
   color: #4285f4;
+  font-size: 1rem;
 }
 
-/* Secțiune comună: logare (pe Signup) / creare cont (pe Login) */
 .auth-section {
-  margin-top: 1.5rem;
-  padding-top: 1.25rem;
-  border-top: 1px solid #e2e2ea;
-  text-align: center;
+  margin-top: 1rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid #dbe3f1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
 }
 
-.auth-section-login .auth-section-text {
-  margin: 0 0 0.75rem 0;
-  font-size: 0.95rem;
-  color: #5a5a72;
+.auth-section-text {
+  margin: 0;
+  color: #5f718d;
+  font: 500 0.86rem/1.3 'DM Sans', sans-serif;
 }
 
 .auth-section-btn {
-  display: inline-block;
-  padding: 0.6rem 1.25rem;
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: #fff;
-  background: linear-gradient(135deg, #0f3460 0%, #16213e 100%);
-  border-radius: 10px;
   text-decoration: none;
-  transition: transform 0.15s, box-shadow 0.2s;
+  border: 1px solid #c4d8e7;
+  border-radius: 999px;
+  color: #0d5d8f;
+  background: #e6f3fb;
+  padding: 0.48rem 0.8rem;
+  font: 700 0.8rem/1 'DM Sans', sans-serif;
+  transition:
+    transform 0.16s ease,
+    background-color 0.2s ease;
 }
 
 .auth-section-btn:hover {
   transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(15, 52, 96, 0.35);
-  color: #fff;
+  background: #d6ebf8;
 }
 
-.auth-section-btn:active {
-  transform: translateY(0);
+@media (max-width: 920px) {
+  .signup-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .signup-showcase {
+    padding: 1.45rem 1.2rem;
+  }
+
+  .signup-showcase h1 {
+    font-size: 1.62rem;
+  }
+}
+
+@media (max-width: 620px) {
+  .signup-page {
+    padding: 0.65rem;
+  }
+
+  .signup-card {
+    padding: 1.2rem 1rem;
+  }
+
+  .signup-title {
+    font-size: 1.35rem;
+  }
+
+  .auth-section {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
