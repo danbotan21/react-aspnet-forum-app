@@ -1,87 +1,118 @@
 import { useState } from 'react'
 import './Styles/FAQ.css'
-import { FaChevronDown, FaQuestion, FaPhone } from 'react-icons/fa'
+import { FaChevronDown, FaQuestionCircle, FaPhone, FaFileContract } from 'react-icons/fa'
 import { useNavigate } from 'react-router-dom'
 
 const FAQ_ITEMS = [
   {
     id: 1,
-    question: 'Cum îmi creez un cont pe platformă?',
+    question: 'Cum imi creez un cont pe platforma?',
     answer:
-      'Poți crea un cont din meniul principal: apasă pe „Înregistrare" (sau „Register") și completează datele solicitate (email, nume de utilizator, parolă). După confirmare, te poți autentifica oricând din pagina de Login. Contul îți oferă acces la profil, postări și comunități.',
+      'Poti crea un cont din meniul principal: apasa pe Inregistrare, completeaza email, nume de utilizator si parola, apoi confirma datele. Dupa aceea te poti autentifica din pagina de Login.',
   },
   {
     id: 2,
-    question: 'Cum creez o postare într-o comunitate?',
+    question: 'Cum creez o postare intr-o comunitate?',
     answer:
-      'Intră în comunitatea dorită și apasă pe „Creează postare" sau folosește opțiunea din meniu. Poți adăuga titlu, text, linkuri sau imagini. Postările pot fi editate sau șterse din contul tău. Asigură-te că respecti regulile comunității.',
+      'Intra in comunitatea dorita si apasa pe Creeaza postare. Poti adauga titlu, text, link-uri sau imagini. Postarile tale pot fi editate sau sterse din contul personal.',
   },
   {
     id: 3,
     question: 'Cum pot crea sau administra o comunitate?',
     answer:
-      'Din sidebar, accesează „Start Community". După crearea comunității, o poți administra din setările acesteia: poți invita membri, defini reguli și modera conținutul. Doar creatorul și moderatorii pot gestiona comunitatea.',
+      'Din sidebar foloseste Start Community. Dupa creare, poti configura reguli, invita membri si modera continutul. Doar creatorul si moderatorii au acces la setarile avansate.',
   },
   {
     id: 4,
-    question: 'Cum funcționează comentariile și notificările?',
+    question: 'Cum functioneaza comentariile si notificarile?',
     answer:
-      'Sub fiecare postare poți lăsa comentarii și răspunde la cele ale altora. Poți activa notificări pentru răspunsuri la postările sau comentariile tale din secțiunea „Notificări" din meniu. Setările de notificare pot fi ajustate din profil.',
+      'Sub fiecare postare poti lasa comentarii si raspunsuri. Pentru activitate noua primesti notificari in sectiunea Notification, iar preferintele pot fi ajustate din profil.',
   },
   {
     id: 5,
-    question: 'Cum găsesc postări sau comunități de interes?',
+    question: 'Cum gasesc postari sau comunitati de interes?',
     answer:
-      'Folosește bara de căutare pentru cuvinte cheie, nume de comunități sau teme. Poți explora comunități din secțiunile „Popular" și „Explore" din sidebar. Rezultatele pot fi filtrate după relevanță sau dată.',
+      'Foloseste cautarea dupa cuvinte cheie si exploreaza zonele Popular si Explore din sidebar. Rezultatele sunt organizate dupa relevanta si continut recent.',
   },
   {
     id: 6,
-    question: 'Ce se întâmplă dacă încălc regulile sau sunt moderat?',
+    question: 'Ce se intampla daca incalc regulile?',
     answer:
-      'Platforma folosește un sistem de moderare pentru un mediu sigur și respectuos. Conținutul neadecvat poate fi editat sau eliminat, iar în cazuri repetate contul poate fi restricționat. Regulile fiecărei comunități sunt afișate în descrierea acesteia. Pentru contestații, contactează echipa prin pagina „Contact us".',
+      'Platforma foloseste moderare pentru a mentine un spatiu sigur. Continutul neadecvat poate fi eliminat, iar in cazuri repetate contul poate fi restrictionat temporar sau permanent.',
   },
   {
     id: 7,
-    question: 'Cum îmi actualizez profilul sau parola?',
+    question: 'Cum imi actualizez profilul sau parola?',
     answer:
-      'Din meniul contului (profil) poți modifica informațiile personale, poza de profil și preferințele de afișare. Pentru schimbarea parolei, folosește opțiunea „Schimbă parola" din setările de securitate. Modificările sunt salvate imediat.',
+      'Din profil poti modifica datele personale, imaginea si preferintele. Pentru schimbarea parolei, acceseaza setarile de securitate si confirma parola noua.',
   },
 ]
 
 export const FAQ = () => {
-  const [openId, setOpenId] = useState(FAQ_ITEMS[0].id)
+  const [openIds, setOpenIds] = useState([FAQ_ITEMS[0].id])
   const navigate = useNavigate()
 
   const toggle = (id) => {
-    setOpenId((prev) => (prev === id ? null : id))
+    setOpenIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
+    )
+  }
+
+  const openAll = () => {
+    setOpenIds(FAQ_ITEMS.map((item) => item.id))
+  }
+
+  const closeAll = () => {
+    setOpenIds([])
   }
 
   return (
     <main className='app-main faq-page'>
-      <div className='faq-container'>
-        {/* Hero banner */}
+      <div className='faq-shell'>
         <section className='faq-hero'>
-          <div className='faq-hero-icon'>
-            <FaQuestion />
-          </div>
-          <div className='faq-hero-text'>
-            <h1 className='faq-title'>Întrebări frecvente</h1>
-            <p className='faq-tagline'>
-              Răspunsuri rapide despre cont, postări, comunități și moderare.
-            </p>
+          <div className='faq-badge'>SUPPORT CENTER</div>
+          <h1 className='faq-title'>Intrebari frecvente</h1>
+          <p className='faq-tagline'>
+            Raspunsuri rapide pentru cont, postari, comunitati si moderare.
+          </p>
+          <div className='faq-meta'>
+            <span>{FAQ_ITEMS.length} intrebari esentiale</span>
+            <span>Timp mediu raspuns: sub 24h</span>
           </div>
         </section>
 
-        {/* Accordion */}
-        <section className='faq-accordion-wrapper'>
+        <section className='faq-panel'>
+          <div className='faq-panel-head'>
+            <div>
+              <h2>Ghid rapid</h2>
+              <p>Deschide intrebarea care te intereseaza.</p>
+            </div>
+            <div className='faq-actions'>
+              <button
+                type='button'
+                className='faq-action-btn'
+                onClick={openAll}
+              >
+                Extinde tot
+              </button>
+              <button
+                type='button'
+                className='faq-action-btn faq-action-btn--ghost'
+                onClick={closeAll}
+              >
+                Restrange tot
+              </button>
+            </div>
+          </div>
+
           <div className='faq-accordion'>
             {FAQ_ITEMS.map((item, index) => {
-              const isOpen = openId === item.id
+              const isOpen = openIds.includes(item.id)
+
               return (
-                <div
+                <article
                   key={item.id}
                   className={`faq-item ${isOpen ? 'faq-item--open' : ''}`}
-                  // className='faq-item'
                 >
                   <button
                     type='button'
@@ -112,27 +143,40 @@ export const FAQ = () => {
                   >
                     <p className='faq-answer-text'>{item.answer}</p>
                   </div>
-                </div>
+                </article>
               )
             })}
           </div>
         </section>
 
-        {/* Contact card */}
-        <div className='faq-contact-card'>
-          <div className='faq-contact-text'>
-            <h3>Nu ai găsit răspunsul?</h3>
-            <p>Echipa noastră este disponibilă să te ajute direct.</p>
+        <section className='faq-contact-card'>
+          <div className='faq-contact-left'>
+            <FaQuestionCircle className='faq-contact-icon' />
+            <div className='faq-contact-text'>
+              <h3>Nu ai gasit raspunsul?</h3>
+              <p>Echipa noastra te poate ajuta direct.</p>
+            </div>
           </div>
-          <button
-            type='button'
-            className='faq-contact-btn'
-            onClick={() => navigate('/contact')}
-          >
-            <FaPhone style={{ fontSize: '0.78rem' }} />
-            Contactează-ne
-          </button>
-        </div>
+
+          <div className='faq-contact-actions'>
+            <button
+              type='button'
+              className='faq-contact-btn'
+              onClick={() => navigate('/contact')}
+            >
+              <FaPhone />
+              Contacteaza-ne
+            </button>
+            <button
+              type='button'
+              className='faq-contact-btn faq-contact-btn--secondary'
+              onClick={() => navigate('/terms')}
+            >
+              <FaFileContract />
+              Vezi termenii
+            </button>
+          </div>
+        </section>
       </div>
     </main>
   )
