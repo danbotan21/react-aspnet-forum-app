@@ -12,6 +12,7 @@ import { AboutUs } from './AboutUs'
 import { FAQ } from './FAQ'
 import { ExploreCommunities } from './ExploreCommunities'
 import { ContactUs } from './ContactUs'
+import { TermsAndConditions } from './Terms&Conditions'
 
 function AppLayout({ children }) {
   return (
@@ -85,6 +86,14 @@ function App() {
           element={
             <AppLayout>
               <ContactUs />
+            </AppLayout>
+          }
+        />
+        <Route
+          path='/terms'
+          element={
+            <AppLayout>
+              <TermsAndConditions />
             </AppLayout>
           }
         />
