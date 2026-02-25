@@ -14,7 +14,11 @@ export const Navbar = () => {
   return (
     <header className='navbar'>
       <div className='navbar-inner'>
-        <a href='http://localhost:5173/Home' className='navbar-logo' aria-label='credit - home'>
+        <a
+          href='http://localhost:5173/Home'
+          className='navbar-logo'
+          aria-label='credit - home'
+        >
           credit
         </a>
 
@@ -32,6 +36,7 @@ export const Navbar = () => {
           </span>
         </div>
 
+        {/* Actions + profile */}
         <div className='navbar-actions'>
           <button type='button' className='navbar-icon-btn' aria-label='Posts'>
             <FaEdit />
@@ -43,6 +48,7 @@ export const Navbar = () => {
           >
             <FaComment />
           </button>
+
           <Link
             to='/create-post'
             className='navbar-icon-btn navbar-icon-btn-plus'
@@ -50,11 +56,8 @@ export const Navbar = () => {
           >
             <FaPlus />
           </Link>
-          <Link
-            to='/notification'
-            className='navbar-icon-btn'
-            aria-label='Notifications'
-          >
+
+          <Link to='/notification' className='navbar-icon-btn'>
             <FaBell />
           </Link>
           <div className='navbar-profile'>

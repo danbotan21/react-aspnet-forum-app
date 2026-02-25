@@ -7,9 +7,11 @@ import { CreatePost } from './CreatePost'
 import { Login } from './Login'
 import { Signup } from './Signup'
 import { Notification } from './Notification'
+import { Popular } from './Popular'
 import { AboutUs } from './AboutUs'
 import { FAQ } from './FAQ'
-import { Popular } from './Popular'
+import { ExploreCommunities } from './ExploreCommunities'
+import { ContactUs } from './ContactUs'
 
 function AppLayout({ children }) {
   return (
@@ -47,6 +49,22 @@ function App() {
           }
         />
         <Route
+          path='/popular'
+          element={
+            <AppLayout>
+              <Popular />
+            </AppLayout>
+          }
+        />
+        <Route
+          path='/explore'
+          element={
+            <AppLayout>
+              <ExploreCommunities />
+            </AppLayout>
+          }
+        />
+        <Route
           path='/about'
           element={
             <AppLayout>
@@ -63,10 +81,10 @@ function App() {
           }
         />
         <Route
-          path='/popular'
+          path='/contact'
           element={
             <AppLayout>
-              <Popular />
+              <ContactUs />
             </AppLayout>
           }
         />

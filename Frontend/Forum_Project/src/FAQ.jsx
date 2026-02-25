@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import './Styles/FAQ.css'
-import { FaChevronDown, FaChevronUp, FaQuestion, FaPhone } from 'react-icons/fa'
+import { FaChevronDown, FaQuestion, FaPhone } from 'react-icons/fa'
 import { useNavigate } from 'react-router-dom'
 
 const FAQ_ITEMS = [
@@ -59,8 +59,7 @@ export const FAQ = () => {
   return (
     <main className='app-main faq-page'>
       <div className='faq-container'>
-
-        {/* ── Hero banner ── */}
+        {/* Hero banner */}
         <section className='faq-hero'>
           <div className='faq-hero-icon'>
             <FaQuestion />
@@ -73,7 +72,7 @@ export const FAQ = () => {
           </div>
         </section>
 
-        {/* ── Accordion ── */}
+        {/* Accordion */}
         <section className='faq-accordion-wrapper'>
           <div className='faq-accordion'>
             {FAQ_ITEMS.map((item, index) => {
@@ -82,6 +81,7 @@ export const FAQ = () => {
                 <div
                   key={item.id}
                   className={`faq-item ${isOpen ? 'faq-item--open' : ''}`}
+                  // className='faq-item'
                 >
                   <button
                     type='button'
@@ -95,7 +95,10 @@ export const FAQ = () => {
                       <span className='faq-question-num'>{index + 1}</span>
                       <span className='faq-question-text'>{item.question}</span>
                     </span>
-                    <span className='faq-question-icon' aria-hidden='true'>
+                    <span
+                      className={`faq-question-icon ${isOpen ? 'rotated' : ''}`}
+                      aria-hidden='true'
+                    >
                       <FaChevronDown className='faq-chevron' />
                     </span>
                   </button>
@@ -115,7 +118,7 @@ export const FAQ = () => {
           </div>
         </section>
 
-        {/* ── Contact card ── */}
+        {/* Contact card */}
         <div className='faq-contact-card'>
           <div className='faq-contact-text'>
             <h3>Nu ai găsit răspunsul?</h3>
@@ -130,7 +133,6 @@ export const FAQ = () => {
             Contactează-ne
           </button>
         </div>
-
       </div>
     </main>
   )

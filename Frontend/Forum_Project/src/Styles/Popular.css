@@ -6,8 +6,7 @@
   padding-bottom: 56px;
   /* fundalul e pe .app-layout ca să se extindă la scroll; aici doar pentru suprapunere */
   background-color: #dae0e6;
-  /* NU min-height: 100vh – altfel secțiunea e forțată la o înălțime de tot ecranul
-     și sub posturi rămâne mult spațiu gol. Înălțimea o dă conținutul. */
+
   box-sizing: border-box;
   font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
 }
@@ -339,12 +338,12 @@
 
 .vote-icon.upvote:hover,
 .vote-icon.upvote.active {
-  color: #7193ff; 
+  color: #7193ff;
 }
 
 .vote-icon.downvote:hover,
 .vote-icon.downvote.active {
-  color: #ff4500;  
+  color: #ff4500;
 }
 
 .vote-icon:active {
@@ -367,6 +366,5 @@
   color: #878a8c;
   font-size: 14px;
 }
-
 
 /* Clasa .coding nu mai forțează dimensiuni; imaginile folosesc regulile din .media-placeholder img */
