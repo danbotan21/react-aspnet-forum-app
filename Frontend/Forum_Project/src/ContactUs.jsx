@@ -15,6 +15,7 @@ const TOPICS = [
   { value: 'account', label: 'Cont si autentificare' },
   { value: 'community', label: 'Comunitati si moderare' },
   { value: 'bug', label: 'Raporteaza o problema' },
+  { value: 'legal', label: 'Intrebare legala' },
 ]
 
 export const ContactUs = () => {

@@ -30,17 +30,10 @@ export const Navbar = () => {
             placeholder='Find anything'
             aria-label='Search'
           />
-          <span className='navbar-search-right'>
-            <FaComment className='navbar-search-icon navbar-search-icon-right' />
-            <span className='navbar-search-ask'>Ask</span>
-          </span>
         </div>
 
         {/* Actions + profile */}
         <div className='navbar-actions'>
-          <button type='button' className='navbar-icon-btn' aria-label='Posts'>
-            <FaEdit />
-          </button>
           <button
             type='button'
             className='navbar-icon-btn'
