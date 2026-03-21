@@ -15,6 +15,7 @@ import { ContactUs } from './ContactUs'
 import { TermsAndConditions } from './Terms&Conditions'
 import { StartCommunity } from './StartCommunity'
 import { EditAvatar } from './EditAvatar'
+import { UserProfile } from './UserProfile'
 
 function AppLayout({ children }) {
   return (
@@ -112,6 +113,14 @@ function App() {
           element={
             <AppLayout>
               <EditAvatar />
+            </AppLayout>
+          }
+        />
+        <Route
+          path='/user/:username'
+          element={
+            <AppLayout>
+              <UserProfile />
             </AppLayout>
           }
         />

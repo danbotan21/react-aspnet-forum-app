@@ -111,7 +111,7 @@ export const Navbar = () => {
                   onClick={() => setIsOpen(false)}
                 >
                   <FaUsers className='profile-dropdown-item-icon' />
-                  <span>Your Communities &amp; Posts</span>
+                  <span>Your Profile</span>
                 </Link>
 
                 <Link
