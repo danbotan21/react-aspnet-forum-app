@@ -43,7 +43,7 @@
   font-weight: 700;
   color: rgb(15, 67, 199);
   text-decoration: none;
-  text-transform: lowercase;
+  /* text-transform: lowercase; */
   letter-spacing: -0.02em;
   flex-shrink: 0;
   transition: opacity 0.2s ease;
@@ -165,6 +165,7 @@
 
 /* Profile */
 .navbar-profile {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 4px;
@@ -199,4 +200,108 @@
 
 .navbar-avatar {
   margin-right: 15px;
+}
+
+/* ===== Profile Dropdown ===== */
+.profile-dropdown {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  background: #ffffff;
+  border: 1px solid #e9ecef;
+  border-radius: 16px;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.12),
+    0 2px 8px rgba(0, 0, 0, 0.08);
+  min-width: 264px;
+  z-index: 200;
+  overflow: hidden;
+  padding: 8px 0;
+}
+
+.profile-dropdown-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px 16px 16px;
+  gap: 6px;
+}
+
+.profile-dropdown-avatar {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  border: 2px solid rgb(15, 67, 199);
+  object-fit: cover;
+}
+
+.profile-dropdown-username {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #1a1a1b;
+  margin-top: 4px;
+}
+
+.profile-dropdown-karma {
+  font-size: 0.8125rem;
+  color: #7c7c7c;
+}
+
+.profile-dropdown-divider {
+  height: 1px;
+  background-color: #e9ecef;
+  margin: 4px 0;
+}
+
+.profile-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 16px;
+  font-size: 0.9375rem;
+  color: #1a1a1b;
+  text-decoration: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+  font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+  box-sizing: border-box;
+}
+
+.profile-dropdown-item:hover {
+  background-color: #f8f9fa;
+  color: rgb(15, 67, 199);
+}
+
+.profile-dropdown-item:hover .profile-dropdown-item-icon {
+  color: rgb(15, 67, 199);
+}
+
+.profile-dropdown-item-icon {
+  font-size: 1rem;
+  color: #7c7c7c;
+  flex-shrink: 0;
+  transition: color 0.15s ease;
+}
+
+.profile-dropdown-logout {
+  color: #e74c3c;
+}
+
+.profile-dropdown-logout .profile-dropdown-item-icon {
+  color: #e74c3c;
+}
+
+.profile-dropdown-logout:hover {
+  background-color: #fff5f5;
+  color: #c0392b;
+}
+
+.profile-dropdown-logout:hover .profile-dropdown-item-icon {
+  color: #c0392b;
 }

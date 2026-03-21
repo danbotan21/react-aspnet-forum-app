@@ -145,7 +145,9 @@ export const Home = () => {
                     type='button'
                     className='more-button'
                     onClick={() =>
-                      setOpenMorePostId((prev) => (prev === post.id ? null : post.id))
+                      setOpenMorePostId((prev) =>
+                        prev === post.id ? null : post.id,
+                      )
                     }
                     aria-expanded={openMorePostId === post.id}
                     aria-haspopup='menu'

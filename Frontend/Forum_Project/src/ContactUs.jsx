@@ -48,7 +48,8 @@ export const ContactUs = () => {
           <article className='contact-card contact-card--form'>
             <h2 className='contact-section-title'>Trimite un mesaj</h2>
             <p className='contact-section-desc'>
-              Completeaza formularul, iar echipa noastra te va contacta pe email.
+              Completeaza formularul, iar echipa noastra te va contacta pe
+              email.
             </p>
 
             <form className='contact-form' onSubmit={handleSubmit}>
