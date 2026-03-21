@@ -1,0 +1,402 @@
+.edit-avatar-page {
+  padding-top: 72px;
+  padding-left: 296px;
+  padding-right: 32px;
+  padding-bottom: 56px;
+  min-height: 100vh;
+  background: linear-gradient(160deg, #f0f4ff 0%, #f8f9fa 60%);
+  box-sizing: border-box;
+  font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+}
+
+/* ===== Page Header ===== */
+.edit-avatar-page-header {
+  max-width: 100%;
+  margin: 0;
+  padding: 28px 0 20px;
+  border-bottom: 1px solid #e9ecef;
+  margin-bottom: 28px;
+}
+
+.edit-avatar-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1a1a1b;
+  margin: 0 0 4px 0;
+}
+
+.edit-avatar-subtitle {
+  font-size: 0.875rem;
+  color: #7c7c7c;
+  margin: 0;
+}
+
+.edit-avatar-container {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 56px;
+  max-width: 100%;
+  padding-top: 32px;
+}
+/* ===== Left Panel ===== */
+.edit-avatar-left {
+  width: 320px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background: #ffffff;
+  border: 1px solid #e9ecef;
+  border-radius: 20px;
+  padding: 0;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.07);
+  overflow: hidden;
+}
+
+.edit-avatar-preview-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 32px 24px 28px;
+  flex: 1;
+}
+
+.edit-avatar-preview-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #7c7c7c;
+  align-self: flex-start;
+}
+
+.edit-avatar-preview-circle {
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  border: 3px solid rgb(15, 67, 199);
+  overflow: hidden;
+  background: radial-gradient(circle at 60% 40%, #e8f0fe, #dde7f7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 20px rgba(15, 67, 199, 0.18);
+}
+
+.edit-avatar-preview-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.edit-avatar-username {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1a1a1b;
+  letter-spacing: -0.01em;
+}
+
+.edit-avatar-left-divider {
+  height: 1px;
+  background-color: #e9ecef;
+  flex-shrink: 0;
+}
+
+.edit-avatar-save-section {
+  padding: 20px 24px;
+}
+
+.edit-avatar-save-btn {
+  width: 100%;
+  height: 46px;
+  background-color: rgb(15, 67, 199);
+  color: #ffffff;
+  border: none;
+  border-radius: 24px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+  transition:
+    background-color 0.2s ease,
+    transform 0.1s ease,
+    box-shadow 0.2s ease;
+  box-shadow: 0 2px 10px rgba(15, 67, 199, 0.3);
+}
+
+.edit-avatar-save-btn:hover {
+  background-color: rgb(12, 54, 170);
+  box-shadow: 0 4px 16px rgba(15, 67, 199, 0.4);
+}
+
+.edit-avatar-save-btn:active {
+  transform: scale(0.98);
+}
+
+/* ===== Right Panel ===== */
+.edit-avatar-right {
+  flex: 1;
+  min-width: 0;
+  background: #ffffff;
+  border: 1px solid #e9ecef;
+  border-radius: 20px;
+  padding: 0 24px 28px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.07);
+}
+
+.edit-avatar-tabs {
+  display: flex;
+  flex-direction: row;
+  border-bottom: 2px solid #e9ecef;
+  margin-bottom: 24px;
+}
+
+.edit-avatar-tab {
+  padding: 18px 24px 16px;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: #7c7c7c;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  cursor: pointer;
+  font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.edit-avatar-tab.active {
+  color: rgb(15, 67, 199);
+  border-bottom-color: rgb(15, 67, 199);
+}
+
+/* ===== Outfit Grid ===== */
+.outfit-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.outfit-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  border-radius: 14px;
+  border: 2px solid #e9ecef;
+  cursor: pointer;
+  background-color: #ffffff;
+  overflow: hidden;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
+  outline: none;
+}
+
+.outfit-card:hover {
+  border-color: rgba(15, 67, 199, 0.45);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.09);
+}
+
+.outfit-card.selected {
+  border-color: rgb(15, 67, 199);
+  box-shadow: 0 0 0 3px rgba(15, 67, 199, 0.18);
+}
+
+.outfit-card.selected:hover {
+  transform: translateY(-2px);
+}
+
+.outfit-card-img-wrap {
+  width: 100%;
+  background-color: #f0e9d8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 0 12px;
+}
+
+.outfit-card img {
+  width: 72%;
+  aspect-ratio: 1;
+  object-fit: contain;
+}
+
+.outfit-card-name {
+  font-size: 0.8125rem;
+  color: #4a4a4b;
+  text-align: center;
+  font-weight: 600;
+  padding: 10px 8px 12px;
+  width: 100%;
+  background: #ffffff;
+}
+
+.edit-avatar-container {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 32px;
+  max-width: 880px;
+  margin: 0 auto;
+  padding-top: 32px;
+}
+
+/* ===== Left Panel ===== */
+.edit-avatar-left {
+  width: 240px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  background: #ffffff;
+  border: 1px solid #e9ecef;
+  border-radius: 16px;
+  padding: 28px 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.edit-avatar-preview-circle {
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  border: 3px solid rgb(15, 67, 199);
+  overflow: hidden;
+  background-color: #edf0f7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.edit-avatar-preview-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.edit-avatar-username {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #1a1a1b;
+}
+
+.edit-avatar-save-btn {
+  width: 100%;
+  height: 44px;
+  background-color: rgb(15, 67, 199);
+  color: #ffffff;
+  border: none;
+  border-radius: 24px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+  transition:
+    background-color 0.2s ease,
+    transform 0.1s ease;
+  margin-top: 8px;
+}
+
+.edit-avatar-save-btn:hover {
+  background-color: rgb(12, 54, 170);
+}
+
+.edit-avatar-save-btn:active {
+  transform: scale(0.98);
+}
+
+/* ===== Right Panel ===== */
+.edit-avatar-right {
+  flex: 1;
+  min-width: 0;
+  background: #ffffff;
+  border: 1px solid #e9ecef;
+  border-radius: 16px;
+  padding: 0 20px 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.edit-avatar-tabs {
+  display: flex;
+  flex-direction: row;
+  border-bottom: 2px solid #e9ecef;
+  margin-bottom: 20px;
+}
+
+.edit-avatar-tab {
+  padding: 16px 20px 14px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #7c7c7c;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  cursor: pointer;
+  font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.edit-avatar-tab.active {
+  color: rgb(15, 67, 199);
+  border-bottom-color: rgb(15, 67, 199);
+}
+
+/* ===== Outfit Grid ===== */
+.outfit-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+
+.outfit-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 8px;
+  border-radius: 12px;
+  border: 2px solid #e9ecef;
+  cursor: pointer;
+  background-color: #ffffff;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease,
+    box-shadow 0.15s ease;
+  outline: none;
+}
+
+.outfit-card:hover {
+  background-color: rgba(15, 67, 199, 0.04);
+  border-color: rgba(15, 67, 199, 0.4);
+}
+
+.outfit-card.selected {
+  border-color: rgb(15, 67, 199);
+  box-shadow: 0 0 0 3px rgba(15, 67, 199, 0.15);
+  background-color: rgba(15, 67, 199, 0.04);
+}
+
+.outfit-card img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+.outfit-card-name {
+  font-size: 0.8rem;
+  color: #7c7c7c;
+  text-align: center;
+  font-weight: 500;
+}
