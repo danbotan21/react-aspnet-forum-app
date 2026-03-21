@@ -1,0 +1,626 @@
+/* ============================================================================
+   STYLES.CSS - Professional Academic Report Styling (Word-like)
+   ============================================================================ */
+
+:root {
+    --primary-color: #1f2937;
+    --secondary-color: #374151;
+    --accent-color: #2563eb;
+    --text-dark: #111827;
+    --text-light: #6b7280;
+    --border-color: #e5e7eb;
+    --background-color: #ffffff;
+    --light-gray: #f3f4f6;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html {
+    font-size: 16px;
+}
+
+body {
+    font-family: 'Calibri', 'Garamond', 'Georgia', sans-serif;
+    color: var(--text-dark);
+    background-color: #f5f5f5;
+    line-height: 1.6;
+    padding: 20px;
+}
+
+/* ============================================================================
+   DOCUMENT CONTAINER
+   ============================================================================ */
+
+.document {
+    width: 210mm;
+    height: 297mm;
+    margin: 0 auto;
+    background-color: var(--background-color);
+    padding: 25mm;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    font-size: 12pt;
+    line-height: 1.5;
+}
+
+@media (max-width: 1200px) {
+    .document {
+        width: 100%;
+        max-width: 900px;
+        margin: 10px auto;
+    }
+}
+
+/* ============================================================================
+   DOCUMENT HEADER (UNIVERSITY INFO)
+   ============================================================================ */
+
+.document-header {
+    text-align: center;
+    border-bottom: 2px solid var(--primary-color);
+    padding-bottom: 20px;
+    margin-bottom: 30px;
+}
+
+.university-info {
+    line-height: 1.8;
+}
+
+.university-name {
+    font-size: 18pt;
+    font-weight: 700;
+    color: var(--primary-color);
+    letter-spacing: 1px;
+    margin-bottom: 5px;
+}
+
+.faculty-name {
+    font-size: 12pt;
+    font-weight: 600;
+    color: var(--secondary-color);
+    margin-bottom: 3px;
+}
+
+.department {
+    font-size: 11pt;
+    color: var(--text-light);
+}
+
+/* ============================================================================
+   TITLE SECTION
+   ============================================================================ */
+
+.title-section {
+    text-align: center;
+    margin-bottom: 40px;
+    page-break-after: always;
+}
+
+.document-title {
+    font-size: 24pt;
+    font-weight: 700;
+    color: var(--primary-color);
+    margin-bottom: 15px;
+    line-height: 1.3;
+}
+
+.document-subtitle {
+    font-size: 14pt;
+    font-weight: 600;
+    color: var(--accent-color);
+    margin-bottom: 20px;
+}
+
+.document-date {
+    font-size: 12pt;
+    color: var(--text-light);
+    font-style: italic;
+}
+
+/* ============================================================================
+   TABLE OF CONTENTS
+   ============================================================================ */
+
+.toc-section {
+    margin-bottom: 40px;
+    page-break-after: always;
+    border: 1px solid var(--border-color);
+    padding: 20px;
+    background-color: var(--light-gray);
+}
+
+.toc-section h2 {
+    font-size: 16pt;
+    font-weight: 700;
+    color: var(--primary-color);
+    margin-bottom: 20px;
+}
+
+.toc-list {
+    margin-left: 30px;
+}
+
+.toc-list li {
+    font-size: 11pt;
+    margin-bottom: 10px;
+    color: var(--text-dark);
+    list-style-type: decimal;
+}
+
+/* ============================================================================
+   PAGE BREAKS
+   ============================================================================ */
+
+.page-break {
+    page-break-after: always;
+    margin: 40px 0;
+    border-bottom: 1px dotted var(--border-color);
+}
+
+/* ============================================================================
+   REPORT SECTIONS
+   ============================================================================ */
+
+.report-section {
+    margin-bottom: 30px;
+    line-height: 1.6;
+}
+
+.report-section p {
+    margin-bottom: 12pt;
+    text-align: justify;
+    color: var(--text-dark);
+    font-size: 12pt;
+}
+
+.report-section > p:first-of-type::first-letter {
+    font-weight: 600;
+}
+
+/* ============================================================================
+   HEADINGS
+   ============================================================================ */
+
+.section-title {
+    font-size: 16pt;
+    font-weight: 700;
+    color: var(--primary-color);
+    margin-top: 30px;
+    margin-bottom: 20px;
+    border-bottom: 2px solid var(--accent-color);
+    padding-bottom: 10px;
+    page-break-after: avoid;
+}
+
+.subsection-title {
+    font-size: 13pt;
+    font-weight: 600;
+    color: var(--secondary-color);
+    margin-top: 20px;
+    margin-bottom: 12px;
+    page-break-after: avoid;
+}
+
+.subsubsection-title {
+    font-size: 12pt;
+    font-weight: 600;
+    color: var(--text-dark);
+    margin-top: 15px;
+    margin-bottom: 10px;
+    page-break-after: avoid;
+}
+
+/* ============================================================================
+   LISTS
+   ============================================================================ */
+
+.bullet-list {
+    margin: 15px 0 15px 40px;
+    list-style-type: disc;
+}
+
+.bullet-list li {
+    margin-bottom: 8pt;
+    color: var(--text-dark);
+    font-size: 11pt;
+    page-break-inside: avoid;
+}
+
+.bullet-list strong {
+    color: var(--secondary-color);
+    font-weight: 600;
+}
+
+.numbered-list {
+    margin: 15px 0 15px 40px;
+    list-style-type: decimal;
+}
+
+.numbered-list li {
+    margin-bottom: 10pt;
+    color: var(--text-dark);
+    font-size: 11pt;
+    page-break-inside: avoid;
+}
+
+.numbered-list strong {
+    color: var(--secondary-color);
+}
+
+/* ============================================================================
+   CODE & CODE BLOCKS
+   ============================================================================ */
+
+code {
+    background-color: var(--light-gray);
+    color: var(--accent-color);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: 'Courier New', monospace;
+    font-size: 11pt;
+}
+
+.code-block {
+    background-color: var(--light-gray);
+    border-left: 4px solid var(--accent-color);
+    font-family: 'Courier New', monospace;
+    font-size: 10pt;
+    padding: 15px;
+    margin: 15px 0;
+    overflow-x: auto;
+    color: var(--text-dark);
+    line-height: 1.4;
+    page-break-inside: avoid;
+}
+
+/* ============================================================================
+   EMPHASIS STYLES
+   ============================================================================ */
+
+strong {
+    font-weight: 700;
+    color: var(--secondary-color);
+}
+
+em {
+    font-style: italic;
+    color: var(--text-light);
+}
+
+u {
+    text-decoration: underline;
+    text-decoration-color: var(--accent-color);
+    text-decoration-thickness: 2px;
+    text-underline-offset: 3px;
+}
+
+/* ============================================================================
+   BLOCKQUOTE & SPECIAL BLOCKS
+   ============================================================================ */
+
+blockquote {
+    border-left: 4px solid var(--accent-color);
+    padding-left: 20px;
+    margin-left: 0;
+    margin: 20px 0;
+    color: var(--text-light);
+    font-style: italic;
+    background-color: var(--light-gray);
+    padding: 15px 20px;
+}
+
+/* ============================================================================
+   TABLES (IF NEEDED)
+   ============================================================================ */
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+    background-color: var(--background-color);
+}
+
+table th {
+    background-color: var(--primary-color);
+    color: white;
+    padding: 12px;
+    text-align: left;
+    font-weight: 700;
+    border: 1px solid var(--border-color);
+}
+
+table td {
+    padding: 10px;
+    border: 1px solid var(--border-color);
+    color: var(--text-dark);
+    font-size: 11pt;
+}
+
+table tr:nth-child(even) {
+    background-color: var(--light-gray);
+}
+
+table tr:hover {
+    background-color: rgba(37, 99, 235, 0.05);
+}
+
+/* ============================================================================
+   FOOTER
+   ============================================================================ */
+
+.document-footer {
+    margin-top: 60px;
+    padding-top: 20px;
+    border-top: 2px solid var(--border-color);
+    text-align: center;
+    font-size: 10pt;
+    color: var(--text-light);
+    page-break-before: avoid;
+}
+
+.footer-text {
+    margin: 5px 0;
+}
+
+.footer-text:last-child {
+    margin-bottom: 0;
+}
+
+/* ============================================================================
+   UTILITY CLASSES
+   ============================================================================ */
+
+.text-center {
+    text-align: center;
+}
+
+.text-right {
+    text-align: right;
+}
+
+.text-justify {
+    text-align: justify;
+}
+
+.mt-20 {
+    margin-top: 20px;
+}
+
+.mb-20 {
+    margin-bottom: 20px;
+}
+
+.ml-20 {
+    margin-left: 20px;
+}
+
+.mr-20 {
+    margin-right: 20px;
+}
+
+/* ============================================================================
+   PRINT STYLES
+   ============================================================================ */
+
+@media print {
+    body {
+        background-color: white;
+        padding: 0;
+    }
+
+    .document {
+        width: 100%;
+        margin: 0;
+        padding: 25mm;
+        box-shadow: none;
+    }
+
+    .page-break {
+        page-break-after: always;
+    }
+
+    .section-title,
+    .subsection-title {
+        page-break-after: avoid;
+    }
+
+    .bullet-list li,
+    .numbered-list li {
+        page-break-inside: avoid;
+    }
+
+    code {
+        background-color: transparent;
+        border: 1px solid var(--border-color);
+    }
+
+    a {
+        color: var(--text-dark);
+        text-decoration: none;
+    }
+
+    .document-footer {
+        border-top: 1px solid var(--text-light);
+    }
+
+    @page {
+        margin: 25mm;
+    }
+}
+
+/* ============================================================================
+   RESPONSIVE DESIGN - TABLET
+   ============================================================================ */
+
+@media (max-width: 768px) {
+    .document {
+        padding: 20px;
+        font-size: 11pt;
+    }
+
+    .section-title {
+        font-size: 14pt;
+    }
+
+    .subsection-title {
+        font-size: 12pt;
+    }
+
+    .bullet-list,
+    .numbered-list {
+        margin-left: 30px;
+    }
+
+    .code-block {
+        font-size: 9pt;
+    }
+}
+
+/* ============================================================================
+   RESPONSIVE DESIGN - MOBILE
+   ============================================================================ */
+
+@media (max-width: 480px) {
+    body {
+        padding: 10px;
+    }
+
+    .document {
+        padding: 15px;
+        font-size: 11pt;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .document-title {
+        font-size: 18pt;
+    }
+
+    .document-subtitle {
+        font-size: 12pt;
+    }
+
+    .section-title {
+        font-size: 13pt;
+    }
+
+    .subsection-title {
+        font-size: 11pt;
+    }
+
+    .university-name {
+        font-size: 14pt;
+    }
+
+    .bullet-list,
+    .numbered-list {
+        margin-left: 20px;
+    }
+
+    .bullet-list li,
+    .numbered-list li {
+        font-size: 10pt;
+    }
+
+    .code-block {
+        font-size: 8pt;
+        padding: 10px;
+    }
+}
+
+/* ============================================================================
+   DARK MODE SUPPORT (OPTIONAL)
+   ============================================================================ */
+
+@media (prefers-color-scheme: dark) {
+    body {
+        background-color: #1a1a1a;
+    }
+
+    .document {
+        background-color: #2d2d2d;
+        color: #e0e0e0;
+    }
+
+    .document-title,
+    .section-title {
+        color: #60a5fa;
+    }
+
+    .text-dark {
+        color: #e0e0e0;
+    }
+
+    .text-light {
+        color: #9ca3af;
+    }
+
+    code {
+        background-color: #1f2937;
+        color: #60a5fa;
+    }
+
+    .code-block {
+        background-color: #1f2937;
+        border-left-color: #60a5fa;
+        color: #e0e0e0;
+    }
+
+    .light-gray {
+        background-color: #1f2937;
+    }
+
+    table {
+        background-color: #2d2d2d;
+    }
+
+    table th {
+        background-color: #1f2937;
+    }
+
+    table td {
+        border-color: #404040;
+        color: #e0e0e0;
+    }
+
+    table tr:nth-child(even) {
+        background-color: #1f2937;
+    }
+}
+
+/* ============================================================================
+   ANIMATIONS & TRANSITIONS
+   ============================================================================ */
+
+a {
+    transition: color 0.3s ease;
+}
+
+a:hover {
+    color: var(--accent-color);
+    text-decoration: underline;
+}
+
+/* ============================================================================
+   ACCESSIBILITY
+   ============================================================================ */
+
+:focus {
+    outline: 2px solid var(--accent-color);
+    outline-offset: 2px;
+}
+
+/* Screen reader only */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+}

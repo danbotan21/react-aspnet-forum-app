@@ -292,7 +292,7 @@ export const CreatePost = () => {
           </div>
         </div>
 
-        <footer className='create-post-footer'>
+        {/* <footer className='create-post-footer'>
           <a href='#' className='create-post-footer-link'>
             About
           </a>
@@ -305,7 +305,7 @@ export const CreatePost = () => {
           <a href='#' className='create-post-footer-link'>
             Terms
           </a>
-        </footer>
+        </footer> */}
       </div>
 
       {isDraftsOpen && (

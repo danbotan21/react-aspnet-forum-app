@@ -15,6 +15,9 @@ import { ContactUs } from './ContactUs'
 import { TermsAndConditions } from './Terms&Conditions'
 import { StartCommunity } from './StartCommunity'
 import { EditAvatar } from './EditAvatar'
+import { UserProfile } from './UserProfile'
+import { CommunityPage } from './CommunityPage'
+import { PostPage } from './PostPage'
 
 function AppLayout({ children }) {
   return (
@@ -68,6 +71,22 @@ function App() {
           }
         />
         <Route
+          path='/home'
+          element={
+            <AppLayout>
+              <Home />
+            </AppLayout>
+          }
+        />
+        <Route
+          path='/Home'
+          element={
+            <AppLayout>
+              <Home />
+            </AppLayout>
+          }
+        />
+        <Route
           path='/explore'
           element={
             <AppLayout>
@@ -112,6 +131,30 @@ function App() {
           element={
             <AppLayout>
               <EditAvatar />
+            </AppLayout>
+          }
+        />
+        <Route
+          path='/user/:username'
+          element={
+            <AppLayout>
+              <UserProfile />
+            </AppLayout>
+          }
+        />
+        <Route
+          path='/community/:communityname/post/:postId'
+          element={
+            <AppLayout>
+              <PostPage />
+            </AppLayout>
+          }
+        />
+        <Route
+          path='/community/:communityname'
+          element={
+            <AppLayout>
+              <CommunityPage />
             </AppLayout>
           }
         />

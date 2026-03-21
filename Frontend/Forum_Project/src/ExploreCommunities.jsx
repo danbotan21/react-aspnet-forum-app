@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import {
   FaFire,
   FaLeaf,
@@ -212,12 +213,16 @@ export const ExploreCommunities = () => {
                       >
                         <Icon />
                       </div>
-                      <button type='button' className='explore-join-btn'>
-                        Join
-                      </button>
+                      <Link to={`/community/${community.id}`} className='explore-join-btn'>
+                        Visit
+                      </Link>
                     </div>
 
-                    <h3>{community.name}</h3>
+                    <h3>
+                      <Link to={`/community/${community.id}`} className='explore-community-link'>
+                        {community.name}
+                      </Link>
+                    </h3>
                     <p className='explore-visitors'>
                       {community.visitors} weekly visitors
                     </p>

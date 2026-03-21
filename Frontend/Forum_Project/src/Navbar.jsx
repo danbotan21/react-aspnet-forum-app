@@ -16,6 +16,7 @@ import avatar from './img/avatar.webp'
 export const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false)
   const profileRef = useRef(null)
+  const loggedUser = 'username'
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -90,7 +91,7 @@ export const Navbar = () => {
                     alt='avatar'
                     className='profile-dropdown-avatar'
                   />
-                  <span className='profile-dropdown-username'>u/username</span>
+                  <span className='profile-dropdown-username'>u/{loggedUser}</span>
                   <span className='profile-dropdown-karma'>0 karma</span>
                 </div>
 
@@ -106,12 +107,12 @@ export const Navbar = () => {
                 </Link>
 
                 <Link
-                  to='#'
+                  to={`/user/${loggedUser}`}
                   className='profile-dropdown-item'
                   onClick={() => setIsOpen(false)}
                 >
                   <FaUsers className='profile-dropdown-item-icon' />
-                  <span>Your Communities &amp; Posts</span>
+                  <span>Your Profile</span>
                 </Link>
 
                 <Link
