@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import './Styles/Popular.css'
 import avatar from './img/avatar.webp'
 import shreck from './img/shreck.png'
@@ -54,6 +55,11 @@ const handleVote = (type) => {
     console.log('Downvoted')
   }
 }
+
+const getUsernameFromAuthor = (author) => author.replace(/^u\//, '')
+const getSlugFromCommunity = (community) => community.replace(/^r\//, '')
+const getPostRoute = (post) =>
+  `/community/${encodeURIComponent(getSlugFromCommunity(post.community))}/post/${post.id}`
 
 export const Popular = () => {
   const [openMorePostId, setOpenMorePostId] = useState(null)
@@ -133,11 +139,21 @@ export const Popular = () => {
               <header className='post-header'>
                 <img src={avatar} alt='Community Avatar' className='avatar' />
                 <div className='post-meta'>
-                  <span className='community-name'>{post.community}</span>
+                  <Link
+                    to={`/community/${encodeURIComponent(getSlugFromCommunity(post.community))}`}
+                    className='community-name community-link'
+                  >
+                    {post.community}
+                  </Link>
                   <span className='meta-separator'>&middot;</span>
                   <span className='time-posted'>{post.time}</span>
                   <span className='meta-separator'>&middot;</span>
-                  <span className='author'>Posted by {post.author}</span>
+                  <Link
+                    to={`/user/${encodeURIComponent(getUsernameFromAuthor(post.author))}`}
+                    className='author author-link'
+                  >
+                    Posted by {post.author}
+                  </Link>
                 </div>
 
                 <div className='post-header-actions'>
@@ -155,6 +171,22 @@ export const Popular = () => {
                   </button>
                   {openMorePostId === post.id && (
                     <div className='more-menu' role='menu'>
+                      <Link
+                        to={getPostRoute(post)}
+                        className='more-menu-item more-menu-link'
+                        role='menuitem'
+                        onClick={() => setOpenMorePostId(null)}
+                      >
+                        Open post
+                      </Link>
+                      <Link
+                        to={`/user/${encodeURIComponent(getUsernameFromAuthor(post.author))}`}
+                        className='more-menu-item more-menu-link'
+                        role='menuitem'
+                        onClick={() => setOpenMorePostId(null)}
+                      >
+                        View {post.author} profile
+                      </Link>
                       <button className='more-menu-item' role='menuitem'>
                         Save
                       </button>
@@ -170,13 +202,19 @@ export const Popular = () => {
               </header>
 
               <div className='post-body'>
-                <h3 className='post-title'>{post.title}</h3>
+                <h3 className='post-title'>
+                  <Link to={getPostRoute(post)} className='post-title-link'>
+                    {post.title}
+                  </Link>
+                </h3>
                 <p className='post-text'>{post.text}</p>
 
                 <div className='post-media'>
-                  <div className='media-placeholder'>
-                    <img src={post.image} alt='Post content' />
-                  </div>
+                  <Link to={getPostRoute(post)} className='post-media-link'>
+                    <div className='media-placeholder'>
+                      <img src={post.image} alt='Post content' />
+                    </div>
+                  </Link>
                 </div>
               </div>
 

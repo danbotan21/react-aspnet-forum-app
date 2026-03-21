@@ -66,7 +66,7 @@ export const SideBar = () => {
             <div className='communities'>
               <div
                 className='community'
-                onClick={() => navigate('/community/1')}
+                onClick={() => navigate('/community/pixelarena')}
               >
                 <img
                   src={man}
@@ -79,7 +79,7 @@ export const SideBar = () => {
 
               <div
                 className='community'
-                onClick={() => navigate('/community/2')}
+                onClick={() => navigate('/community/memes')}
               >
                 <img
                   src={shreck}
