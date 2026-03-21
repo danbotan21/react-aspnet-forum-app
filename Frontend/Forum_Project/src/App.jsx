@@ -14,6 +14,7 @@ import { ExploreCommunities } from './ExploreCommunities'
 import { ContactUs } from './ContactUs'
 import { TermsAndConditions } from './Terms&Conditions'
 import { StartCommunity } from './StartCommunity'
+import { EditAvatar } from './EditAvatar'
 
 function AppLayout({ children }) {
   return (
@@ -34,7 +35,7 @@ function App() {
         <Route path='/login' element={<Login />} />
         <Route path='/register' element={<Signup />} />
 
-        <Route 
+        <Route
           path='/start-community'
           element={
             <AppLayout>
@@ -98,11 +99,19 @@ function App() {
             </AppLayout>
           }
         />
-        <Route 
+        <Route
           path='/terms'
           element={
             <AppLayout>
               <TermsAndConditions />
+            </AppLayout>
+          }
+        />
+        <Route
+          path='/edit-avatar'
+          element={
+            <AppLayout>
+              <EditAvatar />
             </AppLayout>
           }
         />

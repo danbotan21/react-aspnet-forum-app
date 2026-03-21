@@ -149,7 +149,11 @@ export const CreatePost = () => {
         </div>
 
         <div className='create-post-editor'>
-          <div className='create-post-tabs' role='tablist' aria-label='Post type'>
+          <div
+            className='create-post-tabs'
+            role='tablist'
+            aria-label='Post type'
+          >
             <button
               type='button'
               role='tab'
@@ -333,9 +337,13 @@ export const CreatePost = () => {
                 <div className='drafts-item-main'>
                   <div className='drafts-item-title'>Incerc Draft</div>
                   <div className='drafts-item-sub'>
-                    <span className='drafts-item-community'>r/15minutefood</span>
+                    <span className='drafts-item-community'>
+                      r/15minutefood
+                    </span>
                     <span className='drafts-dot'>*</span>
-                    <span className='drafts-item-edited'>Edited 44 min. ago</span>
+                    <span className='drafts-item-edited'>
+                      Edited 44 min. ago
+                    </span>
                   </div>
                 </div>
                 <div className='drafts-item-actions'>
@@ -364,7 +372,9 @@ export const CreatePost = () => {
                   <div className='drafts-item-sub'>
                     <span className='drafts-item-community'>r/webdev</span>
                     <span className='drafts-dot'>*</span>
-                    <span className='drafts-item-edited'>Edited 2 hours ago</span>
+                    <span className='drafts-item-edited'>
+                      Edited 2 hours ago
+                    </span>
                   </div>
                 </div>
                 <div className='drafts-item-actions'>
