@@ -71,9 +71,10 @@ export const Login = () => {
               autoComplete='current-password'
             />
 
-            <Link to='/forgot-password' className='login-forgot'>
+            {/* <Link to='/forgot-password' className='login-forgot'>
               Ai uitat parola?
-            </Link>
+            </Link> */}
+            <Link className='login-forgot'>Ai uitat parola?</Link>
 
             <button type='submit' className='login-btn'>
               Autentificare

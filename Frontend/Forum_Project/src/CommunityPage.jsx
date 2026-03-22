@@ -112,6 +112,7 @@ const POSTS = [
   {
     id: 1,
     author: 'u/exampleUser',
+    authorAvatar: man,
     time: '4 hr. ago',
     title: 'How should we organize reusable UI primitives in this community?',
     text: 'Share your folder strategy for scalable projects and how you keep naming consistent.',
@@ -122,6 +123,7 @@ const POSTS = [
   {
     id: 2,
     author: 'u/designPilot',
+    authorAvatar: avatar,
     time: '8 hr. ago',
     title: 'Best layout for profile + feed pages in forum products',
     text: 'Looking for practical structure ideas that keep nav, sidebar and content aligned.',
@@ -194,7 +196,11 @@ export function CommunityPage() {
             </div>
 
             <div className='community-head'>
-              <img src={community.image} alt='Community avatar' className='community-avatar' />
+              <img
+                src={community.image}
+                alt='Community avatar'
+                className='community-avatar'
+              />
               <div className='community-meta'>
                 <h1>{community.title}</h1>
                 <p>r/{community.name}</p>
@@ -228,23 +234,24 @@ export function CommunityPage() {
               <article key={post.id} className='post'>
                 <div className='post-main'>
                   <header className='post-header'>
-                    <img src={community.image} alt='Community Avatar' className='avatar' />
+                    <Link
+                      to={`/user/${encodeURIComponent(getUsernameFromAuthor(post.author))}`}
+                    >
+                      <img
+                        src={post.authorAvatar}
+                        alt={post.author}
+                        className='avatar'
+                      />
+                    </Link>
                     <div className='post-meta'>
-                      <Link
-                        to={`/community/${encodeURIComponent(community.name)}`}
-                        className='community-name community-link'
-                      >
-                        r/{community.name}
-                      </Link>
-                      <span className='meta-separator'>&middot;</span>
-                      <span className='time-posted'>{post.time}</span>
-                      <span className='meta-separator'>&middot;</span>
                       <Link
                         to={`/user/${encodeURIComponent(getUsernameFromAuthor(post.author))}`}
                         className='author author-link'
                       >
-                        Posted by {post.author}
+                        {post.author}
                       </Link>
+                      <span className='meta-separator'>&middot;</span>
+                      <span className='time-posted'>{post.time}</span>
                     </div>
 
                     <div className='post-header-actions'>
@@ -252,7 +259,9 @@ export function CommunityPage() {
                         type='button'
                         className='more-button'
                         onClick={() =>
-                          setOpenMorePostId((prev) => (prev === post.id ? null : post.id))
+                          setOpenMorePostId((prev) =>
+                            prev === post.id ? null : post.id,
+                          )
                         }
                         aria-expanded={openMorePostId === post.id}
                         aria-haspopup='menu'

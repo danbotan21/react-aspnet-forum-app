@@ -91,7 +91,9 @@ export const Navbar = () => {
                     alt='avatar'
                     className='profile-dropdown-avatar'
                   />
-                  <span className='profile-dropdown-username'>u/{loggedUser}</span>
+                  <span className='profile-dropdown-username'>
+                    u/{loggedUser}
+                  </span>
                   <span className='profile-dropdown-karma'>0 karma</span>
                 </div>
 
@@ -116,7 +118,7 @@ export const Navbar = () => {
                 </Link>
 
                 <Link
-                  to='#'
+                  to='/settings'
                   className='profile-dropdown-item'
                   onClick={() => setIsOpen(false)}
                 >
@@ -132,7 +134,12 @@ export const Navbar = () => {
                   onClick={() => setIsOpen(false)}
                 >
                   <FaSignOutAlt className='profile-dropdown-item-icon' />
-                  <span>Log Out</span>
+
+                  <span>
+                    <a href='/' className='log-out-button'>
+                      Log Out
+                    </a>
+                  </span>
                 </button>
               </div>
             )}
