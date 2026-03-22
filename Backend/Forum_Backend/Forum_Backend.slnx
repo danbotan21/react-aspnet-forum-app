@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="ForumApp.API/ForumApp.API.csproj" />
+  <Project Path="ForumApp.BusinessLayer/ForumApp.BusinessLayer.csproj" />
+  <Project Path="ForumApp.DataAccess/ForumApp.DataAccess.csproj" />
+  <Project Path="ForumApp.Domain/ForumApp.Domain.csproj" />
+</Solution>
