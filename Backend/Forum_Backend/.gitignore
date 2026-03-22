@@ -1,0 +1,12 @@
+# Foldere de build (fiecare calculator le generează singur)
+**/bin/
+**/obj/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+
+# Alte fișiere temporare
+*.log
+*.cache
