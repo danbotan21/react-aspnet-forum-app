@@ -1,5 +1,6 @@
 using ForumApp.Domain.Entities.User;
 using ForumApp.Domain.Entities.Post;
+using ForumApp.Domain.Entities.Notification;
 
 
 namespace ForumApp.Domain.Entities.Comment
@@ -29,6 +30,8 @@ namespace ForumApp.Domain.Entities.Comment
         // Comentariile copil (reply-urile la acest comentariu)
         public ICollection<CommentData> Replies { get; set; } = new List<CommentData>();
 
+        // Relatia cu Notification: (one to many)
+        public ICollection<NotificationData> Notifications { get; set; } = new List<Notification.NotificationData>();
 
     }
 }
