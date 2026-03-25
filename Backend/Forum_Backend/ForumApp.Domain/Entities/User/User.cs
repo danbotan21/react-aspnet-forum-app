@@ -1,9 +1,9 @@
+using ForumApp.Domain.Entities.Post;
+using ForumApp.Domain.Entities.Comment;
+using ForumApp.Domain.Entities.Vote;
+
 namespace ForumApp.Domain.Entities.User
-
-
 {
-    using ForumApp.Domain.Entities.Post;
-    using ForumApp.Domain.Entities.Comment;
     public class UserData
     {
 
@@ -22,12 +22,12 @@ namespace ForumApp.Domain.Entities.User
         public string Language { get; set; } = string.Empty;
         public DateTime CreatedAt { get; set; }
 
-
         // Relatia cu Post:
         public ICollection<PostData> Posts { get; set; } = new List<PostData>();
 
         // Relatia cu Comment:
         public ICollection<CommentData> Comments { get; set; } = new List<CommentData>();
+        public ICollection<VoteData> Vote{get; set;}=new List<VoteData>();
 
     }
 

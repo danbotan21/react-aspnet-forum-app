@@ -1,20 +1,28 @@
-<<<<<<< HEAD
-# Foldere de build
-=======
-# Foldere de build (fiecare calculator le generează singur)
->>>>>>> 4c0fece08997108013ce6a5cae48df8b537480e9
-**/bin/
-**/obj/
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
 
-# Visual Studio
+*.dll
+*.exe
+*.pdb
+*.deps.json
+*.runtimeconfig.json
+
 .vs/
+.vscode/
 *.user
-<<<<<<< HEAD
 *.suo
-=======
-*.suo
-
-# Alte fișiere temporare
-*.log
 *.cache
->>>>>>> 4c0fece08997108013ce6a5cae48df8b537480e9
+*.csproj.user
+*.DotSettings.user
+
+packages/
+*.nupkg
+*.snupkg
+
+*.log
+*.tmp
+*.temp
