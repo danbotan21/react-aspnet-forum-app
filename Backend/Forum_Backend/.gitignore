@@ -1,13 +1,33 @@
+# Build outputs
 bin/
 obj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+
+# .NET generated binaries and runtime files
 *.dll
 *.exe
 *.pdb
+*.deps.json
+*.runtimeconfig.json
 
+# IDE and user-specific files
 .vs/
+.vscode/
 *.user
 *.suo
 *.cache
+*.csproj.user
+*.DotSettings.user
 
-*.runtimeconfig.json
-*.deps.json
+# NuGet and packages
+packages/
+*.nupkg
+*.snupkg
+
+# Logs and temp files
+*.log
+*.tmp
+*.temp
