@@ -1,8 +1,20 @@
+<<<<<<< HEAD
 # Foldere de build
+=======
+# Foldere de build (fiecare calculator le generează singur)
+>>>>>>> 4c0fece08997108013ce6a5cae48df8b537480e9
 **/bin/
 **/obj/
 
 # Visual Studio
 .vs/
 *.user
+<<<<<<< HEAD
 *.suo
+=======
+*.suo
+
+# Alte fișiere temporare
+*.log
+*.cache
+>>>>>>> 4c0fece08997108013ce6a5cae48df8b537480e9
