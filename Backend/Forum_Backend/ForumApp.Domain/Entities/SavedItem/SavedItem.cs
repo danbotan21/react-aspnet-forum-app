@@ -4,7 +4,7 @@ using ForumApp.Domain.Entities.Comment;
 
 
 namespace ForumApp.Domain.Entities.SavedItem{
-        public class SavedItem{
+        public class SavedItemData{
             public int Id{get; set;}
             public int AuthorId{get; set;}
             public UserData Author{get; set;}=null!;

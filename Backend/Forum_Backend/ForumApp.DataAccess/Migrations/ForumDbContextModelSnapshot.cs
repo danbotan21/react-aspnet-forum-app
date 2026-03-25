@@ -105,6 +105,112 @@ namespace ForumApp.DataAccess.Migrations
                     b.ToTable("Communities");
                 });
 
+            modelBuilder.Entity("ForumApp.Domain.Entities.Contact.ContactData", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ipAddress")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Contacts");
+                });
+
+            modelBuilder.Entity("ForumApp.Domain.Entities.Draft.DraftData", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AuthorId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("LastModifiedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("PostId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AuthorId");
+
+                    b.HasIndex("PostId");
+
+                    b.ToTable("Drafts");
+                });
+
+            modelBuilder.Entity("ForumApp.Domain.Entities.Notification.NotificationData", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("CommentId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("PostId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("RecipientId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CommentId");
+
+                    b.HasIndex("PostId");
+
+                    b.HasIndex("RecipientId");
+
+                    b.ToTable("Notifications");
+                });
+
             modelBuilder.Entity("ForumApp.Domain.Entities.Post.PostData", b =>
                 {
                     b.Property<int>("Id")
@@ -152,6 +258,68 @@ namespace ForumApp.DataAccess.Migrations
                     b.HasIndex("CommunityId");
 
                     b.ToTable("Posts");
+                });
+
+            modelBuilder.Entity("ForumApp.Domain.Entities.Report.ReportData", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("ReportedItemId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ReporterId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReporterId");
+
+                    b.ToTable("Reports");
+                });
+
+            modelBuilder.Entity("ForumApp.Domain.Entities.SavedItem.SavedItemData", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AuthorId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("CommentId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("PostId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AuthorId");
+
+                    b.HasIndex("CommentId");
+
+                    b.HasIndex("PostId");
+
+                    b.ToTable("SavedItems");
                 });
 
             modelBuilder.Entity("ForumApp.Domain.Entities.User.UserData", b =>
@@ -213,18 +381,51 @@ namespace ForumApp.DataAccess.Migrations
                     b.ToTable("Users");
                 });
 
+            modelBuilder.Entity("ForumApp.Domain.Entities.Vote.VoteData", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AuthorId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("CommentId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("PostId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("VotedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AuthorId");
+
+                    b.HasIndex("CommentId");
+
+                    b.HasIndex("PostId");
+
+                    b.ToTable("Votes");
+                });
+
             modelBuilder.Entity("ForumApp.Domain.Entities.Comment.CommentData", b =>
                 {
                     b.HasOne("ForumApp.Domain.Entities.User.UserData", "Author")
                         .WithMany("Comments")
                         .HasForeignKey("AuthorId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("ForumApp.Domain.Entities.Comment.CommentData", "ParentComment")
                         .WithMany("Replies")
-                        .HasForeignKey("ParentCommentId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .HasForeignKey("ParentCommentId");
 
                     b.HasOne("ForumApp.Domain.Entities.Post.PostData", "Post")
                         .WithMany("Comments")
@@ -237,6 +438,48 @@ namespace ForumApp.DataAccess.Migrations
                     b.Navigation("ParentComment");
 
                     b.Navigation("Post");
+                });
+
+            modelBuilder.Entity("ForumApp.Domain.Entities.Draft.DraftData", b =>
+                {
+                    b.HasOne("ForumApp.Domain.Entities.User.UserData", "Author")
+                        .WithMany()
+                        .HasForeignKey("AuthorId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("ForumApp.Domain.Entities.Post.PostData", "Post")
+                        .WithMany()
+                        .HasForeignKey("PostId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Author");
+
+                    b.Navigation("Post");
+                });
+
+            modelBuilder.Entity("ForumApp.Domain.Entities.Notification.NotificationData", b =>
+                {
+                    b.HasOne("ForumApp.Domain.Entities.Comment.CommentData", "Comment")
+                        .WithMany("Notifications")
+                        .HasForeignKey("CommentId");
+
+                    b.HasOne("ForumApp.Domain.Entities.Post.PostData", "Post")
+                        .WithMany("Notifications")
+                        .HasForeignKey("PostId");
+
+                    b.HasOne("ForumApp.Domain.Entities.User.UserData", "Recipient")
+                        .WithMany("Notifications")
+                        .HasForeignKey("RecipientId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Comment");
+
+                    b.Navigation("Post");
+
+                    b.Navigation("Recipient");
                 });
 
             modelBuilder.Entity("ForumApp.Domain.Entities.Post.PostData", b =>
@@ -258,8 +501,67 @@ namespace ForumApp.DataAccess.Migrations
                     b.Navigation("Community");
                 });
 
+            modelBuilder.Entity("ForumApp.Domain.Entities.Report.ReportData", b =>
+                {
+                    b.HasOne("ForumApp.Domain.Entities.User.UserData", "Reporter")
+                        .WithMany("Reports")
+                        .HasForeignKey("ReporterId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Reporter");
+                });
+
+            modelBuilder.Entity("ForumApp.Domain.Entities.SavedItem.SavedItemData", b =>
+                {
+                    b.HasOne("ForumApp.Domain.Entities.User.UserData", "Author")
+                        .WithMany()
+                        .HasForeignKey("AuthorId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ForumApp.Domain.Entities.Comment.CommentData", "Comment")
+                        .WithMany()
+                        .HasForeignKey("CommentId");
+
+                    b.HasOne("ForumApp.Domain.Entities.Post.PostData", "Post")
+                        .WithMany()
+                        .HasForeignKey("PostId");
+
+                    b.Navigation("Author");
+
+                    b.Navigation("Comment");
+
+                    b.Navigation("Post");
+                });
+
+            modelBuilder.Entity("ForumApp.Domain.Entities.Vote.VoteData", b =>
+                {
+                    b.HasOne("ForumApp.Domain.Entities.User.UserData", "Author")
+                        .WithMany()
+                        .HasForeignKey("AuthorId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ForumApp.Domain.Entities.Comment.CommentData", "Comment")
+                        .WithMany()
+                        .HasForeignKey("CommentId");
+
+                    b.HasOne("ForumApp.Domain.Entities.Post.PostData", "Post")
+                        .WithMany()
+                        .HasForeignKey("PostId");
+
+                    b.Navigation("Author");
+
+                    b.Navigation("Comment");
+
+                    b.Navigation("Post");
+                });
+
             modelBuilder.Entity("ForumApp.Domain.Entities.Comment.CommentData", b =>
                 {
+                    b.Navigation("Notifications");
+
                     b.Navigation("Replies");
                 });
 
@@ -271,13 +573,19 @@ namespace ForumApp.DataAccess.Migrations
             modelBuilder.Entity("ForumApp.Domain.Entities.Post.PostData", b =>
                 {
                     b.Navigation("Comments");
+
+                    b.Navigation("Notifications");
                 });
 
             modelBuilder.Entity("ForumApp.Domain.Entities.User.UserData", b =>
                 {
                     b.Navigation("Comments");
 
+                    b.Navigation("Notifications");
+
                     b.Navigation("Posts");
+
+                    b.Navigation("Reports");
                 });
 #pragma warning restore 612, 618
         }

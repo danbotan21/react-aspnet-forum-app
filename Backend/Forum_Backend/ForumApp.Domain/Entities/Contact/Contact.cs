@@ -8,7 +8,7 @@ namespace ForumApp.Domain.Entities.Contact
         ReportAnIssue = 3,
         LegalQuestions = 4
     }
-    public class contactData
+    public class ContactData
     {
         public int Id {get ; set;}
         public string FullName {get; set;} = string.Empty;
