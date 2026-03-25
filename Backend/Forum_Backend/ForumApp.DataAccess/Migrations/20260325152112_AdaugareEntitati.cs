@@ -62,8 +62,7 @@ namespace ForumApp.DataAccess.Migrations
                         name: "FK_Drafts_Users_AuthorId",
                         column: x => x.AuthorId,
                         principalTable: "Users",
-                        principalColumn: "ID",
-                        onDelete: ReferentialAction.NoAction);
+                        principalColumn: "ID");
                 });
 
             migrationBuilder.CreateTable(
@@ -260,8 +259,7 @@ namespace ForumApp.DataAccess.Migrations
                 table: "Comments",
                 column: "AuthorId",
                 principalTable: "Users",
-                principalColumn: "ID",
-                onDelete: ReferentialAction.NoAction);
+                principalColumn: "ID");
         }
 
         /// <inheritdoc />

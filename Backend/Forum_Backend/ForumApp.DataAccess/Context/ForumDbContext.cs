@@ -32,7 +32,7 @@ namespace ForumApp.DataAccess
         public DbSet<SavedItemData> SavedItems { get; set; }
         public DbSet<VoteData> Votes { get; set; }
         public DbSet<NotificationData> Notifications { get; set; }
-        
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
