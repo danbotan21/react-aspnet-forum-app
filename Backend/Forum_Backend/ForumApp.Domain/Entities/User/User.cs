@@ -1,9 +1,13 @@
+using ForumApp.Domain.Entities.Post;
+using ForumApp.Domain.Entities.Comment;
+using ForumApp.Domain.Entities.Report;
+using ForumApp.Domain.Entities.Notification;
+
 namespace ForumApp.Domain.Entities.User
 
 
 {
-    using ForumApp.Domain.Entities.Post;
-    using ForumApp.Domain.Entities.Comment;
+
     public class UserData
     {
 
@@ -23,12 +27,17 @@ namespace ForumApp.Domain.Entities.User
         public DateTime CreatedAt { get; set; }
 
 
-        // Relatia cu Post:
+        // Relatia cu Post: (one to many)
         public ICollection<PostData> Posts { get; set; } = new List<PostData>();
 
-        // Relatia cu Comment:
+        // Relatia cu Comment: (one to many)
         public ICollection<CommentData> Comments { get; set; } = new List<CommentData>();
 
+        // Relatia cu Report: (one to many)
+        public ICollection<ReportData> Reports { get; set; } = new List<Report.ReportData>();
+    
+        // Relatia cu Notification: (one to many)
+        public ICollection<NotificationData> Notifications { get; set; } = new List<NotificationData>();
     }
 
 
