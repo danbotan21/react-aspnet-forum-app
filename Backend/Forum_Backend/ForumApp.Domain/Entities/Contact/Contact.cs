@@ -16,26 +16,26 @@ namespace ForumApp.Domain.Entities.Contact
     {
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        public int Id {get ; set;}
+        public int Id { get; set; }
 
         [Required]
         [StringLength(100)]
-        public string FullName {get; set;} = string.Empty;
+        public string FullName { get; set; } = string.Empty;
 
         [Required]
         [StringLength(100)]
         [EmailAddress]
-        public string Email {get; set;} = string.Empty;
+        public string Email { get; set; } = string.Empty;
 
         [Required]
         [StringLength(50)]
-        public string Subject {get; set;} = string.Empty;
-        public ContactType Type {get; set;}
+        public string Subject { get; set; } = string.Empty;
+        public ContactType Type { get; set; }
 
         [Required]
         [StringLength(1000)]
-        public string Message {get; set;} = string.Empty;
-        public DateTime CreatedAt {get; set;} /* = DateTime.UtcNow; */
+        public string Message { get; set; } = string.Empty;
+        public DateTime CreatedAt { get; set; } /* = DateTime.UtcNow; */
 
     }
 }
