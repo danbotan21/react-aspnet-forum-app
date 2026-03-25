@@ -1,12 +1,13 @@
-# Foldere de build (fiecare calculator le generează singur)
-**/bin/
-**/obj/
+bin/
+obj/
+*.dll
+*.exe
+*.pdb
 
-# Visual Studio
 .vs/
 *.user
 *.suo
-
-# Alte fișiere temporare
-*.log
 *.cache
+
+*.runtimeconfig.json
+*.deps.json
