@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace ForumApp.DataAccess.Migrations
 {
     [DbContext(typeof(ForumDbContext))]
-    [Migration("20260325144407_AdaugareEntitati")]
+    [Migration("20260325152112_AdaugareEntitati")]
     partial class AdaugareEntitati
     {
         /// <inheritdoc />
@@ -423,7 +423,7 @@ namespace ForumApp.DataAccess.Migrations
                     b.HasOne("ForumApp.Domain.Entities.User.UserData", "Author")
                         .WithMany("Comments")
                         .HasForeignKey("AuthorId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("ForumApp.Domain.Entities.Comment.CommentData", "ParentComment")
@@ -448,7 +448,7 @@ namespace ForumApp.DataAccess.Migrations
                     b.HasOne("ForumApp.Domain.Entities.User.UserData", "Author")
                         .WithMany()
                         .HasForeignKey("AuthorId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("ForumApp.Domain.Entities.Post.PostData", "Post")
