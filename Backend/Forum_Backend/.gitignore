@@ -1,8 +1,12 @@
-# Foldere de build
-**/bin/
-**/obj/
+bin/
+obj/
+*.dll
+*.exe
+*.pdb
 
-# Visual Studio
 .vs/
 *.user
 *.suo
+*.cache
+
+*.runtimeconfig.json
