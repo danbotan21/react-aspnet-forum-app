@@ -22,9 +22,4 @@ namespace ForumApp.Domain.Entities.Notification
         public int? CommentId { get; set; }
         public CommentData? Comment { get; set; }
     }
-
-
-
-
-
 }

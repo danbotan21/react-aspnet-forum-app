@@ -17,7 +17,6 @@ namespace ForumApp.Domain.Entities.Community
 
 
     //Relatie cu Post;
-
     public ICollection<PostData> Posts { get; set; } = new List<PostData>();
   }
 

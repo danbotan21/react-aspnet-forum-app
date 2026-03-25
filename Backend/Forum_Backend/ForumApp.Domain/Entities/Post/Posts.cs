@@ -1,7 +1,7 @@
 using ForumApp.Domain.Entities.User;
 using ForumApp.Domain.Entities.Community;
 using ForumApp.Domain.Entities.Comment;
-
+using ForumApp.Domain.Entities.Notification;
 
 
 namespace ForumApp.Domain.Entities.Post
@@ -23,12 +23,13 @@ namespace ForumApp.Domain.Entities.Post
         public UserData Author { get; set; } = null!;
 
 
-
         public int CommunityId { get; set; } // - Cheie Foreign, trimitere la tabelul Community ce eu il am, ID stie automat EF ca asa este codat;
         public CommunityData Community { get; set; } = null!;
-
+        
         // Relatia cu Comment:
         public ICollection<CommentData> Comments { get; set; } = new List<CommentData>();
 
+        // Relatia cu Notification:
+        public ICollection<NotificationData> Notifications { get; set; } = new List<NotificationData>();
     }
 }
