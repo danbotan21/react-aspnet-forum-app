@@ -7,6 +7,7 @@ namespace ForumApp.Domain.Entities.Contact
         CommunitiesAndModeration = 2,
         ReportAnIssue = 3,
         LegalQuestions = 4
+
     }
     public class ContactData
     {
@@ -18,6 +19,8 @@ namespace ForumApp.Domain.Entities.Contact
         public string Message {get; set;} = string.Empty;
         public DateTime CreatedAt {get; set;} /* = DateTime.UtcNow; */
         public string ipAddress {get; set;} = string.Empty;
+
+
 
     }
 }
