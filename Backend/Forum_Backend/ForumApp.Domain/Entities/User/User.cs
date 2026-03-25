@@ -56,8 +56,4 @@ namespace ForumApp.Domain.Entities.User
         // Relatia cu Notification: (one to many)
         public ICollection<NotificationData> Notifications { get; set; } = new List<NotificationData>();
     }
-
-
-
-
 }
