@@ -37,6 +37,12 @@ namespace ForumApp.DataAccess
         {
             base.OnModelCreating(modelBuilder);
 
+            modelBuilder.Entity<PostData>()
+                .HasOne(p => p.Author)
+                .WithMany(u => u.Posts)
+                .HasForeignKey(p => p.AuthorId)
+                .OnDelete(DeleteBehavior.NoAction);
+                
             modelBuilder.Entity<DraftData>()
                 .HasOne(d => d.Author)
                 .WithMany()
