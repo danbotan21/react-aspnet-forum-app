@@ -55,10 +55,22 @@ namespace ForumApp.BusinessLayer.Structure
         }
 
 
+        public async Task<IReadOnlyList<CommunityResponseDto>> GetCommunitiesByUserAsync(int userId, CancellationToken ct = default)
+        {
+
+            var communities = await _context.CommunityMembers
+            .Where(m => m.UserId == userId)
+                .Select(m => m.Community)
+                .OrderBy(c => c.Title)
+                .ToListAsync(ct);
+
+            return communities.Select(MapToDto).ToList().AsReadOnly();
 
 
+        }
 
 
+    
 
 
 
