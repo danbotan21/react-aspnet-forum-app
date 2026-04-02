@@ -7,8 +7,10 @@ namespace ForumApp.BusinessLayer.Interfaces
     {
         Task<CommentResponseDto?> CreateCommentAsync(CommentCreateDto commentData, int authorId, CancellationToken ct = default);
         Task<IReadOnlyList<CommentResponseDto>> GetCommentsByPostAsync(int postId, CancellationToken ct = default);
+        Task<IReadOnlyList<CommentResponseDto>> GetCommentsByUserAsync(int userId, CancellationToken ct = default);
         Task<CommentResponseDto?> GetCommentByIdAsync(int commentId, CancellationToken ct = default);
         Task<CommentResponseDto?> UpdateCommentAsync(int commentId, CommentCreateDto commentData, int requestingUserId, CancellationToken ct = default);
         Task<ActionResponse> DeleteCommentAsync(int commentId, int requestingUserId, CancellationToken ct = default);
+
     }
 }
