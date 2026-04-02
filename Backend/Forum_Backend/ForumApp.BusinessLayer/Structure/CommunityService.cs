@@ -69,8 +69,18 @@ namespace ForumApp.BusinessLayer.Structure
 
         }
 
+        public async Task<IReadOnlyList<CommunityResponseDto>> SearchCommunitiesAsync(string searchTerm, CancellationToken ct = default)
+        {
+            var term = searchTerm.ToLower();
 
-    
+            var communities = await _context.Communities
+                .Where(c => c.Title.ToLower().Contains(term) || c.Slug.ToLower().Contains(term))
+                .OrderByDescending(c => c.MembersCount)
+                .ToListAsync(ct);
+
+            return communities.Select(MapToDto).ToList().AsReadOnly();
+        }
+
 
 
 
