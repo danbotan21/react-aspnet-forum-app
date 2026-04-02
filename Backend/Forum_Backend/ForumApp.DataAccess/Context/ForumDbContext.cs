@@ -9,6 +9,7 @@ using ForumApp.Domain.Entities.Notification;
 using ForumApp.Domain.Entities.Report;
 using ForumApp.Domain.Entities.Vote;
 using ForumApp.Domain.Entities.SavedItem;
+using ForumApp.Domain.Entities.CommunityMember;
 
 
 
@@ -32,6 +33,7 @@ namespace ForumApp.DataAccess
         public DbSet<SavedItemData> SavedItems { get; set; }
         public DbSet<VoteData> Votes { get; set; }
         public DbSet<NotificationData> Notifications { get; set; }
+        public DbSet<CommunityMemberData> CommunityMembers { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

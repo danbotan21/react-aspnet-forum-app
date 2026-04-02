@@ -2,6 +2,7 @@ using ForumApp.Domain.Entities.Post;
 using ForumApp.Domain.Entities.Comment;
 using ForumApp.Domain.Entities.Report;
 using ForumApp.Domain.Entities.Notification;
+using ForumApp.Domain.Entities.CommunityMember;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -43,6 +44,10 @@ namespace ForumApp.Domain.Entities.User
         [StringLength(10)]
         public string Language { get; set; } = string.Empty;
 
+        public int Karma { get; set; } = 0;
+
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
 
         // Relatia cu Post: (one to many)
         public ICollection<PostData> Posts { get; set; } = new List<PostData>();
@@ -55,5 +60,8 @@ namespace ForumApp.Domain.Entities.User
 
         // Relatia cu Notification: (one to many)
         public ICollection<NotificationData> Notifications { get; set; } = new List<NotificationData>();
+
+        // Relatia cu CommunityMember: (one to many)
+        public ICollection<CommunityMemberData> Communities { get; set; } = new List<CommunityMemberData>();
     }
 }
