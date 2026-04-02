@@ -42,5 +42,25 @@ namespace ForumApp.BusinessLayer.Structure
             return communities.Select(MapToDto).ToList().AsReadOnly();
         }
 
+
+
+        public async Task<IReadOnlyList<CommunityResponseDto>> GetAllCommunitiesByTypeAsync(string type, CancellationToken ct = default)
+        {
+            var communities = await _context.Communities
+                .Where(c => c.Type.ToLower() == type.ToLower())
+                .OrderByDescending(c => c.MembersCount)
+                .ToListAsync(ct);
+
+            return communities.Select(MapToDto).ToList().AsReadOnly();
+        }
+
+
+
+
+
+
+
+
+
     }
 }
