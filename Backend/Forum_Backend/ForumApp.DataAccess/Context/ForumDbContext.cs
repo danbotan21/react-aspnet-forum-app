@@ -42,7 +42,7 @@ namespace ForumApp.DataAccess
                 .WithMany(u => u.Posts)
                 .HasForeignKey(p => p.AuthorId)
                 .OnDelete(DeleteBehavior.NoAction);
-
+                
             modelBuilder.Entity<DraftData>()
                 .HasOne(d => d.Author)
                 .WithMany()
