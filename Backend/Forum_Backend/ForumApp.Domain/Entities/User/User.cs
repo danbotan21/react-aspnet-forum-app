@@ -49,6 +49,8 @@ namespace ForumApp.Domain.Entities.User
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
 
+
+
         // Relatia cu Post: (one to many)
         public ICollection<PostData> Posts { get; set; } = new List<PostData>();
 
