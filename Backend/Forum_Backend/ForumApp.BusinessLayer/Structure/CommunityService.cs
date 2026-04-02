@@ -83,6 +83,16 @@ namespace ForumApp.BusinessLayer.Structure
 
 
 
+        public async Task<CommunityResponseDto?> GetCommunityAsync(string slug, CancellationToken ct = default)
+        {
+            var community = await _context.Communities
+                .FirstOrDefaultAsync(c => c.Slug == slug, ct);
+
+            if (community == null) return null;
+
+            return MapToDto(community);
+        }
+
 
     }
 }
