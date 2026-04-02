@@ -9,6 +9,7 @@ namespace ForumApp.BusinessLayer.Interfaces
     {
         Task<SavedItemResponseDTO?> SaveItemAsync(CreateSavedItemRequestDTO itemData, int userId, CancellationToken ct = default);
         Task<ActionResponse> RemoveSavedItemAsync(int savedItemId, int userId, CancellationToken ct = default);
+        Task<SavedItemResponseDTO?> GetSavedItemByIdAsync(int savedItemId, int userId, CancellationToken ct = default);
         Task<IReadOnlyList<SavedItemResponseDTO>> GetSavedItemsByUserAsync(int userId, CancellationToken ct = default);
     }
 
