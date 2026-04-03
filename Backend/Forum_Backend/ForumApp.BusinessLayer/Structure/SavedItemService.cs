@@ -145,6 +145,30 @@ namespace ForumApp.BusinessLayer.Structure
             return savedItems.Select(MapToResponseDTO).ToList();
         }
 
+        public async Task<SavedItemResponseDTO?> GetUserSavedPostAsync(int postId, int userId, CancellationToken ct = default)
+        {
+            var savedItem = await _context.SavedItems
+                .Include(s => s.Author)
+                .Include(s => s.Post)
+                .FirstOrDefaultAsync(s => s.PostId == postId && s.AuthorId == userId, ct);
+
+            if (savedItem == null) return null;
+
+            return MapToResponseDTO(savedItem);
+        }
+
+        public async Task<SavedItemResponseDTO?> GetUserSavedCommentAsync(int commentId, int userId, CancellationToken ct = default)
+        {
+            var savedItem = await _context.SavedItems
+                .Include(s => s.Author)
+                .Include(s => s.Comment)
+                .FirstOrDefaultAsync(s => s.CommentId == commentId && s.AuthorId == userId, ct);
+
+            if (savedItem == null) return null;
+
+            return MapToResponseDTO(savedItem);
+        }
+
         // Metodă helper pentru mapare la DTO
         private SavedItemResponseDTO MapToResponseDTO(SavedItemData savedItem)
         {
