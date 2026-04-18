@@ -1,3 +1,5 @@
+using ForumApp.BusinessLayer.Interfaces;
+using ForumApp.BusinessLayer.Structure;
 using ForumApp.DataAccess;
 using Microsoft.EntityFrameworkCore;
 
@@ -11,6 +13,11 @@ builder.Services.AddSwaggerGen();
 // 🔹 Configure DbContext
 builder.Services.AddDbContext<ForumDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+// 🔹 Register Business Layer services
+builder.Services.AddScoped<IPostActions, PostService>();
+builder.Services.AddScoped<ICommunityActions, CommunityService>();
+builder.Services.AddScoped<ICommentActions, CommentService>();
 
 var app = builder.Build();
 

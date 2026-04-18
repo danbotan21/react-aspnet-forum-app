@@ -1,6 +1,6 @@
 namespace ForumApp.Domain.Models.Notification
 {
-    public class NotificationData
+    public class NotificationResponseDto
     {
         public int Id { get; set; }
         public string Message { get; set; } = string.Empty;
