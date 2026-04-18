@@ -45,7 +45,7 @@ namespace ForumApp.API.Controller
             return Ok(posts);
         }
 
-        // GET api/posts/user/{userId}
+        // GET api/posts/user/{userId}cd f  
         [HttpGet("user/{userId:int}")]
         public async Task<IActionResult> GetByUser(int userId, CancellationToken ct)
         {
