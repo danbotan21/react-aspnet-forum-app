@@ -17,6 +17,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ForumApp.DataAccess\ForumApp.DataAccess.csproj" />
+    <ProjectReference Include="..\ForumApp.BusinessLayer\ForumApp.BusinessLayer.csproj" />
+    <ProjectReference Include="..\ForumApp.Domain\ForumApp.Domain.csproj" />
   </ItemGroup>
 
 </Project>
