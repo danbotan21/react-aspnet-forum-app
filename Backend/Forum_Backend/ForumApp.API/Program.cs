@@ -7,28 +7,24 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 🔹 Add services
+//  Add services
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// 🔹 Configure DbContext
+//  Configure DbContext
 builder.Services.AddDbContext<ForumDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-<<<<<<< HEAD
-// 🔹 Register Business Layer services
-builder.Services.AddScoped<IPostActions, PostService>();
-builder.Services.AddScoped<ICommunityActions, CommunityService>();
-builder.Services.AddScoped<ICommentActions, CommentService>();
-=======
-// 🔹 Register Business Layer Services
-builder.Services.AddScoped<IVoteActions, VoteService>();
-builder.Services.AddScoped<IDraftActions, DraftService>();
-builder.Services.AddScoped<ISavedItemActions, SavedItemService>();
->>>>>>> cf77dcd73506257a024e461d211f66a1002044ce
+//  Register Business Layer Services (Dependency Injection)
+builder.Services.AddScoped<IContactActions, ContactService>();
+builder.Services.AddScoped<IReportActions, ReportService>();
+builder.Services.AddScoped<INotificationActions, NotificationService>();
 
 var app = builder.Build();
+
+//  Seed mock data is DISABLED - use SQL script instead to avoid FK constraint issues
+// See: SeedMockDataComplete.sql for manual seeding
 
 if (app.Environment.IsDevelopment())
 {
@@ -39,7 +35,7 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseAuthorization();
 
-// 🔹 Map controllers
+//  Map controllers
 app.MapControllers();
 
 app.Run();

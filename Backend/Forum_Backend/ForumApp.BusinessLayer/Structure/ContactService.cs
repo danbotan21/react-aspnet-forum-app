@@ -11,7 +11,7 @@ namespace ForumApp.BusinessLayer.Structure
     {
         private readonly ForumDbContext _context;
 
-        // Constructor - Dependency Injection pentru DbContext
+        // Constructor - Dependency Injection pentru DbContext -- Faradependency injection, sa avem 
         public ContactService(ForumDbContext context)
         {
              _context = context;
@@ -21,7 +21,7 @@ namespace ForumApp.BusinessLayer.Structure
         {
             try
             {
-                // Validări de bază
+                // Validari de baza
                 if (string.IsNullOrWhiteSpace(n.FullName) || n.FullName.Length < 2)
                 {
                     return new ActionResponse
@@ -49,7 +49,7 @@ namespace ForumApp.BusinessLayer.Structure
                     };
                 }
 
-                // Optional: Anti-spam check (max 3 mesaje pe oră de la același email)
+                // Optional: Anti-spam check (max 3 mesaje pe oră de la acelasi email)
                 var recentMessagesCount = await _context.Contacts
                     .CountAsync(c => c.Email == n.Email && c.CreatedAt > DateTime.UtcNow.AddHours(-1), ct);
 
@@ -81,10 +81,9 @@ namespace ForumApp.BusinessLayer.Structure
                     Message = "Your message has been sent successfully. We will get back to you soon."
                 };   
             }
-            catch (Exception ex)
+            catch(Exception ex)
             {
-                // TODO: Logging în producție: log.Error(ex, "Failed to submit contact form");
-                // Variabila 'ex' va fi folosită pentru logging când sistemul de logging va fi implementat
+                // Logging la productie: log.Error(ex, "Failed to submit contact form");
                 return new ActionResponse
                 {
                     IsSuccess = false,
@@ -113,9 +112,9 @@ namespace ForumApp.BusinessLayer.Structure
 
                 return contacts;
             }
-            catch (Exception ex)
+            catch(Exception ex)
             {
-                // Logging în producție: log.Error(ex, "Failed to retrieve contact messages");
+                // Logging la productie
                 throw new Exception("Failed to retrieve contact messages.", ex);
             }
         }

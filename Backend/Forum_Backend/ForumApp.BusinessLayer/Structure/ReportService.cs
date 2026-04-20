@@ -17,12 +17,11 @@ namespace ForumApp.BusinessLayer.Structure
             _context = context;
         }
 
-        // Creează un raport nou
         public async Task<ActionResponse> CreateReportAsync(ReportCreateDto reportData, int reporterId, CancellationToken ct = default)
         {
             try
             {
-                // Validări de bază
+                // Validari de bază
                 if (string.IsNullOrWhiteSpace(reportData.Reason) || reportData.Reason.Length < 10)
                 {
                     return new ActionResponse
@@ -41,7 +40,7 @@ namespace ForumApp.BusinessLayer.Structure
                     };
                 }
 
-                // Anti-spam: Verifică dacă userul nu a raportat același item deja
+                // Anti-spam: 1 rep per user per item
                 var existingReport = await _context.Reports
                     .AnyAsync(r => r.ReporterId == reporterId 
                                 && r.ReportedItemId == reportData.ReportedItemId 
@@ -56,7 +55,7 @@ namespace ForumApp.BusinessLayer.Structure
                     };
                 }
 
-                // Optional: Limită de rapoarte per zi (ex: max 10 rapoarte pe zi)
+                // Optional: Limit max daily reports per user
                 var reportsToday = await _context.Reports
                     .CountAsync(r => r.ReporterId == reporterId 
                                   && r.CreatedAt > DateTime.UtcNow.AddDays(-1), ct);
@@ -90,8 +89,8 @@ namespace ForumApp.BusinessLayer.Structure
             }
             catch (Exception ex)
             {
-                // TODO: Logging în producție: log.Error(ex, "Failed to create report for reporter {ReporterId}", reporterId);
-                // Variabila 'ex' va fi folosită pentru logging când sistemul de logging va fi implementat
+                // TODO: Logging la productie: log.Error(ex, "Failed to create report for reporter {ReporterId}", reporterId);
+                // Variabila 'ex' va fi folosita pentru logging cand sistemul de logging va fi implementat
                 return new ActionResponse
                 {
                     IsSuccess = false,
@@ -100,13 +99,12 @@ namespace ForumApp.BusinessLayer.Structure
             }
         }
 
-        // Obține toate rapoartele (pentru admin)
         public async Task<IReadOnlyList<ReportResponseDto>> GetAllReportsAsync(CancellationToken ct = default)
         {
             try
             {
                 var reports = await _context.Reports
-                    .Include(r => r.Reporter) // Include user info pentru a știi cine a raportat
+                    .Include(r => r.Reporter) 
                     .OrderByDescending(r => r.CreatedAt)
                     .Select(r => new ReportResponseDto
                     {
@@ -121,12 +119,10 @@ namespace ForumApp.BusinessLayer.Structure
             }
             catch (Exception ex)
             {
-                // Logging în producție: log.Error(ex, "Failed to retrieve reports");
+                // Logging la productie: log.Error(ex, "Failed to retrieve reports");
                 throw new Exception("Failed to retrieve reports.", ex);
             }
         }
-
-        // Șterge un raport (după ce a fost procesat de admin)
         public async Task<ActionResponse> DeleteReportAsync(int reportId, CancellationToken ct = default)
         {
             try
@@ -154,8 +150,8 @@ namespace ForumApp.BusinessLayer.Structure
             }
             catch (Exception ex)
             {
-                // TODO: Logging în producție: log.Error(ex, "Failed to delete report {ReportId}", reportId);
-                // Variabila 'ex' va fi folosită pentru logging când sistemul de logging va fi implementat
+                // TODO: Logging la productie: log.Error(ex, "Failed to delete report {ReportId}", reportId);
+                // Variabila 'ex' va fi folosita pentru logging cand sistemul de logging va fi implementat
                 return new ActionResponse
                 {
                     IsSuccess = false,
