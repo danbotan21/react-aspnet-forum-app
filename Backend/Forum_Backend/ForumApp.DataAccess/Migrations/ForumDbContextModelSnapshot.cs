@@ -111,6 +111,32 @@ namespace ForumApp.DataAccess.Migrations
                     b.ToTable("Communities");
                 });
 
+            modelBuilder.Entity("ForumApp.Domain.Entities.CommunityMember.CommunityMemberData", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CommunityId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("JoinedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CommunityId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("CommunityMembers");
+                });
+
             modelBuilder.Entity("ForumApp.Domain.Entities.Contact.ContactData", b =>
                 {
                     b.Property<int>("Id")
@@ -344,10 +370,16 @@ namespace ForumApp.DataAccess.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
+
+                    b.Property<int>("Karma")
+                        .HasColumnType("int");
 
                     b.Property<string>("Language")
                         .IsRequired()
@@ -441,6 +473,25 @@ namespace ForumApp.DataAccess.Migrations
                     b.Navigation("ParentComment");
 
                     b.Navigation("Post");
+                });
+
+            modelBuilder.Entity("ForumApp.Domain.Entities.CommunityMember.CommunityMemberData", b =>
+                {
+                    b.HasOne("ForumApp.Domain.Entities.Community.CommunityData", "Community")
+                        .WithMany("Members")
+                        .HasForeignKey("CommunityId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ForumApp.Domain.Entities.User.UserData", "User")
+                        .WithMany("Communities")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Community");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("ForumApp.Domain.Entities.Draft.DraftData", b =>
@@ -570,6 +621,8 @@ namespace ForumApp.DataAccess.Migrations
 
             modelBuilder.Entity("ForumApp.Domain.Entities.Community.CommunityData", b =>
                 {
+                    b.Navigation("Members");
+
                     b.Navigation("Posts");
                 });
 
@@ -583,6 +636,8 @@ namespace ForumApp.DataAccess.Migrations
             modelBuilder.Entity("ForumApp.Domain.Entities.User.UserData", b =>
                 {
                     b.Navigation("Comments");
+
+                    b.Navigation("Communities");
 
                     b.Navigation("Notifications");
 
