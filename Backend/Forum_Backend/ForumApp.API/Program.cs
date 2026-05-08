@@ -25,6 +25,9 @@ builder.Services.AddScoped<IContactActions, ContactService>();
 builder.Services.AddScoped<IReportActions, ReportService>();
 builder.Services.AddScoped<INotificationActions, NotificationService>();
 
+builder.Services.AddScoped<IUserActions, UserService>();
+builder.Services.AddScoped<ITokenService, TokenService>();
+
 var app = builder.Build();
 
 //  Seed mock data is DISABLED - use SQL script instead to avoid FK constraint issues
