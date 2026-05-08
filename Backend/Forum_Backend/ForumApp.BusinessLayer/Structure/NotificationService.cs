@@ -17,7 +17,6 @@ namespace ForumApp.BusinessLayer.Structure
             _context = context;
         }
 
-        // Obține toate notificările unui utilizator (ordonate descrescător după dată)
         public async Task<IReadOnlyList<NotificationResponseDto>> GetUserNotificationsAsync(int userId, CancellationToken ct = default)
         {
             try
@@ -38,12 +37,11 @@ namespace ForumApp.BusinessLayer.Structure
             }
             catch (Exception ex)
             {
-                // Logging în producție: log.Error(ex, "Failed to get notifications for user {UserId}", userId);
+                // Logging la productie: log.Error(ex, "Failed to get notifications for user {UserId}", userId);
                 throw new Exception($"Failed to retrieve notifications for user {userId}", ex);
             }
         }
 
-        // Marchează o notificare ca fiind citită
         public async Task<ActionResponse> MarkAsReadAsync(int notificationId, int userId, CancellationToken ct = default)
         {
             try
@@ -60,7 +58,7 @@ namespace ForumApp.BusinessLayer.Structure
                     };
                 }
 
-                // Verifică dacă e deja citită (optional - evită update-uri inutile)
+                // Daca deja e read, nu face update degeaba
                 if (notification.IsRead)
                 {
                     return new ActionResponse
@@ -81,7 +79,7 @@ namespace ForumApp.BusinessLayer.Structure
             }
             catch (Exception ex)
             {
-                // Logging în producție
+                // Logging la productie
                 return new ActionResponse
                 {
                     IsSuccess = false,
@@ -90,7 +88,6 @@ namespace ForumApp.BusinessLayer.Structure
             }
         }
 
-        // Șterge o notificare (doar dacă aparține utilizatorului)
         public async Task<ActionResponse> DeleteNotificationAsync(int notificationId, int userId, CancellationToken ct = default)
         {
             try
@@ -118,7 +115,7 @@ namespace ForumApp.BusinessLayer.Structure
             }
             catch (Exception ex)
             {
-                // Logging în producție
+                // Logging la productie
                 return new ActionResponse
                 {
                     IsSuccess = false,
