@@ -9,7 +9,11 @@
   <ItemGroup>
     <ProjectReference Include="..\ForumApp.DataAccess\ForumApp.DataAccess.csproj" />
     <ProjectReference Include="..\ForumApp.Domain\ForumApp.Domain.csproj" />
-    <ProjectReference Include="..\ForumApp.DataAccess\ForumApp.DataAccess.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BCrypt.Net-Next" Version="4.1.0" />
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.17.0" />
   </ItemGroup>
 
 </Project>

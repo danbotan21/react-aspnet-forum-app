@@ -1,11 +1,15 @@
+using System.ComponentModel.DataAnnotations;
 namespace ForumApp.Domain.Models.User
 {
 
     public class UserLoginDto
-    {
+{
+    [Required]
+    [EmailAddress]
+    public string Email { get; set; }
 
-        public string Email { get; set; }
-        public string Password { get; set; }
-    }
-
+    [Required]
+    public string Password { get; set; }
 }
+
+}

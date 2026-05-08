@@ -48,7 +48,9 @@ namespace ForumApp.Domain.Entities.User
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-
+        // Refresh token pentru sesiuni persistente (React frontend)
+        public string? RefreshToken { get; set; }
+        public DateTime? RefreshTokenExpiry { get; set; }
 
 
         // Relatia cu Post: (one to many)
