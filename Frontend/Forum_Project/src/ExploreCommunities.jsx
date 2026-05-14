@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   FaFire,
@@ -13,153 +13,74 @@ import './Styles/ExploreCommunities.css'
 
 const CATEGORY_TABS = [
   'All',
-  'Most Visited',
-  'Tech',
+  'Technology',
   'Gaming',
+  'Art',
   'Movies',
-  'Lifestyle',
   'Travel',
   'Music',
+  'Food',
+  'Sports',
+  'Education',
 ]
 
-const ALL_COMMUNITIES = [
-  {
-    id: 'devtalk',
-    name: 'DevTalk',
-    visitors: '92K',
-    description:
-      'Discutii zilnice despre React, backend, AI si proiecte reale.',
-    category: 'Tech',
-    icon: FaCode,
-    accent: 'linear-gradient(135deg, #1d4ed8 0%, #06b6d4 100%)',
-  },
-  {
-    id: 'cinehub',
-    name: 'CineHub',
-    visitors: '61K',
-    description: 'Recenzii, recomandari si debate-uri despre filme si seriale.',
-    category: 'Movies',
-    icon: MdLocalMovies,
-    accent: 'linear-gradient(135deg, #f97316 0%, #ef4444 100%)',
-  },
-  {
-    id: 'pixelarena',
-    name: 'PixelArena',
-    visitors: '114K',
-    description: 'Community pentru esports, stiri si lansari de jocuri.',
-    category: 'Gaming',
-    icon: FaGamepad,
-    accent: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
-  },
-  {
-    id: 'wandernotes',
-    name: 'WanderNotes',
-    visitors: '48K',
-    description: 'Planuri de city break, ghiduri si locuri ascunse.',
-    category: 'Travel',
-    icon: MdTravelExplore,
-    accent: 'linear-gradient(135deg, #0ea5e9 0%, #14b8a6 100%)',
-  },
-  {
-    id: 'sounddistrict',
-    name: 'SoundDistrict',
-    visitors: '73K',
-    description: 'Albume noi, setup audio si recomandari pentru playlist.',
-    category: 'Music',
-    icon: FaMusic,
-    accent: 'linear-gradient(135deg, #f59e0b 0%, #f97316 100%)',
-  },
-  {
-    id: 'greenhabit',
-    name: 'GreenHabit',
-    visitors: '39K',
-    description: 'Tips de productivitate, wellbeing si obiceiuri sanatoase.',
-    category: 'Lifestyle',
-    icon: FaLeaf,
-    accent: 'linear-gradient(135deg, #14b8a6 0%, #22c55e 100%)',
-  },
-  {
-    id: 'futurelab',
-    name: 'FutureLab',
-    visitors: '86K',
-    description: 'AI tools, prompts si trenduri tech explicate simplu.',
-    category: 'Tech',
-    icon: FaRobot,
-    accent: 'linear-gradient(135deg, #6366f1 0%, #0ea5e9 100%)',
-  },
-  {
-    id: 'trendpulse',
-    name: 'TrendPulse',
-    visitors: '55K',
-    description: 'Subiecte virale, opinii si cele mai active discutii.',
-    category: 'Most Visited',
-    icon: FaFire,
-    accent: 'linear-gradient(135deg, #ef4444 0%, #f59e0b 100%)',
-  },
-]
+const getIconForCategory = (category) => {
+  switch (category?.toLowerCase()) {
+    case 'tech':
+    case 'technology': return FaCode;
+    case 'gaming': return FaGamepad;
+    case 'movies': return MdLocalMovies;
+    case 'travel': return MdTravelExplore;
+    case 'music': return FaMusic;
+    case 'food': return FaLeaf; // Just a fallback
+    default: return FaFire;
+  }
+}
 
-const SECTION_CONFIG = [
-  {
-    title: 'Recommended For You',
-    key: 'recommended',
-    ids: [
-      'devtalk',
-      'futurelab',
-      'cinehub',
-      'greenhabit',
-      'sounddistrict',
-      'wandernotes',
-    ],
-  },
-  {
-    title: 'Fast Growing Now',
-    key: 'growing',
-    ids: [
-      'pixelarena',
-      'devtalk',
-      'trendpulse',
-      'futurelab',
-      'cinehub',
-      'wandernotes',
-    ],
-  },
-  {
-    title: 'Because You Like Tech',
-    key: 'tech',
-    ids: [
-      'futurelab',
-      'devtalk',
-      'pixelarena',
-      'sounddistrict',
-      'trendpulse',
-      'cinehub',
-    ],
-  },
-]
+const getAccentForCategory = (category) => {
+  switch (category?.toLowerCase()) {
+    case 'tech':
+    case 'technology': return 'linear-gradient(135deg, #1d4ed8 0%, #06b6d4 100%)';
+    case 'gaming': return 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)';
+    case 'travel': return 'linear-gradient(135deg, #0ea5e9 0%, #14b8a6 100%)';
+    case 'music': return 'linear-gradient(135deg, #f59e0b 0%, #f97316 100%)';
+    default: return 'linear-gradient(135deg, #6366f1 0%, #0ea5e9 100%)';
+  }
+}
 
 export const ExploreCommunities = () => {
   const [activeCategory, setActiveCategory] = useState('All')
+  const [allCommunities, setAllCommunities] = useState([])
+  const [loading, setLoading] = useState(true)
 
-  const mapById = useMemo(
-    () =>
-      Object.fromEntries(
-        ALL_COMMUNITIES.map((community) => [community.id, community]),
-      ),
-    [],
-  )
+  useEffect(() => {
+    const fetchCommunities = async () => {
+      try {
+        const response = await fetch('/api/Communities')
+        if (response.ok) {
+          const data = await response.json()
+          setAllCommunities(data)
+        }
+      } catch (error) {
+        console.error('Failed to fetch communities:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchCommunities()
+  }, [])
 
   const filterByCategory = (communities) => {
     if (activeCategory === 'All') return communities
-    if (activeCategory === 'Most Visited') {
-      return communities.filter(
-        (community) =>
-          community.category === 'Most Visited' ||
-          Number.parseInt(community.visitors, 10) >= 70,
-      )
-    }
     return communities.filter(
       (community) => community.category === activeCategory,
     )
+  }
+
+  const displayedCommunities = filterByCategory(allCommunities);
+
+  if (loading) {
+    return <div className="explore-page"><p>Loading communities...</p></div>
   }
 
   return (
@@ -188,54 +109,49 @@ export const ExploreCommunities = () => {
         ))}
       </section>
 
-      {SECTION_CONFIG.map((section) => {
-        const communities = filterByCategory(
-          section.ids.map((id) => mapById[id]).filter(Boolean),
-        )
+      <section className='explore-section'>
+        <div className='explore-section-header'>
+          <h2>Communities</h2>
+        </div>
 
-        if (communities.length === 0) return null
-
-        return (
-          <section key={section.key} className='explore-section'>
-            <div className='explore-section-header'>
-              <h2>{section.title}</h2>
-            </div>
-
-            <div className='explore-grid'>
-              {communities.map((community) => {
-                const Icon = community.icon
-                return (
-                  <article key={community.id} className='explore-card'>
-                    <div className='explore-card-top'>
-                      <div
-                        className='explore-card-logo'
-                        style={{ background: community.accent }}
-                      >
+        <div className='explore-grid'>
+          {displayedCommunities.map((community) => {
+            const Icon = getIconForCategory(community.category)
+            return (
+              <article key={community.id} className='explore-card'>
+                <div className='explore-card-top'>
+                  <div
+                    className='explore-card-logo'
+                    style={{ background: getAccentForCategory(community.category) }}
+                  >
+                    {community.avatarUrl ? (
+                        <img src={community.avatarUrl} alt="icon" style={{width: '100%', height: '100%', objectFit: 'cover', borderRadius: '4px'}} />
+                    ) : (
                         <Icon />
-                      </div>
-                      <Link to={`/community/${community.id}`} className='explore-join-btn'>
-                        Visit
-                      </Link>
-                    </div>
+                    )}
+                  </div>
+                  <Link to={`/community/${community.slug}`} className='explore-join-btn'>
+                    Visit
+                  </Link>
+                </div>
 
-                    <h3>
-                      <Link to={`/community/${community.id}`} className='explore-community-link'>
-                        {community.name}
-                      </Link>
-                    </h3>
-                    <p className='explore-visitors'>
-                      {community.visitors} weekly visitors
-                    </p>
-                    <p className='explore-description'>
-                      {community.description}
-                    </p>
-                  </article>
-                )
-              })}
-            </div>
-          </section>
-        )
-      })}
+                <h3>
+                  <Link to={`/community/${community.slug}`} className='explore-community-link'>
+                    {community.title}
+                  </Link>
+                </h3>
+                <p className='explore-visitors'>
+                  {community.membersCount} members
+                </p>
+                <p className='explore-description'>
+                  {community.description}
+                </p>
+              </article>
+            )
+          })}
+          {displayedCommunities.length === 0 && <p>No communities found in this category.</p>}
+        </div>
+      </section>
     </main>
   )
 }
