@@ -69,6 +69,21 @@ export const Home = () => {
   const sortRef = useRef(null)
   const postsWrapRef = useRef(null)
 
+  // Fetch communities from backend and log to console
+  useEffect(() => {
+    fetch('/api/communities')
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP error: ${res.status}`)
+        return res.json()
+      })
+      .then((data) => {
+        console.log('[Communities from backend]', data)
+      })
+      .catch((err) => {
+        console.error('[Communities fetch error]', err)
+      })
+  }, [])
+
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (sortRef.current && !sortRef.current.contains(e.target)) {
