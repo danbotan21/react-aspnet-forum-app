@@ -37,14 +37,73 @@ export const StartCommunity = () => {
   const [selectedImageName, setSelectedImageName] = useState('')
   const [communityTitle, setCommunityTitle] = useState('')
   const [communityDescription, setCommunityDescription] = useState('')
+  const [base64Image, setBase64Image] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState(null)
+  const [success, setSuccess] = useState(false)
 
   const handleImageChange = (e) => {
     const file = e.target.files?.[0]
     if (!file || !file.type.startsWith('image/')) {
       setSelectedImageName('')
+      setBase64Image('')
       return
     }
     setSelectedImageName(file.name)
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      setBase64Image(reader.result)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const handleCreateCommunity = async () => {
+    if (!communityTitle.trim()) {
+      setError("Title is required.")
+      return
+    }
+
+    setIsLoading(true)
+    setError(null)
+    setSuccess(false)
+
+    // Generate slug from title
+    const generatedSlug = communityTitle.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '') || `comm-${Date.now()}`
+
+    const payload = {
+      title: communityTitle,
+      slug: generatedSlug,
+      description: communityDescription || "",
+      category: selectedCategory,
+      type: selectedType,
+      avatarUrl: base64Image || null
+    }
+
+    try {
+      const response = await fetch("http://localhost:5129/api/Communities?authorId=1", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+      })
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || "Failed to create community")
+      }
+
+      setSuccess(true)
+      // Optional: Reset form fields here if needed
+      setCommunityTitle('')
+      setCommunityDescription('')
+      setSelectedImageName('')
+      setBase64Image('')
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -150,8 +209,15 @@ export const StartCommunity = () => {
         </section>
 
         <div className='start-community-actions'>
-          <button type='button' className='start-community-submit'>
-            Create Community
+          {error && <p className='start-community-error' style={{ color: 'red', marginBottom: '10px' }}>{error}</p>}
+          {success && <p className='start-community-success' style={{ color: 'green', marginBottom: '10px' }}>Community created successfully!</p>}
+          <button 
+            type='button' 
+            className='start-community-submit' 
+            onClick={handleCreateCommunity}
+            disabled={isLoading}
+          >
+            {isLoading ? 'Creating...' : 'Create Community'}
           </button>
         </div>
       </div>
