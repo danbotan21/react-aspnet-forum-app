@@ -1,153 +1,30 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { FaCaretUp, FaCaretDown, FaComment, FaShare } from 'react-icons/fa'
 import { useAuth } from './AuthContext'
 import './Styles/CommunityPage.css'
 import avatar from './img/avatar.webp'
-import man from './img/man.jpg'
-import shreck from './img/shreck.png'
-import nature from './img/nature.jpg'
 import coding from './img/coding.jpg'
+import { normalizeImageSrc } from './utils/media'
 
 const SORT_OPTIONS = ['Popular', 'New', 'Top']
 
-const COMMUNITY_DATA = {
-  frontend: {
-    name: 'frontend',
-    title: 'Frontend Lounge',
-    description:
-      'Comunitate dedicata UI engineering, React patterns, design systems si performanta web.',
-    banner: coding,
-    image: avatar,
-    members: '92K',
-    online: '1.4K',
-    rules: [
-      'Fii respectuos in discutii si argumenteaza tehnic.',
-      'Postarile trebuie sa aiba context clar si titlu relevant.',
-      'Fara self-promo agresiv sau link farming.',
-      'Include cod minim reproductibil pentru intrebari de debugging.',
-    ],
-  },
-  webdev: {
-    name: 'webdev',
-    title: 'WebDev Circle',
-    description:
-      'Discutii practice despre frontend, backend, deploy, arhitectura si tool-uri moderne.',
-    banner: nature,
-    image: man,
-    members: '77K',
-    online: '880',
-    rules: [
-      'Respecta ghidul de postare si evita titlurile vagi.',
-      'Mentioneaza stack-ul folosit in intrebari tehnice.',
-      'Nu publica continut duplicat in aceeasi zi.',
-      'Feedback constructiv, fara atacuri personale.',
-    ],
-  },
-  memes: {
-    name: 'memes',
-    title: 'Meme Factory',
-    description:
-      'Meme-uri fresh, cultura internet si cele mai virale thread-uri ale saptamanii.',
-    banner: shreck,
-    image: avatar,
-    members: '128K',
-    online: '5.2K',
-    rules: [
-      'Fara continut ofensator sau spam repetitiv.',
-      'Publica doar media care respecta regulile platformei.',
-      'Evita repost-ul aceluiasi meme in 24h.',
-      'Foloseste flair-ul corect pentru postare.',
-    ],
-  },
-  travel: {
-    name: 'travel',
-    title: 'Travel Notes',
-    description:
-      'Ghiduri de calatorie, idei de city break si recomandari reale de la comunitate.',
-    banner: nature,
-    image: avatar,
-    members: '61K',
-    online: '740',
-    rules: [
-      'Include costuri aproximative si perioada recomandata.',
-      'Fara dezinformare despre documente sau vize.',
-      'Pastreaza discutiile on-topic.',
-      'Respecta normele locale din destinatiile discutate.',
-    ],
-  },
-  devtalk: {
-    name: 'devtalk',
-    title: 'DevTalk',
-    description:
-      'Discutii zilnice despre React, backend, AI si proiecte reale.',
-    banner: coding,
-    image: man,
-    members: '92K',
-    online: '1.3K',
-    rules: [
-      'Feedback tehnic argumentat.',
-      'Nu publica cod incomplet fara context.',
-      'Titluri clare si descriptive.',
-      'Respecta intotdeauna ceilalti membri.',
-    ],
-  },
-  pixelarena: {
-    name: 'pixelarena',
-    title: 'PixelArena',
-    description: 'Community pentru esports, stiri si lansari de jocuri.',
-    banner: shreck,
-    image: avatar,
-    members: '114K',
-    online: '3.1K',
-    rules: [
-      'Fara leak-uri neverificate.',
-      'Posteaza in categoria corecta.',
-      'Respecta ceilalti jucatori.',
-      'Nu promova cheaturi.',
-    ],
-  },
-}
-
-const POSTS = [
-  {
-    id: 1,
-    author: 'u/exampleUser',
-    authorAvatar: man,
-    time: '4 hr. ago',
-    title: 'How should we organize reusable UI primitives in this community?',
-    text: 'Share your folder strategy for scalable projects and how you keep naming consistent.',
-    image: coding,
-    votes: 248,
-    comments: 34,
-  },
-  {
-    id: 2,
-    author: 'u/designPilot',
-    authorAvatar: avatar,
-    time: '8 hr. ago',
-    title: 'Best layout for profile + feed pages in forum products',
-    text: 'Looking for practical structure ideas that keep nav, sidebar and content aligned.',
-    image: nature,
-    votes: 177,
-    comments: 19,
-  },
-]
-
-const getUsernameFromAuthor = (author) => author.replace(/^u\//, '')
-const getPostRoute = (communityName, postId) =>
-  `/community/${encodeURIComponent(communityName)}/post/${postId}`
+const getPostRoute = (communitySlug, postId) =>
+  `/community/${encodeURIComponent(communitySlug)}/post/${postId}`
 
 export function CommunityPage() {
   const { communityname } = useParams()
   const { user } = useAuth()
   const [sortBy, setSortBy] = useState('Popular')
   const [openMorePostId, setOpenMorePostId] = useState(null)
-  
+
   const [community, setCommunity] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [isMember, setIsMember] = useState(false)
+
+  const [posts, setPosts] = useState([])
+  const [isLoadingPosts, setIsLoadingPosts] = useState(true)
 
   const postsWrapRef = useRef(null)
 
@@ -179,6 +56,21 @@ export function CommunityPage() {
   }, [communityname, user])
 
   useEffect(() => {
+    if (!community?.id) return
+    setIsLoadingPosts(true)
+    fetch(`/api/posts/community/${community.id}?sortBy=${sortBy.toLowerCase()}`)
+      .then((res) => res.json())
+      .then((data) => {
+        setPosts(data)
+        setIsLoadingPosts(false)
+      })
+      .catch((err) => {
+        console.error(err)
+        setIsLoadingPosts(false)
+      })
+  }, [community?.id, sortBy])
+
+  useEffect(() => {
     const handleClickOutside = (e) => {
       if (postsWrapRef.current && !postsWrapRef.current.contains(e.target)) {
         setOpenMorePostId(null)
@@ -197,22 +89,25 @@ export function CommunityPage() {
   if (loading) return <div className='community-page'><p>Loading...</p></div>;
   if (error || !community) return <div className='community-page'><p>Error: {error || 'Not found'}</p></div>;
 
+  const communityBannerSrc = normalizeImageSrc(community.bannerUrl) || normalizeImageSrc(community.avatarUrl)
+  const communityAvatarSrc = normalizeImageSrc(community.avatarUrl)
+
   return (
     <main className='community-page'>
       <section className='community-shell'>
         <div className='community-main'>
           <header className='community-hero'>
             <div className='community-banner'>
-              {community.bannerUrl ? (
-                <img src={community.bannerUrl} alt='Community banner' />
+              {communityBannerSrc ? (
+                <img src={communityBannerSrc} alt='Community banner' />
               ) : (
                 <img src={coding} alt='Community banner fallback' />
               )}
             </div>
 
             <div className='community-head'>
-              {community.avatarUrl ? (
-                <img src={community.avatarUrl} alt='Community avatar' className='community-avatar' />
+              {communityAvatarSrc ? (
+                <img src={communityAvatarSrc} alt='Community avatar' className='community-avatar' />
               ) : (
                 <img src={avatar} alt='Community avatar fallback' className='community-avatar' />
               )}
@@ -223,8 +118,8 @@ export function CommunityPage() {
                   {community.membersCount} members
                 </span>
               </div>
-              <button 
-                type='button' 
+              <button
+                type='button'
                 className={`community-join-btn ${isMember ? 'community-leave-btn' : ''}`}
                 style={isMember ? { backgroundColor: 'transparent', color: 'white', border: '1px solid white' } : {}}
               >
@@ -249,28 +144,35 @@ export function CommunityPage() {
           </section>
 
           <section className='community-feed' ref={postsWrapRef}>
-            {POSTS.map((post) => (
-              <article key={post.id} className='post'>
+            {isLoadingPosts ? (
+              <p style={{ textAlign: 'center', padding: '2rem' }}>Loading posts...</p>
+            ) : posts.length === 0 ? (
+              <p style={{ textAlign: 'center', padding: '2rem' }}>No posts found in this community.</p>
+            ) : (
+              posts.map((post) => {
+                const postImageSrc = normalizeImageSrc(post.imageUrl ?? post.ImageUrl)
+                return (
+                <article key={post.id} className='post'>
                 <div className='post-main'>
                   <header className='post-header'>
                     <Link
-                      to={`/user/${encodeURIComponent(getUsernameFromAuthor(post.author))}`}
+                      to={`/user/${encodeURIComponent(post.authorName)}`}
                     >
                       <img
-                        src={post.authorAvatar}
-                        alt={post.author}
+                        src={avatar}
+                        alt={post.authorName}
                         className='avatar'
                       />
                     </Link>
                     <div className='post-meta'>
                       <Link
-                        to={`/user/${encodeURIComponent(getUsernameFromAuthor(post.author))}`}
+                        to={`/user/${encodeURIComponent(post.authorName)}`}
                         className='author author-link'
                       >
-                        {post.author}
+                        u/{post.authorName}
                       </Link>
                       <span className='meta-separator'>&middot;</span>
-                      <span className='time-posted'>{post.time}</span>
+                      <span className='time-posted'>{new Date(post.createdAt).toLocaleDateString()}</span>
                     </div>
 
                     <div className='post-header-actions'>
@@ -291,7 +193,7 @@ export function CommunityPage() {
                       {openMorePostId === post.id && (
                         <div className='more-menu' role='menu'>
                           <Link
-                            to={getPostRoute(community.name, post.id)}
+                            to={getPostRoute(community.slug, post.id)}
                             className='more-menu-item more-menu-link'
                             role='menuitem'
                             onClick={() => setOpenMorePostId(null)}
@@ -315,24 +217,32 @@ export function CommunityPage() {
                   <div className='post-body'>
                     <h3 className='post-title'>
                       <Link
-                        to={getPostRoute(community.name, post.id)}
+                        to={getPostRoute(community.slug, post.id)}
                         className='post-title-link'
                       >
                         {post.title}
                       </Link>
                     </h3>
-                    <p className='post-text'>{post.text}</p>
+                    {post.body && <p className='post-text'>{post.body}</p>}
 
-                    <div className='post-media'>
-                      <Link
-                        to={getPostRoute(community.name, post.id)}
-                        className='post-media-link'
-                      >
-                        <div className='media-placeholder'>
-                          <img src={post.image} alt='Post content' />
-                        </div>
-                      </Link>
-                    </div>
+                    {(postImageSrc || post.linkUrl) && (
+                      <div className='post-media'>
+                        {postImageSrc ? (
+                          <Link
+                            to={getPostRoute(community.slug, post.id)}
+                            className='post-media-link'
+                          >
+                            <div className='media-placeholder'>
+                              <img src={postImageSrc} alt='Post content' />
+                            </div>
+                          </Link>
+                        ) : (
+                          <div className='media-placeholder'>
+                            <a href={post.linkUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#0066cc', textDecoration: 'underline' }}>{post.linkUrl}</a>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   <footer className='post-footer'>
@@ -342,18 +252,20 @@ export function CommunityPage() {
                       <FaCaretDown className='vote-icon downvote' />
                     </div>
 
-                    <button type='button' className='action-chip'>
-                      <FaComment className='comment-icon' />
-                      <span className='comment-count'>{post.comments}</span>
-                    </button>
+                      <button type='button' className='action-chip'>
+                        <FaComment className='comment-icon' />
+                        <span className='comment-count'>{post.commentsCount}</span>
+                      </button>
 
                     <button type='button' className='action-chip'>
                       <FaShare className='share-icon' />
                     </button>
                   </footer>
                 </div>
-              </article>
-            ))}
+                </article>
+                )
+              })
+            )}
           </section>
         </div>
 

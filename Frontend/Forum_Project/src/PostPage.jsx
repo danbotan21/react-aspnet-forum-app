@@ -2,38 +2,9 @@ import { Link, useParams } from 'react-router-dom'
 import { FaCaretDown, FaCaretUp, FaComment, FaShare } from 'react-icons/fa'
 import './Styles/PostPage.css'
 import avatar from './img/avatar.webp'
-import coding from './img/coding.jpg'
-import nature from './img/nature.jpg'
+import { normalizeImageSrc } from './utils/media'
 
-const POST_LIBRARY = {
-  'frontend-1': {
-    title: 'How would you design a modern forum homepage?',
-    body: 'I am working on a frontend forum project and would love feedback on layout, typography, and interactions. What patterns from Reddit-style communities do you think are essential?',
-    image: coding,
-    author: 'u/exampleUser',
-    time: '6 hours ago',
-    votes: 324,
-    comments: 67,
-  },
-  'frontend-2': {
-    title: 'What is your preferred structure for reusable React cards?',
-    body: 'I want better composition for list cards and details cards. Curious what naming and folder conventions you use in larger apps.',
-    image: nature,
-    author: 'u/designPilot',
-    time: '8 hours ago',
-    votes: 211,
-    comments: 39,
-  },
-  'webdev-3': {
-    title: 'Best way to keep feed interactions consistent across pages',
-    body: 'We currently duplicate feed UI in multiple routes. Looking for an approach that keeps style and behavior perfectly aligned.',
-    image: coding,
-    author: 'u/devFlow',
-    time: '11 hours ago',
-    votes: 189,
-    comments: 24,
-  },
-}
+import { useState, useEffect } from 'react'
 
 const COMMENTS = [
   {
@@ -56,21 +27,32 @@ const getUsernameFromAuthor = (author) => author.replace(/^u\//, '')
 
 export function PostPage() {
   const { communityname, postId } = useParams()
+  const [post, setPost] = useState(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState(null)
 
-  const communitySlug = decodeURIComponent(communityname ?? 'frontend').toLowerCase()
-  const key = `${communitySlug}-${postId}`
+  useEffect(() => {
+    setIsLoading(true)
+    fetch(`/api/posts/${postId}`)
+      .then(res => {
+        if (!res.ok) throw new Error('Post not found')
+        return res.json()
+      })
+      .then(data => {
+        setPost(data)
+        setIsLoading(false)
+      })
+      .catch(err => {
+        setError(err.message)
+        setIsLoading(false)
+      })
+  }, [postId])
 
-  const fallbackPost = {
-    title: `Post #${postId}`,
-    body: 'Continutul complet al postarii va fi populat din backend. Aceasta este o pagina statica de preview pentru ruta de detaliu.',
-    image: coding,
-    author: 'u/unknownUser',
-    time: 'recently',
-    votes: 0,
-    comments: 0,
-  }
+  const communitySlug = decodeURIComponent(communityname ?? 'community').toLowerCase()
+  const postImageSrc = normalizeImageSrc(post?.imageUrl ?? post?.ImageUrl)
 
-  const post = POST_LIBRARY[key] ?? fallbackPost
+  if (isLoading) return <main className='post-page'><p style={{ textAlign: 'center', padding: '2rem' }}>Loading post...</p></main>
+  if (error || !post) return <main className='post-page'><p style={{ textAlign: 'center', padding: '2rem', color: 'red' }}>Error: {error}</p></main>
 
   return (
     <main className='post-page'>
@@ -80,24 +62,30 @@ export function PostPage() {
             <header className='post-page-header'>
               <img src={avatar} alt='Community avatar' className='post-page-avatar' />
               <div className='post-page-meta'>
-                <Link to={`/community/${encodeURIComponent(communitySlug)}`}>
-                  r/{communitySlug}
+                <Link to={`/community/${encodeURIComponent(post.communitySlug)}`}>
+                  r/{post.communitySlug}
                 </Link>
                 <span>&middot;</span>
-                <span>{post.time}</span>
+                <span>{new Date(post.createdAt).toLocaleDateString()}</span>
                 <span>&middot;</span>
                 <Link
-                  to={`/user/${encodeURIComponent(getUsernameFromAuthor(post.author))}`}
+                  to={`/user/${encodeURIComponent(post.authorName)}`}
                 >
-                  Posted by {post.author}
+                  Posted by u/{post.authorName}
                 </Link>
               </div>
             </header>
 
             <h1>{post.title}</h1>
-            <p>{post.body}</p>
+            {post.body && <p>{post.body}</p>}
 
-            <img src={post.image} alt='Post media' className='post-page-image' />
+            {(postImageSrc || post.linkUrl) && (
+              postImageSrc ? (
+                <img src={postImageSrc} alt='Post media' className='post-page-image' />
+              ) : (
+                <a href={post.linkUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'block', margin: '1rem 0', color: '#0066cc', textDecoration: 'underline' }}>{post.linkUrl}</a>
+              )
+            )}
 
             <footer className='post-page-actions'>
               <button type='button' className='post-chip post-chip-vote'>
@@ -106,7 +94,7 @@ export function PostPage() {
                 <FaCaretDown className='post-chip-vote-icon' />
               </button>
               <button type='button' className='post-chip'>
-                <FaComment /> {post.comments}
+                <FaComment /> {post.commentsCount}
               </button>
               <button type='button' className='post-chip'>
                 <FaShare /> Share

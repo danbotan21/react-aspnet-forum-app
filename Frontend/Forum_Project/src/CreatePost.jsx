@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   FaSearch,
   FaTimes,
@@ -6,19 +7,28 @@ import {
   FaTrash,
   FaCloudUploadAlt,
 } from 'react-icons/fa'
+import { useAuth } from './AuthContext'
 import './Styles/CreatePost.css'
 
 export const CreatePost = () => {
+  const navigate = useNavigate()
+  const { user } = useAuth()
   const [activeTab, setActiveTab] = useState('Text')
   const [isDraftsOpen, setIsDraftsOpen] = useState(false)
   const [dragActive, setDragActive] = useState(false)
-  const [community, setCommunity] = useState('')
+  
+  // States for backend data
+  const [communities, setCommunities] = useState([])
+  const [communityId, setCommunityId] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [postTitle, setPostTitle] = useState('')
   const [postBody, setPostBody] = useState('')
   const [postUrl, setPostUrl] = useState('')
   const [selectedImageName, setSelectedImageName] = useState('')
   const [uploadError, setUploadError] = useState('')
   const [previewUrl, setPreviewUrl] = useState('')
+  const [base64Image, setBase64Image] = useState('')
+  const [isImageProcessing, setIsImageProcessing] = useState(false)
 
   const dragCounterRef = useRef(0)
   const fileInputRef = useRef(null)
@@ -27,6 +37,7 @@ export const CreatePost = () => {
     (file) => {
       if (!file || !file.type.startsWith('image/')) {
         setUploadError('Please choose an image file.')
+        setIsImageProcessing(false)
         return
       }
 
@@ -34,6 +45,19 @@ export const CreatePost = () => {
       setUploadError('')
       setSelectedImageName(file.name)
       setPreviewUrl(URL.createObjectURL(file))
+      setIsImageProcessing(true)
+
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setBase64Image(reader.result)
+        setIsImageProcessing(false)
+      }
+      reader.onerror = () => {
+        setUploadError('Image upload failed. Please try another file.')
+        setBase64Image('')
+        setIsImageProcessing(false)
+      }
+      reader.readAsDataURL(file)
     },
     [previewUrl],
   )
@@ -112,6 +136,87 @@ export const CreatePost = () => {
     }
   }, [isDraftsOpen])
 
+  // Fetch only communities where the current user is a member
+  useEffect(() => {
+    if (!user?.id) {
+      setCommunities([])
+      return
+    }
+
+    fetch(`/api/communities/user/${user.id}`)
+      .then((res) => {
+        if (!res.ok) throw new Error('Failed to fetch communities')
+        return res.json()
+      })
+      .then((data) => {
+        setCommunities(data)
+      })
+      .catch((err) => console.error(err))
+  }, [user?.id])
+
+  const handleSubmit = async () => {
+    if (!user?.id) {
+      alert('Please login to create a post.')
+      return
+    }
+
+    if (!communityId) {
+      alert('Please select a community')
+      return
+    }
+    if (!postTitle.trim()) {
+      alert('Title is required')
+      return
+    }
+    if (activeTab === 'Images' && !base64Image) {
+      alert(
+        isImageProcessing
+          ? 'Image is still processing. Please wait a moment.'
+          : 'Please upload an image.',
+      )
+      return
+    }
+
+    setIsSubmitting(true)
+
+    const postData = {
+      title: postTitle,
+      body: activeTab === 'Text' ? postBody : null,
+      imageUrl: activeTab === 'Images' ? base64Image : null,
+      linkUrl: activeTab === 'Link' ? postUrl : null,
+      type: activeTab === 'Images' ? 'Image' : activeTab,
+      communityId: parseInt(communityId, 10),
+    }
+
+    try {
+      const response = await fetch(`/api/posts?authorId=${user.id}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(postData),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to create post')
+      }
+
+      const createdPost = await response.json()
+      // Use community slug from communities array for the route
+      const selectedComm = communities.find(c => c.id === parseInt(communityId, 10))
+      if (selectedComm) {
+        navigate(`/community/${selectedComm.slug}/post/${createdPost.id}`)
+      } else {
+        navigate('/')
+      }
+    } catch (error) {
+      console.error(error)
+      alert('An error occurred while creating the post.')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
   return (
     <div className='create-post-page'>
       <div className='create-post-card'>
@@ -137,15 +242,21 @@ export const CreatePost = () => {
         </header>
 
         <div className='create-post-community-wrap'>
-          <FaSearch className='create-post-search-icon' aria-hidden />
-          <input
-            type='text'
-            placeholder='Choose a community'
+          <select
             className='create-post-community-input'
-            aria-label='Search community'
-            value={community}
-            onChange={(e) => setCommunity(e.target.value)}
-          />
+            aria-label='Select community'
+            value={communityId}
+            onChange={(e) => setCommunityId(e.target.value)}
+          >
+            <option value='' disabled>
+              {user?.id ? 'Choose a community' : 'Login to choose a community'}
+            </option>
+            {communities.map((comm) => (
+              <option key={comm.id} value={comm.id}>
+                r/{comm.slug}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div className='create-post-editor'>
@@ -286,8 +397,10 @@ export const CreatePost = () => {
             <button
               type='button'
               className='create-post-btn create-post-btn-primary'
+              onClick={handleSubmit}
+              disabled={isSubmitting || (activeTab === 'Images' && isImageProcessing)}
             >
-              Post
+              {isSubmitting ? 'Posting...' : 'Post'}
             </button>
           </div>
         </div>
