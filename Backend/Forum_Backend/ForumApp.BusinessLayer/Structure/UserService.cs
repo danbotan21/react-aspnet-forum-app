@@ -136,6 +136,42 @@ namespace ForumApp.BusinessLayer.Structure
             return new ActionResponse { IsSuccess = true, Message = "Account deleted." };
         }
 
+        // ── Public user queries ──────────────────────────────────────
+
+        public async Task<IReadOnlyList<UserResponseDto>> GetAllUsersAsync(CancellationToken ct = default)
+        {
+            var users = await _context.Users
+                .OrderByDescending(u => u.CreatedAt)
+                .ToListAsync(ct);
+
+            return users.Select(MapToDto).ToList();
+        }
+
+        public async Task<UserResponseDto?> GetUserByIdAsync(int userId, CancellationToken ct = default)
+        {
+            var user = await _context.Users.FindAsync(new object[] { userId }, ct);
+            return user == null ? null : MapToDto(user);
+        }
+
+        public async Task<UserResponseDto?> GetUserByUsernameAsync(string username, CancellationToken ct = default)
+        {
+            var user = await _context.Users
+                .FirstOrDefaultAsync(u => u.UserName == username, ct);
+            return user == null ? null : MapToDto(user);
+        }
+
+        public async Task<IReadOnlyList<UserResponseDto>> SearchUsersAsync(string searchTerm, CancellationToken ct = default)
+        {
+            var users = await _context.Users
+                .Where(u => u.UserName.Contains(searchTerm))
+                .OrderBy(u => u.UserName)
+                .ToListAsync(ct);
+
+            return users.Select(MapToDto).ToList();
+        }
+
+        // ── Mapper ───────────────────────────────────────────────────
+
         private static UserResponseDto MapToDto(UserData user) => new()
         {
             ID = user.ID,

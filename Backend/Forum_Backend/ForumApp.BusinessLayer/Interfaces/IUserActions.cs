@@ -5,12 +5,21 @@ namespace ForumApp.BusinessLayer.Interfaces
 {
     public interface IUserActions
     {
+        // Auth
         Task<UserResponseDto?> RegisterAsync(UserRegisterDto userData, CancellationToken ct = default);
         Task<LoginResponseDto?> LoginAsync(UserLoginDto userData, CancellationToken ct = default); 
+        Task<LoginResponseDto?> RefreshTokenAsync(string refreshToken, CancellationToken ct = default);
+
+        // Profile (userul logat)
         Task<UserResponseDto?> GetProfileAsync(int userId, CancellationToken ct = default);
         Task<UserResponseDto?> UpdateProfileAsync(int userId, UserUpdateDto userData, CancellationToken ct = default);
-        Task<LoginResponseDto?> RefreshTokenAsync(string refreshToken, CancellationToken ct = default);
         Task<ActionResponse> DeleteAccountAsync(int userId, CancellationToken ct = default);
+
+        // Public user queries
+        Task<IReadOnlyList<UserResponseDto>> GetAllUsersAsync(CancellationToken ct = default);
+        Task<UserResponseDto?> GetUserByIdAsync(int userId, CancellationToken ct = default);
+        Task<UserResponseDto?> GetUserByUsernameAsync(string username, CancellationToken ct = default);
+        Task<IReadOnlyList<UserResponseDto>> SearchUsersAsync(string searchTerm, CancellationToken ct = default);
     }
 }
 
