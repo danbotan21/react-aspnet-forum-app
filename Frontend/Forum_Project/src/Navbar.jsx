@@ -17,8 +17,12 @@ import defaultAvatar from './img/avatar.webp'
 export const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false)
   const profileRef = useRef(null)
+  const searchRef = useRef(null)
   const navigate = useNavigate()
   const { user, logout } = useAuth()
+  const [searchTerm, setSearchTerm] = useState('')
+  const [searchResults, setSearchResults] = useState([])
+  const [showSearchDropdown, setShowSearchDropdown] = useState(false)
 
   // Folosim username-ul real din context, sau fallback
   const loggedUser = user?.userName || 'username'
@@ -29,10 +33,34 @@ export const Navbar = () => {
       if (profileRef.current && !profileRef.current.contains(e.target)) {
         setIsOpen(false)
       }
+      if (searchRef.current && !searchRef.current.contains(e.target)) {
+        setShowSearchDropdown(false)
+      }
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
+
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(async () => {
+      if (searchTerm.trim() !== '') {
+        try {
+          const res = await fetch(`/api/Communities/search?term=${encodeURIComponent(searchTerm)}`)
+          if (res.ok) {
+            const data = await res.json()
+            setSearchResults(data)
+            setShowSearchDropdown(true)
+          }
+        } catch (err) {
+          console.error('Error searching communities:', err)
+        }
+      } else {
+        setSearchResults([])
+        setShowSearchDropdown(false)
+      }
+    }, 300)
+    return () => clearTimeout(delayDebounceFn)
+  }, [searchTerm])
 
   const handleLogout = () => {
     setIsOpen(false)
@@ -53,14 +81,35 @@ export const Navbar = () => {
           {/* SPEAK-Line */}
         </a>
 
-        <div className='navbar-search-wrap'>
+        <div className='navbar-search-wrap' ref={searchRef} style={{ position: 'relative' }}>
           <FaSearch className='navbar-search-icon navbar-search-icon-left' />
           <input
             type='search'
             className='navbar-search'
             placeholder='Find anything'
             aria-label='Search'
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            onFocus={() => { if (searchTerm.trim() !== '') setShowSearchDropdown(true) }}
           />
+          {showSearchDropdown && searchResults.length > 0 && (
+            <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, backgroundColor: 'white', borderRadius: '4px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)', zIndex: 10 }}>
+              {searchResults.map((c) => (
+                <div 
+                  key={c.id} 
+                  style={{ padding: '10px', cursor: 'pointer', borderBottom: '1px solid #eee', color: 'black' }}
+                  onClick={() => {
+                    setShowSearchDropdown(false);
+                    setSearchTerm('');
+                    navigate(`/community/${c.slug}`);
+                  }}
+                >
+                  <strong style={{ display: 'block' }}>{c.title}</strong>
+                  <span style={{ fontSize: '0.8em', color: 'gray' }}>c/{c.slug} - {c.membersCount} members</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Actions + profile */}

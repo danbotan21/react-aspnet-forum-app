@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { FaCaretUp, FaCaretDown, FaComment, FaShare } from 'react-icons/fa'
+import { useAuth } from './AuthContext'
 import './Styles/CommunityPage.css'
 import avatar from './img/avatar.webp'
 import man from './img/man.jpg'
@@ -115,10 +116,43 @@ const getPostRoute = (communityName, postId) =>
 
 export function CommunityPage() {
   const { communityname } = useParams()
+  const { user } = useAuth()
   const [sortBy, setSortBy] = useState('Popular')
   const [openMorePostId, setOpenMorePostId] = useState(null)
 
+  const [community, setCommunity] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [isMember, setIsMember] = useState(false)
+
   const postsWrapRef = useRef(null)
+
+  useEffect(() => {
+    const fetchCommunityAndMembership = async () => {
+      try {
+        setLoading(true)
+        const response = await fetch(`/api/Communities/${communityname}`)
+        if (!response.ok) {
+          throw new Error('Community not found')
+        }
+        const data = await response.json()
+        setCommunity(data)
+
+        if (user?.id && data?.id) {
+          const membershipRes = await fetch(`/api/Communities/${data.id}/ismember?userId=${user.id}`);
+          if (membershipRes.ok) {
+            const memberStatus = await membershipRes.json();
+            setIsMember(memberStatus === true);
+          }
+        }
+      } catch (err) {
+        setError(err.message)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchCommunityAndMembership()
+  }, [communityname, user])
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -136,72 +170,8 @@ export function CommunityPage() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  const slug = decodeURIComponent(communityname ?? 'frontend').toLowerCase()
-
-  const [realCommunity, setRealCommunity] = useState(null)
-  const [posts, setPosts] = useState([])
-  const [isLoadingPosts, setIsLoadingPosts] = useState(true)
-
-  // Fetch community from backend
-  useEffect(() => {
-    fetch(`/api/communities/${slug}`)
-      .then((res) => {
-        if (!res.ok) throw new Error('Community not found')
-        return res.json()
-      })
-      .then((data) => setRealCommunity(data))
-      .catch((err) => console.error(err))
-  }, [slug])
-
-  // Fetch posts from backend using the real community ID
-  useEffect(() => {
-    if (!realCommunity?.id) return
-    setIsLoadingPosts(true)
-    fetch(`/api/posts/community/${realCommunity.id}?sortBy=${sortBy.toLowerCase()}`)
-      .then((res) => res.json())
-      .then((data) => {
-        setPosts(data)
-        setIsLoadingPosts(false)
-      })
-      .catch((err) => {
-        console.error(err)
-        setIsLoadingPosts(false)
-      })
-  }, [realCommunity?.id, sortBy])
-
-  const community = useMemo(() => {
-    const fallback = COMMUNITY_DATA[slug] || {
-      name: slug,
-      title: slug
-        .split('-')
-        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-        .join(' '),
-      description:
-        'Aceasta comunitate este noua. Datele de continut vor fi sincronizate dupa conectarea cu backend-ul.',
-      banner: coding,
-      image: avatar,
-      members: '0',
-      online: '0',
-      rules: [
-        'Fii respectuos cu ceilalti membri.',
-        'Posteaza continut relevant comunitatii.',
-        'Evita spam-ul si continutul duplicat.',
-        'Respecta regulile generale ale platformei.',
-      ],
-    }
-
-    if (realCommunity) {
-      return {
-        ...fallback,
-        title: realCommunity.title || fallback.title,
-        description: realCommunity.description || fallback.description,
-        members: realCommunity.membersCount || fallback.members,
-        name: realCommunity.slug || fallback.name,
-      }
-    }
-
-    return fallback
-  }, [slug, realCommunity])
+  if (loading) return <div className='community-page'><p>Loading...</p></div>;
+  if (error || !community) return <div className='community-page'><p>Error: {error || 'Not found'}</p></div>;
 
   return (
     <main className='community-page'>
@@ -209,24 +179,32 @@ export function CommunityPage() {
         <div className='community-main'>
           <header className='community-hero'>
             <div className='community-banner'>
-              <img src={community.banner} alt='Community banner' />
+              {community.bannerUrl ? (
+                <img src={community.bannerUrl} alt='Community banner' />
+              ) : (
+                <img src={coding} alt='Community banner fallback' />
+              )}
             </div>
 
             <div className='community-head'>
-              <img
-                src={community.image}
-                alt='Community avatar'
-                className='community-avatar'
-              />
+              {community.avatarUrl ? (
+                <img src={community.avatarUrl} alt='Community avatar' className='community-avatar' />
+              ) : (
+                <img src={avatar} alt='Community avatar fallback' className='community-avatar' />
+              )}
               <div className='community-meta'>
                 <h1>{community.title}</h1>
-                <p>r/{community.name}</p>
+                <p>c/{community.slug}</p>
                 <span>
-                  {community.members} members • {community.online} online
+                  {community.membersCount} members
                 </span>
               </div>
-              <button type='button' className='community-join-btn'>
-                Join
+              <button
+                type='button'
+                className={`community-join-btn ${isMember ? 'community-leave-btn' : ''}`}
+                style={isMember ? { backgroundColor: 'transparent', color: 'white', border: '1px solid white' } : {}}
+              >
+                {isMember ? 'Leave' : 'Join'}
               </button>
             </div>
           </header>
@@ -378,7 +356,11 @@ export function CommunityPage() {
           <section className='community-side-card'>
             <h3>Rules</h3>
             <ol>
-              {community.rules.map((rule) => (
+              {(community.rules || [
+                'Fii respectuos in discutii.',
+                'Postarile trebuie sa aiba context clar.',
+                'Fara comportament toxic.'
+              ]).map((rule) => (
                 <li key={rule}>{rule}</li>
               ))}
             </ol>

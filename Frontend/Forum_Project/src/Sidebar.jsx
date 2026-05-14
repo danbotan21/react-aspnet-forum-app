@@ -1,5 +1,6 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom' // ← adaugă asta
+import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom' 
+import { useAuth } from './AuthContext'
 import './Styles/SideBar.css'
 import man from './img/man.jpg'
 import shreck from './img/shreck.png'
@@ -18,8 +19,27 @@ import { RiTeamLine } from 'react-icons/ri'
 import { LuScrollText } from 'react-icons/lu'
 
 export const SideBar = () => {
-  const navigate = useNavigate() // ← hook-ul pentru navigare
+  const navigate = useNavigate() 
+  const { user } = useAuth()
   const [showCommunities, setShowCommunities] = useState(false)
+  const [userCommunities, setUserCommunities] = useState([])
+
+  useEffect(() => {
+    if (user?.id) {
+      const fetchUserCommunities = async () => {
+        try {
+          const res = await fetch(`/api/Communities/user/${user.id}`)
+          if (res.ok) {
+            const data = await res.json()
+            setUserCommunities(data || [])
+          }
+        } catch (err) {
+          console.error("Failed to load user communities", err)
+        }
+      }
+      fetchUserCommunities()
+    }
+  }, [user])
 
   const toggleCommunities = () => {
     setShowCommunities(!showCommunities)
@@ -29,7 +49,6 @@ export const SideBar = () => {
     <div className='sidebar'>
       <div className='sidebar-content'>
         <div className='navigation-section'>
-          {/* Acum div-ul întreg e clickabil și duce la route */}
           <div className='nav-item' onClick={() => navigate('/home')}>
             <FaHome className='nav-icon' />
             <p>Home</p>
@@ -51,7 +70,6 @@ export const SideBar = () => {
           </div>
         </div>
 
-        {/* Restul codului rămâne la fel */}
         <div className='communities-section'>
           <div className='communities-header' onClick={toggleCommunities}>
             <h3>COMMUNITIES</h3>
@@ -64,31 +82,27 @@ export const SideBar = () => {
 
           {showCommunities && (
             <div className='communities'>
-              <div
-                className='community'
-                onClick={() => navigate('/community/pixelarena')}
-              >
-                <img
-                  src={man}
-                  alt='imagine din comunitate'
-                  className='img_community'
-                />
-                <p className='name_community'>League of Legends Nikita</p>
-                <FaRegStar className='star-icon' />
-              </div>
-
-              <div
-                className='community'
-                onClick={() => navigate('/community/memes')}
-              >
-                <img
-                  src={shreck}
-                  alt='imagine din comunitate'
-                  className='img_community'
-                />
-                <p className='name_community'>Shreck Gheorghe</p>
-                <FaRegStar className='star-icon' />
-              </div>
+              {userCommunities.length > 0 ? (
+                userCommunities.map(c => (
+                  <div
+                    key={c.id}
+                    className='community'
+                    onClick={() => navigate(`/community/${c.slug}`)}
+                  >
+                    {c.avatarUrl ? (
+                      <img src={c.avatarUrl} alt='imagine ascunsa' className='img_community' />
+                    ) : (
+                      <div className='img_community' style={{backgroundColor: '#ccc', borderRadius: '50%'}}></div>
+                    )}
+                    <p className='name_community'>{c.title}</p>
+                    <FaRegStar className='star-icon' />
+                  </div>
+                ))
+              ) : (
+                <div style={{padding: '0 10px', fontSize: '13px', color: '#888'}}>
+                  {!user ? 'Login to see communities' : 'No communities joined'}
+                </div>
+              )}
             </div>
           )}
         </div>
