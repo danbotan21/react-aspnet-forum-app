@@ -1,17 +1,69 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
-import { FaGoogle,FaStar, FaCheckCircle, FaLock } from 'react-icons/fa'
+import { Link, useNavigate } from 'react-router-dom'
+import { FaGoogle, FaStar, FaCheckCircle, FaLock } from 'react-icons/fa'
 import './Styles/Signup.css'
 
 export const Signup = () => {
+  const navigate = useNavigate()
+
   const [email, setEmail] = useState('')
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
 
-  const handleSubmit = (event) => {
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  const handleSubmit = async (event) => {
     event.preventDefault()
-    // TODO: logica de inregistrare
+    setError('')
+    setSuccess('')
+
+    // Validare pe frontend
+    if (password !== confirmPassword) {
+      setError('Parolele nu coincid.')
+      return
+    }
+
+    if (password.length < 6) {
+      setError('Parola trebuie sa aiba minim 6 caractere.')
+      return
+    }
+
+    if (username.length < 6) {
+      setError('Numele de utilizator trebuie sa aiba minim 6 caractere.')
+      return
+    }
+
+    setLoading(true)
+
+    try {
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userName: username,
+          email: email,
+          password: password,
+        }),
+      })
+
+      if (response.status === 201) {
+        setSuccess('Cont creat cu succes! Vei fi redirectionat...')
+        // Redirect catre Login dupa 1.5 secunde
+        setTimeout(() => navigate('/login'), 1500)
+      } else if (response.status === 400) {
+        const data = await response.json()
+        setError(data.message || 'Email-ul sau username-ul este deja folosit.')
+      } else {
+        setError('A aparut o eroare neasteptata. Incearca din nou.')
+      }
+    } catch (err) {
+      setError('Nu s-a putut contacta serverul. Verifica conexiunea.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -99,8 +151,11 @@ export const Signup = () => {
               autoComplete='new-password'
             />
 
-            <button type='submit' className='signup-btn'>
-              Creeaza cont
+            {error && <div className='signup-message signup-error'>{error}</div>}
+            {success && <div className='signup-message signup-success'>{success}</div>}
+
+            <button type='submit' className='signup-btn' disabled={loading}>
+              {loading ? 'Se creeaza contul...' : 'Creeaza cont'}
             </button>
 
             <div className='signup-divider'>sau continua cu</div>

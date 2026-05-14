@@ -151,6 +151,32 @@
   box-shadow: 0 10px 18px rgba(13, 79, 143, 0.28);
 }
 
+.signup-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.signup-message {
+  border-radius: 9px;
+  padding: 0.65rem 0.8rem;
+  font: 600 0.84rem/1.4 'DM Sans', sans-serif;
+  text-align: center;
+}
+
+.signup-error {
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
+.signup-success {
+  background: #f0fdf4;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+
 .signup-divider {
   margin: 0.2rem 0 0.12rem;
   color: #7989a4;
