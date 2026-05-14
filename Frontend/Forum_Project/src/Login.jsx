@@ -1,15 +1,55 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { FaGoogle, FaShieldAlt, FaUsers, FaBolt } from 'react-icons/fa'
+import { useAuth } from './AuthContext'
 import './Styles/Login.css'
 
 export const Login = () => {
+  const navigate = useNavigate()
+  const { login } = useAuth()
+
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault()
-    // TODO: logica de autentificare
+    setError('')
+
+    if (!email || !password) {
+      setError('Completeaza ambele campuri.')
+      return
+    }
+
+    setLoading(true)
+
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: email,
+          password: password,
+        }),
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        // Salvam token-ul si datele userului in context + localStorage
+        login(data.token, data.refreshToken, data.user)
+        // Redirect la home
+        navigate('/home')
+      } else if (response.status === 401) {
+        setError('Email sau parola incorecta.')
+      } else {
+        setError('A aparut o eroare. Incearca din nou.')
+      }
+    } catch (err) {
+      setError('Nu s-a putut contacta serverul. Verifica conexiunea.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -76,8 +116,10 @@ export const Login = () => {
             </Link> */}
             <Link className='login-forgot'>Ai uitat parola?</Link>
 
-            <button type='submit' className='login-btn'>
-              Autentificare
+            {error && <div className='login-message login-error'>{error}</div>}
+
+            <button type='submit' className='login-btn' disabled={loading}>
+              {loading ? 'Se autentifica...' : 'Autentificare'}
             </button>
 
             <div className='login-divider'>sau continua cu</div>

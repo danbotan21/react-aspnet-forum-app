@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import {
   FaSearch,
   FaComment,
@@ -10,13 +10,19 @@ import {
   FaCog,
   FaSignOutAlt,
 } from 'react-icons/fa'
+import { useAuth } from './AuthContext'
 import './Styles/Navbar.css'
-import avatar from './img/avatar.webp'
+import defaultAvatar from './img/avatar.webp'
 
 export const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false)
   const profileRef = useRef(null)
-  const loggedUser = 'username'
+  const navigate = useNavigate()
+  const { user, logout } = useAuth()
+
+  // Folosim username-ul real din context, sau fallback
+  const loggedUser = user?.userName || 'username'
+  const userKarma = user?.karma ?? 0
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -27,6 +33,12 @@ export const Navbar = () => {
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
+
+  const handleLogout = () => {
+    setIsOpen(false)
+    logout()
+    navigate('/login')
+  }
 
   return (
     <header className='navbar'>
@@ -78,7 +90,7 @@ export const Navbar = () => {
             ref={profileRef}
             onClick={() => setIsOpen((prev) => !prev)}
           >
-            <img src={avatar} alt='avatar' className='navbar-avatar' />
+            <img src={defaultAvatar} alt='avatar' className='navbar-avatar' />
 
             {isOpen && (
               <div
@@ -87,14 +99,14 @@ export const Navbar = () => {
               >
                 <div className='profile-dropdown-header'>
                   <img
-                    src={avatar}
+                    src={defaultAvatar}
                     alt='avatar'
                     className='profile-dropdown-avatar'
                   />
                   <span className='profile-dropdown-username'>
                     u/{loggedUser}
                   </span>
-                  <span className='profile-dropdown-karma'>0 karma</span>
+                  <span className='profile-dropdown-karma'>{userKarma} karma</span>
                 </div>
 
                 <div className='profile-dropdown-divider' />
@@ -131,15 +143,10 @@ export const Navbar = () => {
                 <button
                   type='button'
                   className='profile-dropdown-item profile-dropdown-logout'
-                  onClick={() => setIsOpen(false)}
+                  onClick={handleLogout}
                 >
                   <FaSignOutAlt className='profile-dropdown-item-icon' />
-
-                  <span>
-                    <a href='/' className='log-out-button'>
-                      Log Out
-                    </a>
-                  </span>
+                  <span>Log Out</span>
                 </button>
               </div>
             )}
