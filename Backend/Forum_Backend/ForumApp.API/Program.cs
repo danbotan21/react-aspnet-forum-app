@@ -78,6 +78,7 @@ builder.Services.AddScoped<INotificationActions, NotificationService>();
 //  Auth services
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IUserActions, UserService>();
+builder.Services.AddScoped<IImageStorageActions, LocalImageStorageService>();
 
 //  JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
@@ -109,7 +110,9 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseStaticFiles();
 app.UseCors("AllowFrontend");
+app.UseAuthentication();
 app.UseAuthorization();
 
 //  Map controllers
