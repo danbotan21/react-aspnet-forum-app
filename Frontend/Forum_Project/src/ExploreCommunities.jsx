@@ -10,6 +10,7 @@ import {
 } from 'react-icons/fa'
 import { MdTravelExplore, MdLocalMovies } from 'react-icons/md'
 import './Styles/ExploreCommunities.css'
+import { normalizeImageSrc } from './utils/media'
 
 const CATEGORY_TABS = [
   'All',
@@ -49,25 +50,57 @@ const getAccentForCategory = (category) => {
 }
 
 export const ExploreCommunities = () => {
+  const COMMUNITIES_CACHE_KEY = 'explore-communities-cache-v1'
   const [activeCategory, setActiveCategory] = useState('All')
   const [allCommunities, setAllCommunities] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const fetchCommunities = async () => {
+    let isMounted = true
+    const controller = new AbortController()
+
+    const cachedValue = sessionStorage.getItem(COMMUNITIES_CACHE_KEY)
+    const hasCachedData = Boolean(cachedValue)
+
+    if (cachedValue) {
       try {
-        const response = await fetch('/api/Communities')
-        if (response.ok) {
-          const data = await response.json()
-          setAllCommunities(data)
+        const parsed = JSON.parse(cachedValue)
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setAllCommunities(parsed)
+          setLoading(false)
         }
-      } catch (error) {
-        console.error('Failed to fetch communities:', error)
-      } finally {
-        setLoading(false)
+      } catch {
+        sessionStorage.removeItem(COMMUNITIES_CACHE_KEY)
       }
     }
+
+    const fetchCommunities = async () => {
+      try {
+        const response = await fetch('/api/communities', { signal: controller.signal })
+        if (response.ok) {
+          const data = await response.json()
+          if (isMounted) {
+            setAllCommunities(data)
+            sessionStorage.setItem(COMMUNITIES_CACHE_KEY, JSON.stringify(data))
+          }
+        }
+      } catch (error) {
+        if (error.name !== 'AbortError') {
+          console.error('Failed to fetch communities:', error)
+        }
+      } finally {
+        if (isMounted && !hasCachedData) {
+          setLoading(false)
+        }
+      }
+    }
+
     fetchCommunities()
+
+    return () => {
+      isMounted = false
+      controller.abort()
+    }
   }, [])
 
   const filterByCategory = (communities) => {
@@ -117,6 +150,7 @@ export const ExploreCommunities = () => {
         <div className='explore-grid'>
           {displayedCommunities.map((community) => {
             const Icon = getIconForCategory(community.category)
+            const communityAvatarSrc = normalizeImageSrc(community.avatarUrl)
             return (
               <article key={community.id} className='explore-card'>
                 <div className='explore-card-top'>
@@ -124,8 +158,8 @@ export const ExploreCommunities = () => {
                     className='explore-card-logo'
                     style={{ background: getAccentForCategory(community.category) }}
                   >
-                    {community.avatarUrl ? (
-                        <img src={community.avatarUrl} alt="icon" style={{width: '100%', height: '100%', objectFit: 'cover', borderRadius: '4px'}} />
+                    {communityAvatarSrc ? (
+                        <img src={communityAvatarSrc} alt="icon" style={{width: '100%', height: '100%', objectFit: 'cover', borderRadius: '4px'}} />
                     ) : (
                         <Icon />
                     )}

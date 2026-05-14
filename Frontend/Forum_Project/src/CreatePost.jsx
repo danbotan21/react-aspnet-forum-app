@@ -7,10 +7,12 @@ import {
   FaTrash,
   FaCloudUploadAlt,
 } from 'react-icons/fa'
+import { useAuth } from './AuthContext'
 import './Styles/CreatePost.css'
 
 export const CreatePost = () => {
   const navigate = useNavigate()
+  const { user } = useAuth()
   const [activeTab, setActiveTab] = useState('Text')
   const [isDraftsOpen, setIsDraftsOpen] = useState(false)
   const [dragActive, setDragActive] = useState(false)
@@ -26,6 +28,7 @@ export const CreatePost = () => {
   const [uploadError, setUploadError] = useState('')
   const [previewUrl, setPreviewUrl] = useState('')
   const [base64Image, setBase64Image] = useState('')
+  const [isImageProcessing, setIsImageProcessing] = useState(false)
 
   const dragCounterRef = useRef(0)
   const fileInputRef = useRef(null)
@@ -34,6 +37,7 @@ export const CreatePost = () => {
     (file) => {
       if (!file || !file.type.startsWith('image/')) {
         setUploadError('Please choose an image file.')
+        setIsImageProcessing(false)
         return
       }
 
@@ -41,10 +45,17 @@ export const CreatePost = () => {
       setUploadError('')
       setSelectedImageName(file.name)
       setPreviewUrl(URL.createObjectURL(file))
+      setIsImageProcessing(true)
 
       const reader = new FileReader()
       reader.onloadend = () => {
         setBase64Image(reader.result)
+        setIsImageProcessing(false)
+      }
+      reader.onerror = () => {
+        setUploadError('Image upload failed. Please try another file.')
+        setBase64Image('')
+        setIsImageProcessing(false)
       }
       reader.readAsDataURL(file)
     },
@@ -125,9 +136,14 @@ export const CreatePost = () => {
     }
   }, [isDraftsOpen])
 
-  // Fetch communities for the dropdown
+  // Fetch only communities where the current user is a member
   useEffect(() => {
-    fetch('/api/communities')
+    if (!user?.id) {
+      setCommunities([])
+      return
+    }
+
+    fetch(`/api/communities/user/${user.id}`)
       .then((res) => {
         if (!res.ok) throw new Error('Failed to fetch communities')
         return res.json()
@@ -136,15 +152,28 @@ export const CreatePost = () => {
         setCommunities(data)
       })
       .catch((err) => console.error(err))
-  }, [])
+  }, [user?.id])
 
   const handleSubmit = async () => {
+    if (!user?.id) {
+      alert('Please login to create a post.')
+      return
+    }
+
     if (!communityId) {
       alert('Please select a community')
       return
     }
     if (!postTitle.trim()) {
       alert('Title is required')
+      return
+    }
+    if (activeTab === 'Images' && !base64Image) {
+      alert(
+        isImageProcessing
+          ? 'Image is still processing. Please wait a moment.'
+          : 'Please upload an image.',
+      )
       return
     }
 
@@ -155,14 +184,12 @@ export const CreatePost = () => {
       body: activeTab === 'Text' ? postBody : null,
       imageUrl: activeTab === 'Images' ? base64Image : null,
       linkUrl: activeTab === 'Link' ? postUrl : null,
-      type: activeTab,
+      type: activeTab === 'Images' ? 'Image' : activeTab,
       communityId: parseInt(communityId, 10),
     }
 
     try {
-      // TODO: Modificat urgent dupa merge cu sistemul de useri/autentificare
-      const authorId = 1 // Hardcoded temporar
-      const response = await fetch(`/api/posts?authorId=${authorId}`, {
+      const response = await fetch(`/api/posts?authorId=${user.id}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -222,7 +249,7 @@ export const CreatePost = () => {
             onChange={(e) => setCommunityId(e.target.value)}
           >
             <option value='' disabled>
-              Choose a community
+              {user?.id ? 'Choose a community' : 'Login to choose a community'}
             </option>
             {communities.map((comm) => (
               <option key={comm.id} value={comm.id}>
@@ -371,7 +398,7 @@ export const CreatePost = () => {
               type='button'
               className='create-post-btn create-post-btn-primary'
               onClick={handleSubmit}
-              disabled={isSubmitting}
+              disabled={isSubmitting || (activeTab === 'Images' && isImageProcessing)}
             >
               {isSubmitting ? 'Posting...' : 'Post'}
             </button>

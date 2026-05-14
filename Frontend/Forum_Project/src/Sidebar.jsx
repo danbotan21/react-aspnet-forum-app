@@ -2,8 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom' 
 import { useAuth } from './AuthContext'
 import './Styles/SideBar.css'
-import man from './img/man.jpg'
-import shreck from './img/shreck.png'
+import { normalizeImageSrc } from './utils/media'
 import {
   FaRegStar,
   FaHome,
@@ -83,21 +82,24 @@ export const SideBar = () => {
           {showCommunities && (
             <div className='communities'>
               {userCommunities.length > 0 ? (
-                userCommunities.map(c => (
+                userCommunities.map(c => {
+                  const communityAvatarSrc = normalizeImageSrc(c.avatarUrl)
+                  return (
                   <div
                     key={c.id}
                     className='community'
                     onClick={() => navigate(`/community/${c.slug}`)}
                   >
-                    {c.avatarUrl ? (
-                      <img src={c.avatarUrl} alt='imagine ascunsa' className='img_community' />
+                    {communityAvatarSrc ? (
+                      <img src={communityAvatarSrc} alt='imagine ascunsa' className='img_community' />
                     ) : (
                       <div className='img_community' style={{backgroundColor: '#ccc', borderRadius: '50%'}}></div>
                     )}
                     <p className='name_community'>{c.title}</p>
                     <FaRegStar className='star-icon' />
                   </div>
-                ))
+                  )
+                })
               ) : (
                 <div style={{padding: '0 10px', fontSize: '13px', color: '#888'}}>
                   {!user ? 'Login to see communities' : 'No communities joined'}

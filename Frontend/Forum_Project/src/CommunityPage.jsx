@@ -1,113 +1,13 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { FaCaretUp, FaCaretDown, FaComment, FaShare } from 'react-icons/fa'
 import { useAuth } from './AuthContext'
 import './Styles/CommunityPage.css'
 import avatar from './img/avatar.webp'
-import man from './img/man.jpg'
-import shreck from './img/shreck.png'
-import nature from './img/nature.jpg'
 import coding from './img/coding.jpg'
+import { normalizeImageSrc } from './utils/media'
 
 const SORT_OPTIONS = ['Popular', 'New', 'Top']
-
-const COMMUNITY_DATA = {
-  frontend: {
-    name: 'frontend',
-    title: 'Frontend Lounge',
-    description:
-      'Comunitate dedicata UI engineering, React patterns, design systems si performanta web.',
-    banner: coding,
-    image: avatar,
-    members: '92K',
-    online: '1.4K',
-    rules: [
-      'Fii respectuos in discutii si argumenteaza tehnic.',
-      'Postarile trebuie sa aiba context clar si titlu relevant.',
-      'Fara self-promo agresiv sau link farming.',
-      'Include cod minim reproductibil pentru intrebari de debugging.',
-    ],
-  },
-  webdev: {
-    name: 'webdev',
-    title: 'WebDev Circle',
-    description:
-      'Discutii practice despre frontend, backend, deploy, arhitectura si tool-uri moderne.',
-    banner: nature,
-    image: man,
-    members: '77K',
-    online: '880',
-    rules: [
-      'Respecta ghidul de postare si evita titlurile vagi.',
-      'Mentioneaza stack-ul folosit in intrebari tehnice.',
-      'Nu publica continut duplicat in aceeasi zi.',
-      'Feedback constructiv, fara atacuri personale.',
-    ],
-  },
-  memes: {
-    name: 'memes',
-    title: 'Meme Factory',
-    description:
-      'Meme-uri fresh, cultura internet si cele mai virale thread-uri ale saptamanii.',
-    banner: shreck,
-    image: avatar,
-    members: '128K',
-    online: '5.2K',
-    rules: [
-      'Fara continut ofensator sau spam repetitiv.',
-      'Publica doar media care respecta regulile platformei.',
-      'Evita repost-ul aceluiasi meme in 24h.',
-      'Foloseste flair-ul corect pentru postare.',
-    ],
-  },
-  travel: {
-    name: 'travel',
-    title: 'Travel Notes',
-    description:
-      'Ghiduri de calatorie, idei de city break si recomandari reale de la comunitate.',
-    banner: nature,
-    image: avatar,
-    members: '61K',
-    online: '740',
-    rules: [
-      'Include costuri aproximative si perioada recomandata.',
-      'Fara dezinformare despre documente sau vize.',
-      'Pastreaza discutiile on-topic.',
-      'Respecta normele locale din destinatiile discutate.',
-    ],
-  },
-  devtalk: {
-    name: 'devtalk',
-    title: 'DevTalk',
-    description:
-      'Discutii zilnice despre React, backend, AI si proiecte reale.',
-    banner: coding,
-    image: man,
-    members: '92K',
-    online: '1.3K',
-    rules: [
-      'Feedback tehnic argumentat.',
-      'Nu publica cod incomplet fara context.',
-      'Titluri clare si descriptive.',
-      'Respecta intotdeauna ceilalti membri.',
-    ],
-  },
-  pixelarena: {
-    name: 'pixelarena',
-    title: 'PixelArena',
-    description: 'Community pentru esports, stiri si lansari de jocuri.',
-    banner: shreck,
-    image: avatar,
-    members: '114K',
-    online: '3.1K',
-    rules: [
-      'Fara leak-uri neverificate.',
-      'Posteaza in categoria corecta.',
-      'Respecta ceilalti jucatori.',
-      'Nu promova cheaturi.',
-    ],
-  },
-}
 
 const getPostRoute = (communitySlug, postId) =>
   `/community/${encodeURIComponent(communitySlug)}/post/${postId}`
@@ -189,22 +89,25 @@ export function CommunityPage() {
   if (loading) return <div className='community-page'><p>Loading...</p></div>;
   if (error || !community) return <div className='community-page'><p>Error: {error || 'Not found'}</p></div>;
 
+  const communityBannerSrc = normalizeImageSrc(community.bannerUrl) || normalizeImageSrc(community.avatarUrl)
+  const communityAvatarSrc = normalizeImageSrc(community.avatarUrl)
+
   return (
     <main className='community-page'>
       <section className='community-shell'>
         <div className='community-main'>
           <header className='community-hero'>
             <div className='community-banner'>
-              {community.bannerUrl ? (
-                <img src={community.bannerUrl} alt='Community banner' />
+              {communityBannerSrc ? (
+                <img src={communityBannerSrc} alt='Community banner' />
               ) : (
                 <img src={coding} alt='Community banner fallback' />
               )}
             </div>
 
             <div className='community-head'>
-              {community.avatarUrl ? (
-                <img src={community.avatarUrl} alt='Community avatar' className='community-avatar' />
+              {communityAvatarSrc ? (
+                <img src={communityAvatarSrc} alt='Community avatar' className='community-avatar' />
               ) : (
                 <img src={avatar} alt='Community avatar fallback' className='community-avatar' />
               )}
@@ -246,7 +149,9 @@ export function CommunityPage() {
             ) : posts.length === 0 ? (
               <p style={{ textAlign: 'center', padding: '2rem' }}>No posts found in this community.</p>
             ) : (
-              posts.map((post) => (
+              posts.map((post) => {
+                const postImageSrc = normalizeImageSrc(post.imageUrl ?? post.ImageUrl)
+                return (
                 <article key={post.id} className='post'>
                 <div className='post-main'>
                   <header className='post-header'>
@@ -320,15 +225,15 @@ export function CommunityPage() {
                     </h3>
                     {post.body && <p className='post-text'>{post.body}</p>}
 
-                    {(post.imageUrl || post.linkUrl) && (
+                    {(postImageSrc || post.linkUrl) && (
                       <div className='post-media'>
-                        {post.imageUrl ? (
+                        {postImageSrc ? (
                           <Link
                             to={getPostRoute(community.slug, post.id)}
                             className='post-media-link'
                           >
                             <div className='media-placeholder'>
-                              <img src={post.imageUrl} alt='Post content' />
+                              <img src={postImageSrc} alt='Post content' />
                             </div>
                           </Link>
                         ) : (
@@ -358,7 +263,8 @@ export function CommunityPage() {
                   </footer>
                 </div>
                 </article>
-              ))
+                )
+              })
             )}
           </section>
         </div>

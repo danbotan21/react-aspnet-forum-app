@@ -2,51 +2,8 @@ import { useState, useRef, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import './Styles/Popular.css'
 import avatar from './img/avatar.webp'
-import shreck from './img/shreck.png'
-import nature from './img/nature.jpg'
-import { FaCaretUp, FaCaretDown, FaComment, FaShare } from 'react-icons/fa'
-
-const SORT_OPTIONS = [
-  { id: 'popular', label: 'Popular' },
-  { id: 'new', label: 'New' },
-  { id: 'mostComments', label: 'Most comments' },
-]
-
-const POSTS = [
-  {
-    id: 1,
-    community: 'r/memes',
-    time: '2 hours ago',
-    author: 'u/lolMaster',
-    title: 'Top trending post of the day',
-    text: 'This one exploded in activity. What do you think made it so shareable compared to the rest of this week?',
-    image: nature,
-    votes: 1240,
-    comments: 312,
-  },
-  {
-    id: 2,
-    community: 'r/travel',
-    time: '4 hours ago',
-    author: 'u/wanderFlow',
-    title: 'Most upvoted photo story this week',
-    text: 'A visual journey with details and route notes. The community loved the structure and quality of storytelling.',
-    image: nature,
-    votes: 860,
-    comments: 188,
-  },
-  {
-    id: 3,
-    community: 'r/webdev',
-    time: '7 hours ago',
-    author: 'u/frontendAce',
-    title: 'Popular architecture debate for large React apps',
-    text: 'A thread about scalable folders, shared components and design consistency across complex product pages.',
-    image: nature,
-    votes: 645,
-    comments: 144,
-  },
-]
+import { FaCaretUp, FaCaretDown, FaComment } from 'react-icons/fa'
+import { normalizeImageSrc } from './utils/media'
 
 const handleVote = (type) => {
   if (type === 'up') {
@@ -56,25 +13,45 @@ const handleVote = (type) => {
   }
 }
 
-const getUsernameFromAuthor = (author) => author.replace(/^u\//, '')
-const getSlugFromCommunity = (community) => community.replace(/^r\//, '')
 const getPostRoute = (post) =>
-  `/community/${encodeURIComponent(getSlugFromCommunity(post.community))}/post/${post.id}`
+  `/community/${encodeURIComponent(post.communitySlug)}/post/${post.id}`
+
+const getRecentPopularityScore = (post) => {
+  const votes = post.votes ?? 0
+  const createdAt = post.createdAt ? new Date(post.createdAt).getTime() : 0
+  const ageHours = Math.max((Date.now() - createdAt) / (1000 * 60 * 60), 1)
+  return votes / Math.pow(ageHours, 0.75)
+}
 
 export const Popular = () => {
   const [openMorePostId, setOpenMorePostId] = useState(null)
-  const [sortBy, setSortBy] = useState('popular')
-  const [isSortOpen, setIsSortOpen] = useState(false)
+  const [posts, setPosts] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
-  const sortRef = useRef(null)
   const postsWrapRef = useRef(null)
 
   useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (sortRef.current && !sortRef.current.contains(e.target)) {
-        setIsSortOpen(false)
-      }
+    fetch('/api/posts?sortBy=top')
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP error: ${res.status}`)
+        return res.json()
+      })
+      .then((data) => {
+        const sortedByRecentPopularity = [...data].sort(
+          (a, b) => getRecentPopularityScore(b) - getRecentPopularityScore(a),
+        )
+        setPosts(sortedByRecentPopularity)
+        setLoading(false)
+      })
+      .catch((err) => {
+        setError(err.message)
+        setLoading(false)
+      })
+  }, [])
 
+  useEffect(() => {
+    const handleClickOutside = (e) => {
       if (postsWrapRef.current && !postsWrapRef.current.contains(e.target)) {
         setOpenMorePostId(null)
         return
@@ -89,70 +66,39 @@ export const Popular = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  const currentSortLabel =
-    SORT_OPTIONS.find((option) => option.id === sortBy)?.label ?? 'Popular'
-
   return (
     <div className='popular-page'>
-      <div className='home-sort-bar' ref={sortRef}>
-        <div className='sort-trigger-wrapper'>
-          <button
-            type='button'
-            className='sort-trigger'
-            onClick={() => setIsSortOpen((prev) => !prev)}
-            aria-expanded={isSortOpen}
-            aria-haspopup='listbox'
-          >
-            <span className='sort-trigger-label'>{currentSortLabel}</span>
-            <span className='sort-trigger-chevron' aria-hidden>
-              <FaCaretDown size={16} />
-            </span>
-          </button>
-
-          {isSortOpen && (
-            <div className='sort-dropdown' role='listbox'>
-              <div className='sort-dropdown-header'>Sort by</div>
-              {SORT_OPTIONS.map((option) => (
-                <button
-                  key={option.id}
-                  type='button'
-                  role='option'
-                  aria-selected={sortBy === option.id}
-                  className={`sort-dropdown-item ${sortBy === option.id ? 'sort-dropdown-item--active' : ''}`}
-                  onClick={() => {
-                    setSortBy(option.id)
-                    setIsSortOpen(false)
-                  }}
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
       <div ref={postsWrapRef}>
-        {POSTS.map((post) => (
+        {loading ? (
+          <p style={{ textAlign: 'center', padding: '2rem' }}>Loading popular posts...</p>
+        ) : error ? (
+          <p style={{ textAlign: 'center', padding: '2rem', color: 'red' }}>{error}</p>
+        ) : posts.length === 0 ? (
+          <p style={{ textAlign: 'center', padding: '2rem' }}>No posts found.</p>
+        ) : posts.map((post) => {
+          const postImageSrc = normalizeImageSrc(post.imageUrl ?? post.ImageUrl)
+          return (
           <article className='post' key={post.id}>
             <div className='post-main'>
               <header className='post-header'>
                 <img src={avatar} alt='Community Avatar' className='avatar' />
                 <div className='post-meta'>
                   <Link
-                    to={`/community/${encodeURIComponent(getSlugFromCommunity(post.community))}`}
+                    to={`/community/${encodeURIComponent(post.communitySlug)}`}
                     className='community-name community-link'
                   >
-                    {post.community}
+                    r/{post.communitySlug}
                   </Link>
                   <span className='meta-separator'>&middot;</span>
-                  <span className='time-posted'>{post.time}</span>
+                  <span className='time-posted'>
+                    {new Date(post.createdAt).toLocaleDateString()}
+                  </span>
                   <span className='meta-separator'>&middot;</span>
                   <Link
-                    to={`/user/${encodeURIComponent(getUsernameFromAuthor(post.author))}`}
+                    to={`/user/${encodeURIComponent(post.authorName)}`}
                     className='author author-link'
                   >
-                    Posted by {post.author}
+                    Posted by u/{post.authorName}
                   </Link>
                 </div>
 
@@ -193,15 +139,25 @@ export const Popular = () => {
                     {post.title}
                   </Link>
                 </h3>
-                <p className='post-text'>{post.text}</p>
+                {post.body && <p className='post-text'>{post.body}</p>}
 
-                <div className='post-media'>
-                  <Link to={getPostRoute(post)} className='post-media-link'>
-                    <div className='media-placeholder'>
-                      <img src={post.image} alt='Post content' />
-                    </div>
-                  </Link>
-                </div>
+                {(postImageSrc || post.linkUrl) && (
+                  <div className='post-media'>
+                    {postImageSrc ? (
+                      <Link to={getPostRoute(post)} className='post-media-link'>
+                        <div className='media-placeholder'>
+                          <img src={postImageSrc} alt='Post content' />
+                        </div>
+                      </Link>
+                    ) : (
+                      <div className='media-placeholder'>
+                        <a href={post.linkUrl} target='_blank' rel='noopener noreferrer' style={{ color: '#0066cc', textDecoration: 'underline' }}>
+                          {post.linkUrl}
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               <footer className='post-footer'>
@@ -219,12 +175,13 @@ export const Popular = () => {
 
                 <Link to={getPostRoute(post)} className='action-chip'>
                   <FaComment className='comment-icon' />
-                  <span className='comment-count'>{post.comments}</span>
+                  <span className='comment-count'>{post.commentsCount}</span>
                 </Link>
               </footer>
             </div>
           </article>
-        ))}
+          )
+        })}
       </div>
     </div>
   )

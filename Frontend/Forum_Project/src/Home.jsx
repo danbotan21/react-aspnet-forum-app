@@ -2,9 +2,8 @@ import { useState, useRef, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import './Styles/Home.css'
 import avatar from './img/avatar.webp'
-import coding from './img/coding.jpg'
-import nature from './img/nature.jpg'
-import { FaCaretUp, FaCaretDown, FaComment, FaShare } from 'react-icons/fa'
+import { FaCaretUp, FaCaretDown, FaComment } from 'react-icons/fa'
+import { normalizeImageSrc } from './utils/media'
 
 const SORT_OPTIONS = [
   { id: 'popular', label: 'Popular' },
@@ -120,7 +119,9 @@ export const Home = () => {
         ) : posts.length === 0 ? (
           <p style={{ textAlign: 'center', padding: '2rem' }}>No posts found.</p>
         ) : (
-          posts.map((post) => (
+          posts.map((post) => {
+            const postImageSrc = normalizeImageSrc(post.imageUrl ?? post.ImageUrl)
+            return (
             <article className='post' key={post.id}>
               <div className='post-main'>
                 <header className='post-header'>
@@ -184,12 +185,12 @@ export const Home = () => {
                   </h3>
                   {post.body && <p className='post-text'>{post.body}</p>}
 
-                  {(post.imageUrl || post.linkUrl) && (
+                  {(postImageSrc || post.linkUrl) && (
                     <div className='post-media'>
-                      {post.imageUrl ? (
+                      {postImageSrc ? (
                         <Link to={`/community/${encodeURIComponent(post.communitySlug)}/post/${post.id}`} className='post-media-link'>
                           <div className='media-placeholder'>
-                            <img src={post.imageUrl} alt='Post content' />
+                            <img src={postImageSrc} alt='Post content' />
                           </div>
                         </Link>
                       ) : (
@@ -221,7 +222,8 @@ export const Home = () => {
                 </footer>
               </div>
             </article>
-          ))
+            )
+          })
         )}
       </div>
     </div>

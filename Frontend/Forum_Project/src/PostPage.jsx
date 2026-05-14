@@ -2,8 +2,7 @@ import { Link, useParams } from 'react-router-dom'
 import { FaCaretDown, FaCaretUp, FaComment, FaShare } from 'react-icons/fa'
 import './Styles/PostPage.css'
 import avatar from './img/avatar.webp'
-import coding from './img/coding.jpg'
-import nature from './img/nature.jpg'
+import { normalizeImageSrc } from './utils/media'
 
 import { useState, useEffect } from 'react'
 
@@ -50,6 +49,7 @@ export function PostPage() {
   }, [postId])
 
   const communitySlug = decodeURIComponent(communityname ?? 'community').toLowerCase()
+  const postImageSrc = normalizeImageSrc(post?.imageUrl ?? post?.ImageUrl)
 
   if (isLoading) return <main className='post-page'><p style={{ textAlign: 'center', padding: '2rem' }}>Loading post...</p></main>
   if (error || !post) return <main className='post-page'><p style={{ textAlign: 'center', padding: '2rem', color: 'red' }}>Error: {error}</p></main>
@@ -79,9 +79,9 @@ export function PostPage() {
             <h1>{post.title}</h1>
             {post.body && <p>{post.body}</p>}
 
-            {(post.imageUrl || post.linkUrl) && (
-              post.imageUrl ? (
-                <img src={post.imageUrl} alt='Post media' className='post-page-image' />
+            {(postImageSrc || post.linkUrl) && (
+              postImageSrc ? (
+                <img src={postImageSrc} alt='Post media' className='post-page-image' />
               ) : (
                 <a href={post.linkUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'block', margin: '1rem 0', color: '#0066cc', textDecoration: 'underline' }}>{post.linkUrl}</a>
               )
