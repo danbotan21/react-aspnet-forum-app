@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   FaSearch,
   FaTimes,
@@ -9,16 +10,22 @@ import {
 import './Styles/CreatePost.css'
 
 export const CreatePost = () => {
+  const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('Text')
   const [isDraftsOpen, setIsDraftsOpen] = useState(false)
   const [dragActive, setDragActive] = useState(false)
-  const [community, setCommunity] = useState('')
+  
+  // States for backend data
+  const [communities, setCommunities] = useState([])
+  const [communityId, setCommunityId] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [postTitle, setPostTitle] = useState('')
   const [postBody, setPostBody] = useState('')
   const [postUrl, setPostUrl] = useState('')
   const [selectedImageName, setSelectedImageName] = useState('')
   const [uploadError, setUploadError] = useState('')
   const [previewUrl, setPreviewUrl] = useState('')
+  const [base64Image, setBase64Image] = useState('')
 
   const dragCounterRef = useRef(0)
   const fileInputRef = useRef(null)
@@ -34,6 +41,12 @@ export const CreatePost = () => {
       setUploadError('')
       setSelectedImageName(file.name)
       setPreviewUrl(URL.createObjectURL(file))
+
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setBase64Image(reader.result)
+      }
+      reader.readAsDataURL(file)
     },
     [previewUrl],
   )
@@ -112,6 +125,71 @@ export const CreatePost = () => {
     }
   }, [isDraftsOpen])
 
+  // Fetch communities for the dropdown
+  useEffect(() => {
+    fetch('/api/communities')
+      .then((res) => {
+        if (!res.ok) throw new Error('Failed to fetch communities')
+        return res.json()
+      })
+      .then((data) => {
+        setCommunities(data)
+      })
+      .catch((err) => console.error(err))
+  }, [])
+
+  const handleSubmit = async () => {
+    if (!communityId) {
+      alert('Please select a community')
+      return
+    }
+    if (!postTitle.trim()) {
+      alert('Title is required')
+      return
+    }
+
+    setIsSubmitting(true)
+
+    const postData = {
+      title: postTitle,
+      body: activeTab === 'Text' ? postBody : null,
+      imageUrl: activeTab === 'Images' ? base64Image : null,
+      linkUrl: activeTab === 'Link' ? postUrl : null,
+      type: activeTab,
+      communityId: parseInt(communityId, 10),
+    }
+
+    try {
+      // TODO: Modificat urgent dupa merge cu sistemul de useri/autentificare
+      const authorId = 1 // Hardcoded temporar
+      const response = await fetch(`/api/posts?authorId=${authorId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(postData),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to create post')
+      }
+
+      const createdPost = await response.json()
+      // Use community slug from communities array for the route
+      const selectedComm = communities.find(c => c.id === parseInt(communityId, 10))
+      if (selectedComm) {
+        navigate(`/community/${selectedComm.slug}/post/${createdPost.id}`)
+      } else {
+        navigate('/')
+      }
+    } catch (error) {
+      console.error(error)
+      alert('An error occurred while creating the post.')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
   return (
     <div className='create-post-page'>
       <div className='create-post-card'>
@@ -137,15 +215,21 @@ export const CreatePost = () => {
         </header>
 
         <div className='create-post-community-wrap'>
-          <FaSearch className='create-post-search-icon' aria-hidden />
-          <input
-            type='text'
-            placeholder='Choose a community'
+          <select
             className='create-post-community-input'
-            aria-label='Search community'
-            value={community}
-            onChange={(e) => setCommunity(e.target.value)}
-          />
+            aria-label='Select community'
+            value={communityId}
+            onChange={(e) => setCommunityId(e.target.value)}
+          >
+            <option value='' disabled>
+              Choose a community
+            </option>
+            {communities.map((comm) => (
+              <option key={comm.id} value={comm.id}>
+                r/{comm.slug}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div className='create-post-editor'>
@@ -286,8 +370,10 @@ export const CreatePost = () => {
             <button
               type='button'
               className='create-post-btn create-post-btn-primary'
+              onClick={handleSubmit}
+              disabled={isSubmitting}
             >
-              Post
+              {isSubmitting ? 'Posting...' : 'Post'}
             </button>
           </div>
         </div>

@@ -108,32 +108,8 @@ const COMMUNITY_DATA = {
   },
 }
 
-const POSTS = [
-  {
-    id: 1,
-    author: 'u/exampleUser',
-    authorAvatar: man,
-    time: '4 hr. ago',
-    title: 'How should we organize reusable UI primitives in this community?',
-    text: 'Share your folder strategy for scalable projects and how you keep naming consistent.',
-    image: coding,
-    votes: 248,
-    comments: 34,
-  },
-  {
-    id: 2,
-    author: 'u/designPilot',
-    authorAvatar: avatar,
-    time: '8 hr. ago',
-    title: 'Best layout for profile + feed pages in forum products',
-    text: 'Looking for practical structure ideas that keep nav, sidebar and content aligned.',
-    image: nature,
-    votes: 177,
-    comments: 19,
-  },
-]
+// Posts will be fetched from backend.
 
-const getUsernameFromAuthor = (author) => author.replace(/^u\//, '')
 const getPostRoute = (communityName, postId) =>
   `/community/${encodeURIComponent(communityName)}/post/${postId}`
 
@@ -162,10 +138,39 @@ export function CommunityPage() {
 
   const slug = decodeURIComponent(communityname ?? 'frontend').toLowerCase()
 
-  const community = useMemo(() => {
-    if (COMMUNITY_DATA[slug]) return COMMUNITY_DATA[slug]
+  const [realCommunity, setRealCommunity] = useState(null)
+  const [posts, setPosts] = useState([])
+  const [isLoadingPosts, setIsLoadingPosts] = useState(true)
 
-    return {
+  // Fetch community from backend
+  useEffect(() => {
+    fetch(`/api/communities/${slug}`)
+      .then((res) => {
+        if (!res.ok) throw new Error('Community not found')
+        return res.json()
+      })
+      .then((data) => setRealCommunity(data))
+      .catch((err) => console.error(err))
+  }, [slug])
+
+  // Fetch posts from backend using the real community ID
+  useEffect(() => {
+    if (!realCommunity?.id) return
+    setIsLoadingPosts(true)
+    fetch(`/api/posts/community/${realCommunity.id}?sortBy=${sortBy.toLowerCase()}`)
+      .then((res) => res.json())
+      .then((data) => {
+        setPosts(data)
+        setIsLoadingPosts(false)
+      })
+      .catch((err) => {
+        console.error(err)
+        setIsLoadingPosts(false)
+      })
+  }, [realCommunity?.id, sortBy])
+
+  const community = useMemo(() => {
+    const fallback = COMMUNITY_DATA[slug] || {
       name: slug,
       title: slug
         .split('-')
@@ -184,7 +189,19 @@ export function CommunityPage() {
         'Respecta regulile generale ale platformei.',
       ],
     }
-  }, [slug])
+
+    if (realCommunity) {
+      return {
+        ...fallback,
+        title: realCommunity.title || fallback.title,
+        description: realCommunity.description || fallback.description,
+        members: realCommunity.membersCount || fallback.members,
+        name: realCommunity.slug || fallback.name,
+      }
+    }
+
+    return fallback
+  }, [slug, realCommunity])
 
   return (
     <main className='community-page'>
@@ -230,111 +247,125 @@ export function CommunityPage() {
           </section>
 
           <section className='community-feed' ref={postsWrapRef}>
-            {POSTS.map((post) => (
-              <article key={post.id} className='post'>
-                <div className='post-main'>
-                  <header className='post-header'>
-                    <Link
-                      to={`/user/${encodeURIComponent(getUsernameFromAuthor(post.author))}`}
-                    >
-                      <img
-                        src={post.authorAvatar}
-                        alt={post.author}
-                        className='avatar'
-                      />
-                    </Link>
-                    <div className='post-meta'>
+            {isLoadingPosts && realCommunity ? (
+              <p style={{ textAlign: 'center', padding: '2rem' }}>Loading posts...</p>
+            ) : posts.length === 0 ? (
+              <p style={{ textAlign: 'center', padding: '2rem' }}>No posts found in this community.</p>
+            ) : (
+              posts.map((post) => (
+                <article key={post.id} className='post'>
+                  <div className='post-main'>
+                    <header className='post-header'>
                       <Link
-                        to={`/user/${encodeURIComponent(getUsernameFromAuthor(post.author))}`}
-                        className='author author-link'
+                        to={`/user/${encodeURIComponent(post.authorName)}`}
                       >
-                        {post.author}
+                        <img
+                          src={avatar}
+                          alt={post.authorName}
+                          className='avatar'
+                        />
                       </Link>
-                      <span className='meta-separator'>&middot;</span>
-                      <span className='time-posted'>{post.time}</span>
-                    </div>
+                      <div className='post-meta'>
+                        <Link
+                          to={`/user/${encodeURIComponent(post.authorName)}`}
+                          className='author author-link'
+                        >
+                          u/{post.authorName}
+                        </Link>
+                        <span className='meta-separator'>&middot;</span>
+                        <span className='time-posted'>{new Date(post.createdAt).toLocaleDateString()}</span>
+                      </div>
 
-                    <div className='post-header-actions'>
-                      <button
-                        type='button'
-                        className='more-button'
-                        onClick={() =>
-                          setOpenMorePostId((prev) =>
-                            prev === post.id ? null : post.id,
-                          )
-                        }
-                        aria-expanded={openMorePostId === post.id}
-                        aria-haspopup='menu'
-                        aria-label='Open post options'
-                      >
-                        ...
-                      </button>
-                      {openMorePostId === post.id && (
-                        <div className='more-menu' role='menu'>
-                          <Link
-                            to={getPostRoute(community.name, post.id)}
-                            className='more-menu-item more-menu-link'
-                            role='menuitem'
-                            onClick={() => setOpenMorePostId(null)}
-                          >
-                            Open post
-                          </Link>
-                          <button className='more-menu-item' role='menuitem'>
-                            Save
-                          </button>
-                          <button
-                            className='more-menu-item more-menu-danger'
-                            role='menuitem'
-                          >
-                            Report
-                          </button>
+                      <div className='post-header-actions'>
+                        <button
+                          type='button'
+                          className='more-button'
+                          onClick={() =>
+                            setOpenMorePostId((prev) =>
+                              prev === post.id ? null : post.id,
+                            )
+                          }
+                          aria-expanded={openMorePostId === post.id}
+                          aria-haspopup='menu'
+                          aria-label='Open post options'
+                        >
+                          ...
+                        </button>
+                        {openMorePostId === post.id && (
+                          <div className='more-menu' role='menu'>
+                            <Link
+                              to={getPostRoute(community.name, post.id)}
+                              className='more-menu-item more-menu-link'
+                              role='menuitem'
+                              onClick={() => setOpenMorePostId(null)}
+                            >
+                              Open post
+                            </Link>
+                            <button className='more-menu-item' role='menuitem'>
+                              Save
+                            </button>
+                            <button
+                              className='more-menu-item more-menu-danger'
+                              role='menuitem'
+                            >
+                              Report
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </header>
+
+                    <div className='post-body'>
+                      <h3 className='post-title'>
+                        <Link
+                          to={getPostRoute(community.name, post.id)}
+                          className='post-title-link'
+                        >
+                          {post.title}
+                        </Link>
+                      </h3>
+                      {post.body && <p className='post-text'>{post.body}</p>}
+
+                      {(post.imageUrl || post.linkUrl) && (
+                        <div className='post-media'>
+                          {post.imageUrl ? (
+                            <Link
+                              to={getPostRoute(community.name, post.id)}
+                              className='post-media-link'
+                            >
+                              <div className='media-placeholder'>
+                                <img src={post.imageUrl} alt='Post content' />
+                              </div>
+                            </Link>
+                          ) : (
+                            <div className='media-placeholder'>
+                              <a href={post.linkUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#0066cc', textDecoration: 'underline' }}>{post.linkUrl}</a>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
-                  </header>
 
-                  <div className='post-body'>
-                    <h3 className='post-title'>
-                      <Link
-                        to={getPostRoute(community.name, post.id)}
-                        className='post-title-link'
-                      >
-                        {post.title}
-                      </Link>
-                    </h3>
-                    <p className='post-text'>{post.text}</p>
+                    <footer className='post-footer'>
+                      <div className='action-chip vote-chip'>
+                        <FaCaretUp className='vote-icon upvote' />
+                        <span className='vote-count'>{post.votes}</span>
+                        <FaCaretDown className='vote-icon downvote' />
+                      </div>
 
-                    <div className='post-media'>
-                      <Link
-                        to={getPostRoute(community.name, post.id)}
-                        className='post-media-link'
-                      >
-                        <div className='media-placeholder'>
-                          <img src={post.image} alt='Post content' />
-                        </div>
-                      </Link>
-                    </div>
+                      <button type='button' className='action-chip'>
+                        <FaComment className='comment-icon' />
+                        <span className='comment-count'>{post.commentsCount}</span>
+                      </button>
+
+                      <button type='button' className='action-chip'>
+                        <FaShare className='share-icon' />
+                      </button>
+                    </footer>
                   </div>
-
-                  <footer className='post-footer'>
-                    <div className='action-chip vote-chip'>
-                      <FaCaretUp className='vote-icon upvote' />
-                      <span className='vote-count'>{post.votes}</span>
-                      <FaCaretDown className='vote-icon downvote' />
-                    </div>
-
-                    <button type='button' className='action-chip'>
-                      <FaComment className='comment-icon' />
-                      <span className='comment-count'>{post.comments}</span>
-                    </button>
-
-                    <button type='button' className='action-chip'>
-                      <FaShare className='share-icon' />
-                    </button>
-                  </footer>
-                </div>
-              </article>
-            ))}
+                </article>
+              ))
+            )}
           </section>
         </div>
 
