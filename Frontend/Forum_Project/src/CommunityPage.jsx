@@ -40,10 +40,12 @@ export function CommunityPage() {
         setCommunity(data)
 
         if (user?.id && data?.id) {
-          const membershipRes = await fetch(`/api/Communities/${data.id}/ismember?userId=${user.id}`);
+          const membershipRes = await fetch(
+            `/api/Communities/${data.id}/ismember?userId=${user.id}`,
+          )
           if (membershipRes.ok) {
-            const memberStatus = await membershipRes.json();
-            setIsMember(memberStatus === true);
+            const memberStatus = await membershipRes.json()
+            setIsMember(memberStatus === true)
           }
         }
       } catch (err) {
@@ -86,10 +88,22 @@ export function CommunityPage() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  if (loading) return <div className='community-page'><p>Loading...</p></div>;
-  if (error || !community) return <div className='community-page'><p>Error: {error || 'Not found'}</p></div>;
+  if (loading)
+    return (
+      <div className='community-page'>
+        <p>Loading...</p>
+      </div>
+    )
+  if (error || !community)
+    return (
+      <div className='community-page'>
+        <p>Error: {error || 'Not found'}</p>
+      </div>
+    )
 
-  const communityBannerSrc = normalizeImageSrc(community.bannerUrl) || normalizeImageSrc(community.avatarUrl)
+  const communityBannerSrc =
+    normalizeImageSrc(community.bannerUrl) ||
+    normalizeImageSrc(community.avatarUrl)
   const communityAvatarSrc = normalizeImageSrc(community.avatarUrl)
 
   return (
@@ -107,21 +121,35 @@ export function CommunityPage() {
 
             <div className='community-head'>
               {communityAvatarSrc ? (
-                <img src={communityAvatarSrc} alt='Community avatar' className='community-avatar' />
+                <img
+                  src={communityAvatarSrc}
+                  alt='Community avatar'
+                  className='community-avatar'
+                />
               ) : (
-                <img src={avatar} alt='Community avatar fallback' className='community-avatar' />
+                <img
+                  src={avatar}
+                  alt='Community avatar fallback'
+                  className='community-avatar'
+                />
               )}
               <div className='community-meta'>
                 <h1>{community.title}</h1>
                 <p>c/{community.slug}</p>
-                <span>
-                  {community.membersCount} members
-                </span>
+                <span>{community.membersCount} members</span>
               </div>
               <button
                 type='button'
                 className={`community-join-btn ${isMember ? 'community-leave-btn' : ''}`}
-                style={isMember ? { backgroundColor: 'transparent', color: 'white', border: '1px solid white' } : {}}
+                style={
+                  isMember
+                    ? {
+                        backgroundColor: 'transparent',
+                        color: 'white',
+                        border: '1px solid white',
+                      }
+                    : {}
+                }
               >
                 {isMember ? 'Leave' : 'Join'}
               </button>
@@ -145,124 +173,147 @@ export function CommunityPage() {
 
           <section className='community-feed' ref={postsWrapRef}>
             {isLoadingPosts ? (
-              <p style={{ textAlign: 'center', padding: '2rem' }}>Loading posts...</p>
+              <p style={{ textAlign: 'center', padding: '2rem' }}>
+                Loading posts...
+              </p>
             ) : posts.length === 0 ? (
-              <p style={{ textAlign: 'center', padding: '2rem' }}>No posts found in this community.</p>
+              <p style={{ textAlign: 'center', padding: '2rem' }}>
+                No posts found in this community.
+              </p>
             ) : (
               posts.map((post) => {
-                const postImageSrc = normalizeImageSrc(post.imageUrl ?? post.ImageUrl)
+                const postImageSrc = normalizeImageSrc(
+                  post.imageUrl ?? post.ImageUrl,
+                )
                 return (
-                <article key={post.id} className='post'>
-                <div className='post-main'>
-                  <header className='post-header'>
-                    <Link
-                      to={`/user/${encodeURIComponent(post.authorName)}`}
-                    >
-                      <img
-                        src={avatar}
-                        alt={post.authorName}
-                        className='avatar'
-                      />
-                    </Link>
-                    <div className='post-meta'>
-                      <Link
-                        to={`/user/${encodeURIComponent(post.authorName)}`}
-                        className='author author-link'
-                      >
-                        u/{post.authorName}
-                      </Link>
-                      <span className='meta-separator'>&middot;</span>
-                      <span className='time-posted'>{new Date(post.createdAt).toLocaleDateString()}</span>
-                    </div>
-
-                    <div className='post-header-actions'>
-                      <button
-                        type='button'
-                        className='more-button'
-                        onClick={() =>
-                          setOpenMorePostId((prev) =>
-                            prev === post.id ? null : post.id,
-                          )
-                        }
-                        aria-expanded={openMorePostId === post.id}
-                        aria-haspopup='menu'
-                        aria-label='Open post options'
-                      >
-                        ...
-                      </button>
-                      {openMorePostId === post.id && (
-                        <div className='more-menu' role='menu'>
+                  <article key={post.id} className='post'>
+                    <div className='post-main'>
+                      <header className='post-header'>
+                        <Link
+                          to={`/user/${encodeURIComponent(post.authorName)}`}
+                        >
+                          <img
+                            src={avatar}
+                            alt={post.authorName}
+                            className='avatar'
+                          />
+                        </Link>
+                        <div className='post-meta'>
                           <Link
-                            to={getPostRoute(community.slug, post.id)}
-                            className='more-menu-item more-menu-link'
-                            role='menuitem'
-                            onClick={() => setOpenMorePostId(null)}
+                            to={`/user/${encodeURIComponent(post.authorName)}`}
+                            className='author author-link'
                           >
-                            Open post
+                            u/{post.authorName}
                           </Link>
-                          <button className='more-menu-item' role='menuitem'>
-                            Save
-                          </button>
-                          <button
-                            className='more-menu-item more-menu-danger'
-                            role='menuitem'
-                          >
-                            Report
-                          </button>
+                          <span className='meta-separator'>&middot;</span>
+                          <span className='time-posted'>
+                            {new Date(post.createdAt).toLocaleDateString()}
+                          </span>
                         </div>
-                      )}
-                    </div>
-                  </header>
 
-                  <div className='post-body'>
-                    <h3 className='post-title'>
-                      <Link
-                        to={getPostRoute(community.slug, post.id)}
-                        className='post-title-link'
-                      >
-                        {post.title}
-                      </Link>
-                    </h3>
-                    {post.body && <p className='post-text'>{post.body}</p>}
+                        <div className='post-header-actions'>
+                          <button
+                            type='button'
+                            className='more-button'
+                            onClick={() =>
+                              setOpenMorePostId((prev) =>
+                                prev === post.id ? null : post.id,
+                              )
+                            }
+                            aria-expanded={openMorePostId === post.id}
+                            aria-haspopup='menu'
+                            aria-label='Open post options'
+                          >
+                            ...
+                          </button>
+                          {openMorePostId === post.id && (
+                            <div className='more-menu' role='menu'>
+                              <Link
+                                to={getPostRoute(community.slug, post.id)}
+                                className='more-menu-item more-menu-link'
+                                role='menuitem'
+                                onClick={() => setOpenMorePostId(null)}
+                              >
+                                Open post
+                              </Link>
+                              <button
+                                className='more-menu-item'
+                                role='menuitem'
+                              >
+                                Save
+                              </button>
+                              <button
+                                className='more-menu-item more-menu-danger'
+                                role='menuitem'
+                              >
+                                Report
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </header>
 
-                    {(postImageSrc || post.linkUrl) && (
-                      <div className='post-media'>
-                        {postImageSrc ? (
+                      <div className='post-body'>
+                        <h3 className='post-title'>
                           <Link
                             to={getPostRoute(community.slug, post.id)}
-                            className='post-media-link'
+                            className='post-title-link'
                           >
-                            <div className='media-placeholder'>
-                              <img src={postImageSrc} alt='Post content' />
-                            </div>
+                            {post.title}
                           </Link>
-                        ) : (
-                          <div className='media-placeholder'>
-                            <a href={post.linkUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#0066cc', textDecoration: 'underline' }}>{post.linkUrl}</a>
+                        </h3>
+                        {post.body && <p className='post-text'>{post.body}</p>}
+
+                        {(postImageSrc || post.linkUrl) && (
+                          <div className='post-media'>
+                            {postImageSrc ? (
+                              <Link
+                                to={getPostRoute(community.slug, post.id)}
+                                className='post-media-link'
+                              >
+                                <div className='media-placeholder'>
+                                  <img src={postImageSrc} alt='Post content' />
+                                </div>
+                              </Link>
+                            ) : (
+                              <div className='media-placeholder'>
+                                <a
+                                  href={post.linkUrl}
+                                  target='_blank'
+                                  rel='noopener noreferrer'
+                                  style={{
+                                    color: '#0066cc',
+                                    textDecoration: 'underline',
+                                  }}
+                                >
+                                  {post.linkUrl}
+                                </a>
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
-                    )}
-                  </div>
 
-                  <footer className='post-footer'>
-                    <div className='action-chip vote-chip'>
-                      <FaCaretUp className='vote-icon upvote' />
-                      <span className='vote-count'>{post.votes}</span>
-                      <FaCaretDown className='vote-icon downvote' />
+                      <footer className='post-footer'>
+                        <div className='action-chip vote-chip'>
+                          <FaCaretUp className='vote-icon upvote' />
+                          <span className='vote-count'>{post.votes}</span>
+                          <FaCaretDown className='vote-icon downvote' />
+                        </div>
+
+                        <button type='button' className='action-chip'>
+                          <FaComment className='comment-icon' />
+                          <span className='comment-count'>
+                            {post.commentsCount}
+                          </span>
+                        </button>
+
+                        <button type='button' className='action-chip'>
+                          <FaShare className='share-icon' />
+                        </button>
+                      </footer>
                     </div>
-
-                      <button type='button' className='action-chip'>
-                        <FaComment className='comment-icon' />
-                        <span className='comment-count'>{post.commentsCount}</span>
-                      </button>
-
-                    <button type='button' className='action-chip'>
-                      <FaShare className='share-icon' />
-                    </button>
-                  </footer>
-                </div>
-                </article>
+                  </article>
                 )
               })
             )}
@@ -278,11 +329,13 @@ export function CommunityPage() {
           <section className='community-side-card'>
             <h3>Rules</h3>
             <ol>
-              {(community.rules || [
-                'Fii respectuos in discutii.',
-                'Postarile trebuie sa aiba context clar.',
-                'Fara comportament toxic.'
-              ]).map((rule) => (
+              {(
+                community.rules || [
+                  'Fii respectuos in discutii.',
+                  'Postarile trebuie sa aiba context clar.',
+                  'Fara comportament toxic.',
+                ]
+              ).map((rule) => (
                 <li key={rule}>{rule}</li>
               ))}
             </ol>

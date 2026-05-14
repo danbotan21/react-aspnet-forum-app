@@ -1,6 +1,11 @@
 import { useState } from 'react'
 import './Styles/FAQ.css'
-import { FaChevronDown, FaQuestionCircle, FaPhone, FaFileContract } from 'react-icons/fa'
+import {
+  FaChevronDown,
+  FaQuestionCircle,
+  FaPhone,
+  FaFileContract,
+} from 'react-icons/fa'
 import { useNavigate } from 'react-router-dom'
 
 const FAQ_ITEMS = [

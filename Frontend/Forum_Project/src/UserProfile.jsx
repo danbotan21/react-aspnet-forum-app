@@ -9,6 +9,8 @@ import { ProfilePostsTab } from './ProfilePostsTab'
 import { ProfileCommentsTab } from './ProfileCommentsTab'
 import { ProfileSavedTab } from './ProfileSavedTab'
 import { ProfileVotedTab } from './ProfileVotedTab'
+import { useAuth } from './AuthContext'
+import { normalizeImageSrc } from './utils/media'
 
 const getCommunitySlug = (community) => community.replace(/^r\//, '')
 const getCommentPostRoute = (comment) =>
@@ -167,8 +169,9 @@ const DOWNVOTED_POSTS = [
 
 export function UserProfile() {
   const { username } = useParams()
+  const { user: authUser } = useAuth()
 
-  const loggedUser = 'username'
+  const loggedUser = authUser?.userName || 'username'
   const displayName = decodeURIComponent(username ?? 'guest')
   const isOwnProfile = displayName.toLowerCase() === loggedUser.toLowerCase()
 
@@ -198,6 +201,7 @@ export function UserProfile() {
   const statCards = isOwnProfile ? ownStatCards : visitorStatCards
 
   const [activeTab, setActiveTab] = useState(tabs[0])
+  const [profileUser, setProfileUser] = useState(null)
   const [hasPosts, setHasPosts] = useState(true)
   const [openMorePostId, setOpenMorePostId] = useState(null)
   const [postMenuPos, setPostMenuPos] = useState({ top: 0, right: 0 })
@@ -230,6 +234,22 @@ export function UserProfile() {
     document.addEventListener('mousedown', close)
     return () => document.removeEventListener('mousedown', close)
   }, [])
+
+  useEffect(() => {
+    if (!displayName) return
+
+    fetch(`/api/users/by-username/${encodeURIComponent(displayName)}`)
+      .then((res) => {
+        if (!res.ok) return null
+        return res.json()
+      })
+      .then((data) => {
+        setProfileUser(data || null)
+      })
+      .catch(() => {
+        setProfileUser(null)
+      })
+  }, [displayName])
 
   const handlePostMenu = (e, postId) => {
     if (openMorePostId === postId) {
@@ -359,6 +379,11 @@ export function UserProfile() {
     return null
   }
 
+  const profileAvatarSrc =
+    normalizeImageSrc(
+      profileUser?.avatarUrl || (isOwnProfile ? authUser?.avatarUrl : null),
+    ) || avatar
+
   return (
     <main className='user-profile-page'>
       <section className='user-profile-shell'>
@@ -378,7 +403,11 @@ export function UserProfile() {
             </div>
 
             <div className='user-hero-body'>
-              <img src={avatar} alt='Avatar' className='user-hero-avatar' />
+              <img
+                src={profileAvatarSrc}
+                alt='Avatar'
+                className='user-hero-avatar'
+              />
               <div className='user-hero-meta'>
                 <h1>{displayName}</h1>
                 <p>u/{displayName}</p>

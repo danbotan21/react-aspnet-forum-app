@@ -34,25 +34,39 @@ export function PostPage() {
   useEffect(() => {
     setIsLoading(true)
     fetch(`/api/posts/${postId}`)
-      .then(res => {
+      .then((res) => {
         if (!res.ok) throw new Error('Post not found')
         return res.json()
       })
-      .then(data => {
+      .then((data) => {
         setPost(data)
         setIsLoading(false)
       })
-      .catch(err => {
+      .catch((err) => {
         setError(err.message)
         setIsLoading(false)
       })
   }, [postId])
 
-  const communitySlug = decodeURIComponent(communityname ?? 'community').toLowerCase()
+  const communitySlug = decodeURIComponent(
+    communityname ?? 'community',
+  ).toLowerCase()
   const postImageSrc = normalizeImageSrc(post?.imageUrl ?? post?.ImageUrl)
 
-  if (isLoading) return <main className='post-page'><p style={{ textAlign: 'center', padding: '2rem' }}>Loading post...</p></main>
-  if (error || !post) return <main className='post-page'><p style={{ textAlign: 'center', padding: '2rem', color: 'red' }}>Error: {error}</p></main>
+  if (isLoading)
+    return (
+      <main className='post-page'>
+        <p style={{ textAlign: 'center', padding: '2rem' }}>Loading post...</p>
+      </main>
+    )
+  if (error || !post)
+    return (
+      <main className='post-page'>
+        <p style={{ textAlign: 'center', padding: '2rem', color: 'red' }}>
+          Error: {error}
+        </p>
+      </main>
+    )
 
   return (
     <main className='post-page'>
@@ -60,17 +74,21 @@ export function PostPage() {
         <div className='post-page-main'>
           <article className='post-page-card'>
             <header className='post-page-header'>
-              <img src={avatar} alt='Community avatar' className='post-page-avatar' />
+              <img
+                src={avatar}
+                alt='Community avatar'
+                className='post-page-avatar'
+              />
               <div className='post-page-meta'>
-                <Link to={`/community/${encodeURIComponent(post.communitySlug)}`}>
+                <Link
+                  to={`/community/${encodeURIComponent(post.communitySlug)}`}
+                >
                   r/{post.communitySlug}
                 </Link>
                 <span>&middot;</span>
                 <span>{new Date(post.createdAt).toLocaleDateString()}</span>
                 <span>&middot;</span>
-                <Link
-                  to={`/user/${encodeURIComponent(post.authorName)}`}
-                >
+                <Link to={`/user/${encodeURIComponent(post.authorName)}`}>
                   Posted by u/{post.authorName}
                 </Link>
               </div>
@@ -79,13 +97,28 @@ export function PostPage() {
             <h1>{post.title}</h1>
             {post.body && <p>{post.body}</p>}
 
-            {(postImageSrc || post.linkUrl) && (
-              postImageSrc ? (
-                <img src={postImageSrc} alt='Post media' className='post-page-image' />
+            {(postImageSrc || post.linkUrl) &&
+              (postImageSrc ? (
+                <img
+                  src={postImageSrc}
+                  alt='Post media'
+                  className='post-page-image'
+                />
               ) : (
-                <a href={post.linkUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'block', margin: '1rem 0', color: '#0066cc', textDecoration: 'underline' }}>{post.linkUrl}</a>
-              )
-            )}
+                <a
+                  href={post.linkUrl}
+                  target='_blank'
+                  rel='noopener noreferrer'
+                  style={{
+                    display: 'block',
+                    margin: '1rem 0',
+                    color: '#0066cc',
+                    textDecoration: 'underline',
+                  }}
+                >
+                  {post.linkUrl}
+                </a>
+              ))}
 
             <footer className='post-page-actions'>
               <button type='button' className='post-chip post-chip-vote'>
@@ -133,8 +166,8 @@ export function PostPage() {
           <section className='post-page-side-card'>
             <h3>About r/{communitySlug}</h3>
             <p>
-              Pagina de postare foloseste ruta dinamica pentru comunitate si id-ul
-              postarii. Datele reale vor fi conectate din backend.
+              Pagina de postare foloseste ruta dinamica pentru comunitate si
+              id-ul postarii. Datele reale vor fi conectate din backend.
             </p>
           </section>
         </aside>

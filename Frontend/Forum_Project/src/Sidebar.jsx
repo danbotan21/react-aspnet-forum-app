@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom' 
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from './AuthContext'
 import './Styles/SideBar.css'
 import { normalizeImageSrc } from './utils/media'
@@ -18,7 +18,7 @@ import { RiTeamLine } from 'react-icons/ri'
 import { LuScrollText } from 'react-icons/lu'
 
 export const SideBar = () => {
-  const navigate = useNavigate() 
+  const navigate = useNavigate()
   const { user } = useAuth()
   const [showCommunities, setShowCommunities] = useState(false)
   const [userCommunities, setUserCommunities] = useState([])
@@ -33,7 +33,7 @@ export const SideBar = () => {
             setUserCommunities(data || [])
           }
         } catch (err) {
-          console.error("Failed to load user communities", err)
+          console.error('Failed to load user communities', err)
         }
       }
       fetchUserCommunities()
@@ -63,7 +63,10 @@ export const SideBar = () => {
             <p>Explore</p>
           </div>
 
-          <div className='nav-item' onClick={() => navigate('/start-community')}>
+          <div
+            className='nav-item'
+            onClick={() => navigate('/start-community')}
+          >
             <FaPlusCircle className='nav-icon' />
             <p>Start Community</p>
           </div>
@@ -82,26 +85,38 @@ export const SideBar = () => {
           {showCommunities && (
             <div className='communities'>
               {userCommunities.length > 0 ? (
-                userCommunities.map(c => {
+                userCommunities.map((c) => {
                   const communityAvatarSrc = normalizeImageSrc(c.avatarUrl)
                   return (
-                  <div
-                    key={c.id}
-                    className='community'
-                    onClick={() => navigate(`/community/${c.slug}`)}
-                  >
-                    {communityAvatarSrc ? (
-                      <img src={communityAvatarSrc} alt='imagine ascunsa' className='img_community' />
-                    ) : (
-                      <div className='img_community' style={{backgroundColor: '#ccc', borderRadius: '50%'}}></div>
-                    )}
-                    <p className='name_community'>{c.title}</p>
-                    <FaRegStar className='star-icon' />
-                  </div>
+                    <div
+                      key={c.id}
+                      className='community'
+                      onClick={() => navigate(`/community/${c.slug}`)}
+                    >
+                      {communityAvatarSrc ? (
+                        <img
+                          src={communityAvatarSrc}
+                          alt='imagine ascunsa'
+                          className='img_community'
+                        />
+                      ) : (
+                        <div
+                          className='img_community'
+                          style={{
+                            backgroundColor: '#ccc',
+                            borderRadius: '50%',
+                          }}
+                        ></div>
+                      )}
+                      <p className='name_community'>{c.title}</p>
+                      <FaRegStar className='star-icon' />
+                    </div>
                   )
                 })
               ) : (
-                <div style={{padding: '0 10px', fontSize: '13px', color: '#888'}}>
+                <div
+                  style={{ padding: '0 10px', fontSize: '13px', color: '#888' }}
+                >
                   {!user ? 'Login to see communities' : 'No communities joined'}
                 </div>
               )}

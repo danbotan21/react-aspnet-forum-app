@@ -151,8 +151,12 @@ export const Signup = () => {
               autoComplete='new-password'
             />
 
-            {error && <div className='signup-message signup-error'>{error}</div>}
-            {success && <div className='signup-message signup-success'>{success}</div>}
+            {error && (
+              <div className='signup-message signup-error'>{error}</div>
+            )}
+            {success && (
+              <div className='signup-message signup-success'>{success}</div>
+            )}
 
             <button type='submit' className='signup-btn' disabled={loading}>
               {loading ? 'Se creeaza contul...' : 'Creeaza cont'}

@@ -28,24 +28,36 @@ const CATEGORY_TABS = [
 const getIconForCategory = (category) => {
   switch (category?.toLowerCase()) {
     case 'tech':
-    case 'technology': return FaCode;
-    case 'gaming': return FaGamepad;
-    case 'movies': return MdLocalMovies;
-    case 'travel': return MdTravelExplore;
-    case 'music': return FaMusic;
-    case 'food': return FaLeaf; // Just a fallback
-    default: return FaFire;
+    case 'technology':
+      return FaCode
+    case 'gaming':
+      return FaGamepad
+    case 'movies':
+      return MdLocalMovies
+    case 'travel':
+      return MdTravelExplore
+    case 'music':
+      return FaMusic
+    case 'food':
+      return FaLeaf // Just a fallback
+    default:
+      return FaFire
   }
 }
 
 const getAccentForCategory = (category) => {
   switch (category?.toLowerCase()) {
     case 'tech':
-    case 'technology': return 'linear-gradient(135deg, #1d4ed8 0%, #06b6d4 100%)';
-    case 'gaming': return 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)';
-    case 'travel': return 'linear-gradient(135deg, #0ea5e9 0%, #14b8a6 100%)';
-    case 'music': return 'linear-gradient(135deg, #f59e0b 0%, #f97316 100%)';
-    default: return 'linear-gradient(135deg, #6366f1 0%, #0ea5e9 100%)';
+    case 'technology':
+      return 'linear-gradient(135deg, #1d4ed8 0%, #06b6d4 100%)'
+    case 'gaming':
+      return 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)'
+    case 'travel':
+      return 'linear-gradient(135deg, #0ea5e9 0%, #14b8a6 100%)'
+    case 'music':
+      return 'linear-gradient(135deg, #f59e0b 0%, #f97316 100%)'
+    default:
+      return 'linear-gradient(135deg, #6366f1 0%, #0ea5e9 100%)'
   }
 }
 
@@ -76,7 +88,9 @@ export const ExploreCommunities = () => {
 
     const fetchCommunities = async () => {
       try {
-        const response = await fetch('/api/communities', { signal: controller.signal })
+        const response = await fetch('/api/communities', {
+          signal: controller.signal,
+        })
         if (response.ok) {
           const data = await response.json()
           if (isMounted) {
@@ -110,10 +124,14 @@ export const ExploreCommunities = () => {
     )
   }
 
-  const displayedCommunities = filterByCategory(allCommunities);
+  const displayedCommunities = filterByCategory(allCommunities)
 
   if (loading) {
-    return <div className="explore-page"><p>Loading communities...</p></div>
+    return (
+      <div className='explore-page'>
+        <p>Loading communities...</p>
+      </div>
+    )
   }
 
   return (
@@ -156,34 +174,51 @@ export const ExploreCommunities = () => {
                 <div className='explore-card-top'>
                   <div
                     className='explore-card-logo'
-                    style={{ background: getAccentForCategory(community.category) }}
+                    style={{
+                      background: getAccentForCategory(community.category),
+                    }}
                   >
                     {communityAvatarSrc ? (
-                        <img src={communityAvatarSrc} alt="icon" style={{width: '100%', height: '100%', objectFit: 'cover', borderRadius: '4px'}} />
+                      <img
+                        src={communityAvatarSrc}
+                        alt='icon'
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover',
+                          borderRadius: '4px',
+                        }}
+                      />
                     ) : (
-                        <Icon />
+                      <Icon />
                     )}
                   </div>
-                  <Link to={`/community/${community.slug}`} className='explore-join-btn'>
+                  <Link
+                    to={`/community/${community.slug}`}
+                    className='explore-join-btn'
+                  >
                     Visit
                   </Link>
                 </div>
 
                 <h3>
-                  <Link to={`/community/${community.slug}`} className='explore-community-link'>
+                  <Link
+                    to={`/community/${community.slug}`}
+                    className='explore-community-link'
+                  >
                     {community.title}
                   </Link>
                 </h3>
                 <p className='explore-visitors'>
                   {community.membersCount} members
                 </p>
-                <p className='explore-description'>
-                  {community.description}
-                </p>
+                <p className='explore-description'>{community.description}</p>
               </article>
             )
           })}
-          {displayedCommunities.length === 0 && <p>No communities found in this category.</p>}
+          {displayedCommunities.length === 0 && (
+            <p>No communities found in this category.</p>
+          )}
         </div>
       </section>
     </main>

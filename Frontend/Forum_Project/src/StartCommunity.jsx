@@ -1,6 +1,8 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { FaCloudUploadAlt, FaTimes } from 'react-icons/fa'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from './AuthContext'
+import { uploadImage } from './utils/imageUpload'
 import './Styles/StartCommunity.css'
 
 export const StartCommunity = () => {
@@ -34,35 +36,38 @@ export const StartCommunity = () => {
   ]
 
   const navigate = useNavigate()
+  const { user } = useAuth()
   const [selectedCategory, setSelectedCategory] = useState('Technology')
   const [selectedType, setSelectedType] = useState('public')
-  const [selectedImageName, setSelectedImageName] = useState('')
+  const [selectedAvatarImageName, setSelectedAvatarImageName] = useState('')
+  const [selectedBannerImageName, setSelectedBannerImageName] = useState('')
   const [communityTitle, setCommunityTitle] = useState('')
   const [communityDescription, setCommunityDescription] = useState('')
-  const [base64Image, setBase64Image] = useState('')
+  const [avatarFile, setAvatarFile] = useState(null)
+  const [bannerFile, setBannerFile] = useState(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState(null)
-  
+
   const [dragActive, setDragActive] = useState(false)
-  const [previewUrl, setPreviewUrl] = useState('')
+  const [avatarPreviewUrl, setAvatarPreviewUrl] = useState('')
+  const [bannerPreviewUrl, setBannerPreviewUrl] = useState('')
   const dragCounterRef = useRef(0)
   const fileInputRef = useRef(null)
 
-  const handleImageChange = useCallback((file) => {
-    if (!file || !file.type.startsWith('image/')) {
-      setSelectedImageName('')
-      setBase64Image('')
-      return
-    }
-    setSelectedImageName(file.name)
-    if (previewUrl) URL.revokeObjectURL(previewUrl)
-    setPreviewUrl(URL.createObjectURL(file))
-    const reader = new FileReader()
-    reader.onloadend = () => {
-      setBase64Image(reader.result)
-    }
-    reader.readAsDataURL(file)
-  }, [previewUrl])
+  const handleImageChange = useCallback(
+    (file) => {
+      if (!file || !file.type.startsWith('image/')) {
+        setSelectedAvatarImageName('')
+        setAvatarFile(null)
+        return
+      }
+      setSelectedAvatarImageName(file.name)
+      setAvatarFile(file)
+      if (avatarPreviewUrl) URL.revokeObjectURL(avatarPreviewUrl)
+      setAvatarPreviewUrl(URL.createObjectURL(file))
+    },
+    [avatarPreviewUrl],
+  )
 
   const handleDragEnter = useCallback((e) => {
     e.preventDefault()
@@ -115,15 +120,36 @@ export const StartCommunity = () => {
     fileInputRef.current?.click()
   }, [])
 
+  const handleBannerFileSelect = (e) => {
+    const file = e.target.files?.[0]
+
+    if (!file || !file.type.startsWith('image/')) {
+      setSelectedBannerImageName('')
+      setBannerFile(null)
+      return
+    }
+
+    setSelectedBannerImageName(file.name)
+    setBannerFile(file)
+    if (bannerPreviewUrl) URL.revokeObjectURL(bannerPreviewUrl)
+    setBannerPreviewUrl(URL.createObjectURL(file))
+  }
+
   useEffect(() => {
     return () => {
-      if (previewUrl) URL.revokeObjectURL(previewUrl)
+      if (avatarPreviewUrl) URL.revokeObjectURL(avatarPreviewUrl)
+      if (bannerPreviewUrl) URL.revokeObjectURL(bannerPreviewUrl)
     }
-  }, [previewUrl])
+  }, [avatarPreviewUrl, bannerPreviewUrl])
 
   const handleCreateCommunity = async () => {
+    if (!user?.id) {
+      setError('Please log in before creating a community.')
+      return
+    }
+
     if (!communityTitle.trim()) {
-      setError("Title is required.")
+      setError('Title is required.')
       return
     }
 
@@ -131,47 +157,70 @@ export const StartCommunity = () => {
     setError(null)
 
     // Generate slug from title
-    const generatedSlug = communityTitle.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '') || `comm-${Date.now()}`
+    const generatedSlug =
+      communityTitle
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)+/g, '') || `comm-${Date.now()}`
 
     const payload = {
       title: communityTitle,
       slug: generatedSlug,
-      description: communityDescription || "",
+      description: communityDescription || '',
       category: selectedCategory,
-      type: selectedType
+      type: selectedType,
     }
 
     try {
-      const response = await fetch("/api/communities?authorId=1", {
-        method: "POST",
+      const response = await fetch(`/api/communities?authorId=${user.id}`, {
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json"
+          'Content-Type': 'application/json',
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
       })
 
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || "Failed to create community")
+        const errorText = await response.text()
+        throw new Error(errorText || 'Failed to create community')
       }
 
       const createdCommunity = await response.json()
 
-      if (base64Image && createdCommunity?.id) {
-        const imageUpdateResponse = await fetch(`/api/communities/${createdCommunity.id}?requestingUserId=1`, {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json"
+      const imageUpdatePayload = {}
+
+      if (avatarFile) {
+        imageUpdatePayload.avatarUrl = await uploadImage(
+          avatarFile,
+          'communities',
+        )
+      }
+
+      if (bannerFile) {
+        imageUpdatePayload.bannerUrl = await uploadImage(
+          bannerFile,
+          'communities',
+        )
+      }
+
+      if (Object.keys(imageUpdatePayload).length > 0 && createdCommunity?.id) {
+        const imageUpdateResponse = await fetch(
+          `/api/communities/${createdCommunity.id}?requestingUserId=${user.id}`,
+          {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(imageUpdatePayload),
           },
-          body: JSON.stringify({
-            avatarUrl: base64Image,
-            bannerUrl: base64Image
-          })
-        })
+        )
 
         if (!imageUpdateResponse.ok) {
           const imageErrorText = await imageUpdateResponse.text()
-          throw new Error(imageErrorText || "Community created, but image upload failed")
+          throw new Error(
+            imageErrorText || 'Community created, but image upload failed',
+          )
         }
       }
 
@@ -210,9 +259,7 @@ export const StartCommunity = () => {
         </section>
 
         <section className='start-community-section'>
-          <h2 className='start-community-section-title'>
-            Community details
-          </h2>
+          <h2 className='start-community-section-title'>Community details</h2>
           <div className='start-community-field'>
             <label htmlFor='community-title' className='start-community-label'>
               Title
@@ -256,14 +303,18 @@ export const StartCommunity = () => {
               role='button'
               tabIndex={0}
               style={{
-                border: dragActive ? '2px dashed var(--accent)' : '2px dashed var(--border)',
+                border: dragActive
+                  ? '2px dashed var(--accent)'
+                  : '2px dashed var(--border)',
                 borderRadius: '8px',
                 padding: '2rem',
                 textAlign: 'center',
                 cursor: 'pointer',
-                background: dragActive ? 'var(--bg-card-hover)' : 'var(--bg-card)',
+                background: dragActive
+                  ? 'var(--bg-card-hover)'
+                  : 'var(--bg-card)',
                 transition: 'all 0.2s ease',
-                position: 'relative'
+                position: 'relative',
               }}
             >
               <input
@@ -274,16 +325,20 @@ export const StartCommunity = () => {
                 style={{ display: 'none' }}
                 aria-hidden='true'
               />
-              {previewUrl ? (
+              {avatarPreviewUrl ? (
                 <div style={{ position: 'relative', display: 'inline-block' }}>
-                  <img src={previewUrl} alt='Preview' style={{ maxHeight: '150px', borderRadius: '4px' }} />
+                  <img
+                    src={avatarPreviewUrl}
+                    alt='Avatar preview'
+                    style={{ maxHeight: '150px', borderRadius: '4px' }}
+                  />
                   <button
                     type='button'
                     onClick={(e) => {
                       e.stopPropagation()
-                      setPreviewUrl('')
-                      setSelectedImageName('')
-                      setBase64Image('')
+                      setAvatarPreviewUrl('')
+                      setSelectedAvatarImageName('')
+                      setAvatarFile(null)
                     }}
                     style={{
                       position: 'absolute',
@@ -298,7 +353,7 @@ export const StartCommunity = () => {
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      cursor: 'pointer'
+                      cursor: 'pointer',
                     }}
                     aria-label='Remove image'
                   >
@@ -306,14 +361,63 @@ export const StartCommunity = () => {
                   </button>
                 </div>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', color: 'var(--text-secondary)' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    color: 'var(--text-secondary)',
+                  }}
+                >
                   <FaCloudUploadAlt size={32} />
                   <p style={{ margin: 0 }}>
-                    Drag and drop an image or <span style={{ color: 'var(--accent)', fontWeight: '500' }}>Upload</span>
+                    Drag and drop an image or{' '}
+                    <span style={{ color: 'var(--accent)', fontWeight: '500' }}>
+                      Upload
+                    </span>
                   </p>
                 </div>
               )}
             </div>
+            {selectedAvatarImageName && (
+              <p
+                style={{ marginTop: '0.5rem', color: 'var(--text-secondary)' }}
+              >
+                Avatar: {selectedAvatarImageName}
+              </p>
+            )}
+          </div>
+
+          <div className='start-community-field'>
+            <label htmlFor='community-banner' className='start-community-label'>
+              Banner image (optional)
+            </label>
+            <input
+              id='community-banner'
+              type='file'
+              accept='image/*'
+              className='start-community-input'
+              onChange={handleBannerFileSelect}
+            />
+            {selectedBannerImageName && (
+              <p
+                style={{ marginTop: '0.5rem', color: 'var(--text-secondary)' }}
+              >
+                Banner: {selectedBannerImageName}
+              </p>
+            )}
+            {bannerPreviewUrl && (
+              <img
+                src={bannerPreviewUrl}
+                alt='Banner preview'
+                style={{
+                  maxHeight: '120px',
+                  marginTop: '0.75rem',
+                  borderRadius: '6px',
+                }}
+              />
+            )}
           </div>
         </section>
 
@@ -336,10 +440,17 @@ export const StartCommunity = () => {
         </section>
 
         <div className='start-community-actions'>
-          {error && <p className='start-community-error' style={{ color: 'red', marginBottom: '10px' }}>{error}</p>}
-          <button 
-            type='button' 
-            className='start-community-submit' 
+          {error && (
+            <p
+              className='start-community-error'
+              style={{ color: 'red', marginBottom: '10px' }}
+            >
+              {error}
+            </p>
+          )}
+          <button
+            type='button'
+            className='start-community-submit'
             onClick={handleCreateCommunity}
             disabled={isLoading}
           >

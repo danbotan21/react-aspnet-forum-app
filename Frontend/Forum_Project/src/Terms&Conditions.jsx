@@ -85,11 +85,11 @@ export const TermsAndConditions = () => {
             ))}
 
             <section className='terms-footer-note'>
-              <Link to="/contact" style={{ textDecoration: 'none' }}> 
-              <p>
-                Pentru clarificari juridice sau intrebari legate de date,
-                contacteaza-ne din pagina Contact Us.
-              </p>
+              <Link to='/contact' style={{ textDecoration: 'none' }}>
+                <p>
+                  Pentru clarificari juridice sau intrebari legate de date,
+                  contacteaza-ne din pagina Contact Us.
+                </p>
               </Link>
             </section>
           </section>

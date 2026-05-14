@@ -400,3 +400,35 @@
   text-align: center;
   font-weight: 500;
 }
+
+.edit-avatar-status {
+  margin: 0 0 10px;
+  font-size: 0.8125rem;
+}
+
+.edit-avatar-status-error {
+  color: #c0202f;
+}
+
+.edit-avatar-status-success {
+  color: #1d8a56;
+}
+
+.edit-avatar-save-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+  box-shadow: none;
+}
+
+.edit-avatar-upload-actions {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.edit-avatar-upload-hint {
+  margin: 0;
+  color: #5f7394;
+  font-size: 0.8125rem;
+}

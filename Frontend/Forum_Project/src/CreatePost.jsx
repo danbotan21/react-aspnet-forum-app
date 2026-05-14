@@ -8,6 +8,7 @@ import {
   FaCloudUploadAlt,
 } from 'react-icons/fa'
 import { useAuth } from './AuthContext'
+import { uploadImage } from './utils/imageUpload'
 import './Styles/CreatePost.css'
 
 export const CreatePost = () => {
@@ -16,7 +17,7 @@ export const CreatePost = () => {
   const [activeTab, setActiveTab] = useState('Text')
   const [isDraftsOpen, setIsDraftsOpen] = useState(false)
   const [dragActive, setDragActive] = useState(false)
-  
+
   // States for backend data
   const [communities, setCommunities] = useState([])
   const [communityId, setCommunityId] = useState('')
@@ -27,8 +28,7 @@ export const CreatePost = () => {
   const [selectedImageName, setSelectedImageName] = useState('')
   const [uploadError, setUploadError] = useState('')
   const [previewUrl, setPreviewUrl] = useState('')
-  const [base64Image, setBase64Image] = useState('')
-  const [isImageProcessing, setIsImageProcessing] = useState(false)
+  const [selectedImageFile, setSelectedImageFile] = useState(null)
 
   const dragCounterRef = useRef(0)
   const fileInputRef = useRef(null)
@@ -37,27 +37,15 @@ export const CreatePost = () => {
     (file) => {
       if (!file || !file.type.startsWith('image/')) {
         setUploadError('Please choose an image file.')
-        setIsImageProcessing(false)
+        setSelectedImageFile(null)
         return
       }
 
       if (previewUrl) URL.revokeObjectURL(previewUrl)
       setUploadError('')
       setSelectedImageName(file.name)
+      setSelectedImageFile(file)
       setPreviewUrl(URL.createObjectURL(file))
-      setIsImageProcessing(true)
-
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        setBase64Image(reader.result)
-        setIsImageProcessing(false)
-      }
-      reader.onerror = () => {
-        setUploadError('Image upload failed. Please try another file.')
-        setBase64Image('')
-        setIsImageProcessing(false)
-      }
-      reader.readAsDataURL(file)
     },
     [previewUrl],
   )
@@ -168,21 +156,22 @@ export const CreatePost = () => {
       alert('Title is required')
       return
     }
-    if (activeTab === 'Images' && !base64Image) {
-      alert(
-        isImageProcessing
-          ? 'Image is still processing. Please wait a moment.'
-          : 'Please upload an image.',
-      )
+    if (activeTab === 'Images' && !selectedImageFile) {
+      alert('Please upload an image.')
       return
     }
 
     setIsSubmitting(true)
 
+    let imageUrl = null
+    if (activeTab === 'Images' && selectedImageFile) {
+      imageUrl = await uploadImage(selectedImageFile, 'posts')
+    }
+
     const postData = {
       title: postTitle,
       body: activeTab === 'Text' ? postBody : null,
-      imageUrl: activeTab === 'Images' ? base64Image : null,
+      imageUrl: activeTab === 'Images' ? imageUrl : null,
       linkUrl: activeTab === 'Link' ? postUrl : null,
       type: activeTab === 'Images' ? 'Image' : activeTab,
       communityId: parseInt(communityId, 10),
@@ -203,7 +192,9 @@ export const CreatePost = () => {
 
       const createdPost = await response.json()
       // Use community slug from communities array for the route
-      const selectedComm = communities.find(c => c.id === parseInt(communityId, 10))
+      const selectedComm = communities.find(
+        (c) => c.id === parseInt(communityId, 10),
+      )
       if (selectedComm) {
         navigate(`/community/${selectedComm.slug}/post/${createdPost.id}`)
       } else {
@@ -398,7 +389,7 @@ export const CreatePost = () => {
               type='button'
               className='create-post-btn create-post-btn-primary'
               onClick={handleSubmit}
-              disabled={isSubmitting || (activeTab === 'Images' && isImageProcessing)}
+              disabled={isSubmitting}
             >
               {isSubmitting ? 'Posting...' : 'Post'}
             </button>

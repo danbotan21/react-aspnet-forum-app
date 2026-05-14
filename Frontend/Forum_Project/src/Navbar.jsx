@@ -11,6 +11,7 @@ import {
   FaSignOutAlt,
 } from 'react-icons/fa'
 import { useAuth } from './AuthContext'
+import { normalizeImageSrc } from './utils/media'
 import './Styles/Navbar.css'
 import defaultAvatar from './img/avatar.webp'
 
@@ -27,6 +28,7 @@ export const Navbar = () => {
   // Folosim username-ul real din context, sau fallback
   const loggedUser = user?.userName || 'username'
   const userKarma = user?.karma ?? 0
+  const userAvatarSrc = normalizeImageSrc(user?.avatarUrl) || defaultAvatar
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -45,7 +47,9 @@ export const Navbar = () => {
     const delayDebounceFn = setTimeout(async () => {
       if (searchTerm.trim() !== '') {
         try {
-          const res = await fetch(`/api/Communities/search?term=${encodeURIComponent(searchTerm)}`)
+          const res = await fetch(
+            `/api/Communities/search?term=${encodeURIComponent(searchTerm)}`,
+          )
           if (res.ok) {
             const data = await res.json()
             setSearchResults(data)
@@ -81,7 +85,11 @@ export const Navbar = () => {
           {/* SPEAK-Line */}
         </a>
 
-        <div className='navbar-search-wrap' ref={searchRef} style={{ position: 'relative' }}>
+        <div
+          className='navbar-search-wrap'
+          ref={searchRef}
+          style={{ position: 'relative' }}
+        >
           <FaSearch className='navbar-search-icon navbar-search-icon-left' />
           <input
             type='search'
@@ -90,22 +98,42 @@ export const Navbar = () => {
             aria-label='Search'
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            onFocus={() => { if (searchTerm.trim() !== '') setShowSearchDropdown(true) }}
+            onFocus={() => {
+              if (searchTerm.trim() !== '') setShowSearchDropdown(true)
+            }}
           />
           {showSearchDropdown && searchResults.length > 0 && (
-            <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, backgroundColor: 'white', borderRadius: '4px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)', zIndex: 10 }}>
+            <div
+              style={{
+                position: 'absolute',
+                top: '100%',
+                left: 0,
+                right: 0,
+                backgroundColor: 'white',
+                borderRadius: '4px',
+                boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+                zIndex: 10,
+              }}
+            >
               {searchResults.map((c) => (
-                <div 
-                  key={c.id} 
-                  style={{ padding: '10px', cursor: 'pointer', borderBottom: '1px solid #eee', color: 'black' }}
+                <div
+                  key={c.id}
+                  style={{
+                    padding: '10px',
+                    cursor: 'pointer',
+                    borderBottom: '1px solid #eee',
+                    color: 'black',
+                  }}
                   onClick={() => {
-                    setShowSearchDropdown(false);
-                    setSearchTerm('');
-                    navigate(`/community/${c.slug}`);
+                    setShowSearchDropdown(false)
+                    setSearchTerm('')
+                    navigate(`/community/${c.slug}`)
                   }}
                 >
                   <strong style={{ display: 'block' }}>{c.title}</strong>
-                  <span style={{ fontSize: '0.8em', color: 'gray' }}>c/{c.slug} - {c.membersCount} members</span>
+                  <span style={{ fontSize: '0.8em', color: 'gray' }}>
+                    c/{c.slug} - {c.membersCount} members
+                  </span>
                 </div>
               ))}
             </div>
@@ -139,7 +167,7 @@ export const Navbar = () => {
             ref={profileRef}
             onClick={() => setIsOpen((prev) => !prev)}
           >
-            <img src={defaultAvatar} alt='avatar' className='navbar-avatar' />
+            <img src={userAvatarSrc} alt='avatar' className='navbar-avatar' />
 
             {isOpen && (
               <div
@@ -148,14 +176,16 @@ export const Navbar = () => {
               >
                 <div className='profile-dropdown-header'>
                   <img
-                    src={defaultAvatar}
+                    src={userAvatarSrc}
                     alt='avatar'
                     className='profile-dropdown-avatar'
                   />
                   <span className='profile-dropdown-username'>
                     u/{loggedUser}
                   </span>
-                  <span className='profile-dropdown-karma'>{userKarma} karma</span>
+                  <span className='profile-dropdown-karma'>
+                    {userKarma} karma
+                  </span>
                 </div>
 
                 <div className='profile-dropdown-divider' />

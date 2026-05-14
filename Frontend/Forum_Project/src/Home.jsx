@@ -115,113 +115,144 @@ export const Home = () => {
 
       <div ref={postsWrapRef}>
         {isLoading ? (
-          <p style={{ textAlign: 'center', padding: '2rem' }}>Loading posts...</p>
+          <p style={{ textAlign: 'center', padding: '2rem' }}>
+            Loading posts...
+          </p>
         ) : posts.length === 0 ? (
-          <p style={{ textAlign: 'center', padding: '2rem' }}>No posts found.</p>
+          <p style={{ textAlign: 'center', padding: '2rem' }}>
+            No posts found.
+          </p>
         ) : (
           posts.map((post) => {
-            const postImageSrc = normalizeImageSrc(post.imageUrl ?? post.ImageUrl)
+            const postImageSrc = normalizeImageSrc(
+              post.imageUrl ?? post.ImageUrl,
+            )
             return (
-            <article className='post' key={post.id}>
-              <div className='post-main'>
-                <header className='post-header'>
-                  <img src={avatar} alt='Community Avatar' className='avatar' />
-                  <div className='post-meta'>
-                    <Link
-                      to={`/community/${encodeURIComponent(post.communitySlug)}`}
-                      className='community-name community-link'
-                    >
-                      r/{post.communitySlug}
-                    </Link>
-                    <span className='meta-separator'>&middot;</span>
-                    <span className='time-posted'>
-                      {new Date(post.createdAt).toLocaleDateString()}
-                    </span>
-                    <span className='meta-separator'>&middot;</span>
-                    <Link
-                      to={`/user/${encodeURIComponent(post.authorName)}`}
-                      className='author author-link'
-                    >
-                      Posted by u/{post.authorName}
-                    </Link>
-                  </div>
+              <article className='post' key={post.id}>
+                <div className='post-main'>
+                  <header className='post-header'>
+                    <img
+                      src={avatar}
+                      alt='Community Avatar'
+                      className='avatar'
+                    />
+                    <div className='post-meta'>
+                      <Link
+                        to={`/community/${encodeURIComponent(post.communitySlug)}`}
+                        className='community-name community-link'
+                      >
+                        r/{post.communitySlug}
+                      </Link>
+                      <span className='meta-separator'>&middot;</span>
+                      <span className='time-posted'>
+                        {new Date(post.createdAt).toLocaleDateString()}
+                      </span>
+                      <span className='meta-separator'>&middot;</span>
+                      <Link
+                        to={`/user/${encodeURIComponent(post.authorName)}`}
+                        className='author author-link'
+                      >
+                        Posted by u/{post.authorName}
+                      </Link>
+                    </div>
 
-                  <div className='post-header-actions'>
-                    <button
-                      type='button'
-                      className='more-button'
-                      onClick={() =>
-                        setOpenMorePostId((prev) =>
-                          prev === post.id ? null : post.id,
-                        )
-                      }
-                      aria-expanded={openMorePostId === post.id}
-                      aria-haspopup='menu'
-                      aria-label='Open post options'
-                    >
-                      ...
-                    </button>
-                    {openMorePostId === post.id && (
-                      <div className='more-menu' role='menu'>
-                        <button className='more-menu-item' role='menuitem'>
-                          Save
-                        </button>
-                        <button
-                          className='more-menu-item more-menu-danger'
-                          role='menuitem'
-                        >
-                          Report
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </header>
-
-                <div className='post-body'>
-                  <h3 className='post-title'>
-                    <Link to={`/community/${encodeURIComponent(post.communitySlug)}/post/${post.id}`} className='post-title-link'>
-                      {post.title}
-                    </Link>
-                  </h3>
-                  {post.body && <p className='post-text'>{post.body}</p>}
-
-                  {(postImageSrc || post.linkUrl) && (
-                    <div className='post-media'>
-                      {postImageSrc ? (
-                        <Link to={`/community/${encodeURIComponent(post.communitySlug)}/post/${post.id}`} className='post-media-link'>
-                          <div className='media-placeholder'>
-                            <img src={postImageSrc} alt='Post content' />
-                          </div>
-                        </Link>
-                      ) : (
-                        <div className='media-placeholder'>
-                          <a href={post.linkUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#0066cc', textDecoration: 'underline' }}>{post.linkUrl}</a>
+                    <div className='post-header-actions'>
+                      <button
+                        type='button'
+                        className='more-button'
+                        onClick={() =>
+                          setOpenMorePostId((prev) =>
+                            prev === post.id ? null : post.id,
+                          )
+                        }
+                        aria-expanded={openMorePostId === post.id}
+                        aria-haspopup='menu'
+                        aria-label='Open post options'
+                      >
+                        ...
+                      </button>
+                      {openMorePostId === post.id && (
+                        <div className='more-menu' role='menu'>
+                          <button className='more-menu-item' role='menuitem'>
+                            Save
+                          </button>
+                          <button
+                            className='more-menu-item more-menu-danger'
+                            role='menuitem'
+                          >
+                            Report
+                          </button>
                         </div>
                       )}
                     </div>
-                  )}
-                </div>
+                  </header>
 
-                <footer className='post-footer'>
-                  <div className='action-chip vote-chip'>
-                    <FaCaretUp
-                      className='vote-icon upvote'
-                      onClick={() => handleVote('up')}
-                    />
-                    <span className='vote-count'>{post.votes}</span>
-                    <FaCaretDown
-                      className='vote-icon downvote'
-                      onClick={() => handleVote('down')}
-                    />
+                  <div className='post-body'>
+                    <h3 className='post-title'>
+                      <Link
+                        to={`/community/${encodeURIComponent(post.communitySlug)}/post/${post.id}`}
+                        className='post-title-link'
+                      >
+                        {post.title}
+                      </Link>
+                    </h3>
+                    {post.body && <p className='post-text'>{post.body}</p>}
+
+                    {(postImageSrc || post.linkUrl) && (
+                      <div className='post-media'>
+                        {postImageSrc ? (
+                          <Link
+                            to={`/community/${encodeURIComponent(post.communitySlug)}/post/${post.id}`}
+                            className='post-media-link'
+                          >
+                            <div className='media-placeholder'>
+                              <img src={postImageSrc} alt='Post content' />
+                            </div>
+                          </Link>
+                        ) : (
+                          <div className='media-placeholder'>
+                            <a
+                              href={post.linkUrl}
+                              target='_blank'
+                              rel='noopener noreferrer'
+                              style={{
+                                color: '#0066cc',
+                                textDecoration: 'underline',
+                              }}
+                            >
+                              {post.linkUrl}
+                            </a>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
 
-                  <Link to={`/community/${encodeURIComponent(post.communitySlug)}/post/${post.id}`} className='action-chip'>
-                    <FaComment className='comment-icon' />
-                    <span className='comment-count'>{post.commentsCount}</span>
-                  </Link>
-                </footer>
-              </div>
-            </article>
+                  <footer className='post-footer'>
+                    <div className='action-chip vote-chip'>
+                      <FaCaretUp
+                        className='vote-icon upvote'
+                        onClick={() => handleVote('up')}
+                      />
+                      <span className='vote-count'>{post.votes}</span>
+                      <FaCaretDown
+                        className='vote-icon downvote'
+                        onClick={() => handleVote('down')}
+                      />
+                    </div>
+
+                    <Link
+                      to={`/community/${encodeURIComponent(post.communitySlug)}/post/${post.id}`}
+                      className='action-chip'
+                    >
+                      <FaComment className='comment-icon' />
+                      <span className='comment-count'>
+                        {post.commentsCount}
+                      </span>
+                    </Link>
+                  </footer>
+                </div>
+              </article>
             )
           })
         )}
