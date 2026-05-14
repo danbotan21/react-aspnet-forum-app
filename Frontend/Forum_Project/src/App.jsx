@@ -34,7 +34,8 @@ function App() {
   return (
     <div style={{ minHeight: '100vh', width: '100%' }}>
       <Routes>
-        <Route path='/' element={<Navigate to='/Login' replace />} />
+        {/* <Route path='/' element={<Navigate to='/Login' replace />} /> */}
+        <Route path='/' element={<Navigate to='/home' replace />} />
         <Route path='/Login' element={<Login />} />
         <Route path='/login' element={<Login />} />
         <Route path='/register' element={<Signup />} />
