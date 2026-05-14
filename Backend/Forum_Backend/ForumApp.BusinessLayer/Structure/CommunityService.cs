@@ -108,6 +108,8 @@ namespace ForumApp.BusinessLayer.Structure
                 Description = communityData.Description,
                 Category = communityData.Category,
                 Type = communityData.Type,
+                AvatarUrl = communityData.AvatarUrl,
+                BannerUrl = communityData.BannerUrl,
                 MembersCount = 1,
                 CreatedAt = DateTime.UtcNow
             };
