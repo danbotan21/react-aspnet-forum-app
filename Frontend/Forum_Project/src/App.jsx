@@ -18,6 +18,7 @@ import { EditAvatar } from './EditAvatar'
 import { UserProfile } from './UserProfile'
 import { CommunityPage } from './CommunityPage'
 import { PostPage } from './PostPage'
+import { Settings } from './Settings'
 
 function AppLayout({ children }) {
   return (
@@ -131,6 +132,14 @@ function App() {
           element={
             <AppLayout>
               <EditAvatar />
+            </AppLayout>
+          }
+        />
+        <Route
+          path='/settings'
+          element={
+            <AppLayout>
+              <Settings />
             </AppLayout>
           }
         />

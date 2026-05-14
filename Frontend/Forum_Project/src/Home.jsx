@@ -173,22 +173,6 @@ export const Home = () => {
                   </button>
                   {openMorePostId === post.id && (
                     <div className='more-menu' role='menu'>
-                      <Link
-                        to={getPostRoute(post)}
-                        className='more-menu-item more-menu-link'
-                        role='menuitem'
-                        onClick={() => setOpenMorePostId(null)}
-                      >
-                        Open post
-                      </Link>
-                      <Link
-                        to={`/user/${encodeURIComponent(getUsernameFromAuthor(post.author))}`}
-                        className='more-menu-item more-menu-link'
-                        role='menuitem'
-                        onClick={() => setOpenMorePostId(null)}
-                      >
-                        View {post.author} profile
-                      </Link>
                       <button className='more-menu-item' role='menuitem'>
                         Save
                       </button>
@@ -233,14 +217,10 @@ export const Home = () => {
                   />
                 </div>
 
-                <button type='button' className='action-chip'>
+                <Link to={getPostRoute(post)} className='action-chip'>
                   <FaComment className='comment-icon' />
                   <span className='comment-count'>{post.comments}</span>
-                </button>
-
-                <button type='button' className='action-chip'>
-                  <FaShare className='share-icon' />
-                </button>
+                </Link>
               </footer>
             </div>
           </article>

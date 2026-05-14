@@ -20,7 +20,7 @@ const POSTS = [
     author: 'u/lolMaster',
     title: 'Top trending post of the day',
     text: 'This one exploded in activity. What do you think made it so shareable compared to the rest of this week?',
-    image: shreck,
+    image: nature,
     votes: 1240,
     comments: 312,
   },
@@ -42,7 +42,7 @@ const POSTS = [
     author: 'u/frontendAce',
     title: 'Popular architecture debate for large React apps',
     text: 'A thread about scalable folders, shared components and design consistency across complex product pages.',
-    image: shreck,
+    image: nature,
     votes: 645,
     comments: 144,
   },
@@ -161,7 +161,9 @@ export const Popular = () => {
                     type='button'
                     className='more-button'
                     onClick={() =>
-                      setOpenMorePostId((prev) => (prev === post.id ? null : post.id))
+                      setOpenMorePostId((prev) =>
+                        prev === post.id ? null : post.id,
+                      )
                     }
                     aria-expanded={openMorePostId === post.id}
                     aria-haspopup='menu'
@@ -171,22 +173,6 @@ export const Popular = () => {
                   </button>
                   {openMorePostId === post.id && (
                     <div className='more-menu' role='menu'>
-                      <Link
-                        to={getPostRoute(post)}
-                        className='more-menu-item more-menu-link'
-                        role='menuitem'
-                        onClick={() => setOpenMorePostId(null)}
-                      >
-                        Open post
-                      </Link>
-                      <Link
-                        to={`/user/${encodeURIComponent(getUsernameFromAuthor(post.author))}`}
-                        className='more-menu-item more-menu-link'
-                        role='menuitem'
-                        onClick={() => setOpenMorePostId(null)}
-                      >
-                        View {post.author} profile
-                      </Link>
                       <button className='more-menu-item' role='menuitem'>
                         Save
                       </button>
@@ -231,14 +217,10 @@ export const Popular = () => {
                   />
                 </div>
 
-                <button type='button' className='action-chip'>
+                <Link to={getPostRoute(post)} className='action-chip'>
                   <FaComment className='comment-icon' />
                   <span className='comment-count'>{post.comments}</span>
-                </button>
-
-                <button type='button' className='action-chip'>
-                  <FaShare className='share-icon' />
-                </button>
+                </Link>
               </footer>
             </div>
           </article>
