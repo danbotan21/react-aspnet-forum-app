@@ -44,6 +44,8 @@ namespace ForumApp.Domain.Entities.User
         [StringLength(10)]
         public string Language { get; set; } = string.Empty;
 
+        public string? AvatarUrl { get; set; }
+
         public int Karma { get; set; } = 0;
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
