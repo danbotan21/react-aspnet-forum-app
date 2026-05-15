@@ -110,21 +110,61 @@ namespace ForumApp.BusinessLayer.Structure
             var user = await _context.Users.FindAsync(new object[] { userId }, ct);
             if (user == null) return null;
 
-            if (!string.IsNullOrWhiteSpace(userData.UserName))
-                user.UserName = userData.UserName;
-            if (!string.IsNullOrWhiteSpace(userData.Bio))
-                user.Bio = userData.Bio;
+            if (userData.UserName != null)
+            {
+                var normalizedUserName = userData.UserName.Trim();
+                if (string.IsNullOrWhiteSpace(normalizedUserName))
+                    throw new InvalidOperationException("Username cannot be empty.");
+
+                if (normalizedUserName.Length < 6 || normalizedUserName.Length > 50)
+                    throw new InvalidOperationException("Username must have between 6 and 50 characters.");
+
+                var usernameTaken = await _context.Users
+                    .AnyAsync(u => u.ID != userId && u.UserName.ToLower() == normalizedUserName.ToLower(), ct);
+                if (usernameTaken)
+                    throw new InvalidOperationException("Username is already in use.");
+
+                user.UserName = normalizedUserName;
+            }
+
+            if (userData.Bio != null)
+            {
+                var normalizedBio = userData.Bio.Trim();
+                user.Bio = string.IsNullOrWhiteSpace(normalizedBio) ? null : normalizedBio;
+            }
+
             if (userData.AvatarUrl != null)
-                user.AvatarUrl = string.IsNullOrWhiteSpace(userData.AvatarUrl) ? null : userData.AvatarUrl;
+            {
+                var normalizedAvatarUrl = userData.AvatarUrl.Trim();
+                user.AvatarUrl = string.IsNullOrWhiteSpace(normalizedAvatarUrl) ? null : normalizedAvatarUrl;
+            }
             if (!string.IsNullOrWhiteSpace(userData.Theme))
-                user.Theme = userData.Theme;
+                user.Theme = userData.Theme.Trim();
             if (!string.IsNullOrWhiteSpace(userData.Language))
-                user.Language = userData.Language;
+                user.Language = userData.Language.Trim();
             if (!string.IsNullOrWhiteSpace(userData.ProfileVisibility))
-                user.ProfileVisibility = userData.ProfileVisibility;
+                user.ProfileVisibility = userData.ProfileVisibility.Trim();
 
             await _context.SaveChangesAsync(ct);
             return MapToDto(user);
+        }
+
+        public async Task<ActionResponse> ChangePasswordAsync(int userId, ChangePasswordDto passwordData, CancellationToken ct = default)
+        {
+            var user = await _context.Users.FindAsync(new object[] { userId }, ct);
+            if (user == null)
+                return new ActionResponse { IsSuccess = false, Message = "User not found." };
+
+            if (!BCrypt.Net.BCrypt.Verify(passwordData.CurrentPassword, user.PasswordHash))
+                return new ActionResponse { IsSuccess = false, Message = "Current password is incorrect." };
+
+            if (passwordData.CurrentPassword == passwordData.NewPassword)
+                return new ActionResponse { IsSuccess = false, Message = "New password must be different from current password." };
+
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(passwordData.NewPassword);
+            await _context.SaveChangesAsync(ct);
+
+            return new ActionResponse { IsSuccess = true, Message = "Password changed successfully." };
         }
 
         public async Task<ActionResponse> DeleteAccountAsync(int userId, CancellationToken ct = default)

@@ -78,11 +78,40 @@ namespace ForumApp.API.Controller
                 return BadRequest(ModelState);
 
             int userId = GetCurrentUserId();
-            var updated = await _userService.UpdateProfileAsync(userId, updateDto, ct);
+            UserResponseDto? updated;
+            try
+            {
+                updated = await _userService.UpdateProfileAsync(userId, updateDto, ct);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+
             if (updated == null)
                 return NotFound();
 
             return Ok(updated);
+        }
+
+        [Authorize]
+        [HttpPut("me/password")]
+        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto changePasswordDto, CancellationToken ct)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            int userId = GetCurrentUserId();
+            var action = await _userService.ChangePasswordAsync(userId, changePasswordDto, ct);
+            if (!action.IsSuccess)
+            {
+                if (action.Message == "User not found.")
+                    return NotFound(action.Message);
+
+                return BadRequest(new { message = action.Message });
+            }
+
+            return Ok(action);
         }
 
         [Authorize]

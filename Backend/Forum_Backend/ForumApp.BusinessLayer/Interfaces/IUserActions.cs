@@ -13,6 +13,7 @@ namespace ForumApp.BusinessLayer.Interfaces
         // Profile (userul logat)
         Task<UserResponseDto?> GetProfileAsync(int userId, CancellationToken ct = default);
         Task<UserResponseDto?> UpdateProfileAsync(int userId, UserUpdateDto userData, CancellationToken ct = default);
+        Task<ActionResponse> ChangePasswordAsync(int userId, ChangePasswordDto passwordData, CancellationToken ct = default);
         Task<ActionResponse> DeleteAccountAsync(int userId, CancellationToken ct = default);
 
         // Public user queries

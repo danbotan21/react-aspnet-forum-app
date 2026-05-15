@@ -1,4 +1,5 @@
 using ForumApp.BusinessLayer.Interfaces;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 
 namespace ForumApp.BusinessLayer.Structure
