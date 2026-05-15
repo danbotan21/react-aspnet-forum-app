@@ -31,3 +31,6 @@ packages/
 *.log
 *.tmp
 *.temp
+
+ForumApp.DataAccess/Migrations/
+ForumApp.API/wwwroot/uploads/
