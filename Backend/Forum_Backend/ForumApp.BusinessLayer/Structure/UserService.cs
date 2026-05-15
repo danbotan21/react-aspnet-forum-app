@@ -114,6 +114,8 @@ namespace ForumApp.BusinessLayer.Structure
                 user.UserName = userData.UserName;
             if (!string.IsNullOrWhiteSpace(userData.Bio))
                 user.Bio = userData.Bio;
+            if (userData.AvatarUrl != null)
+                user.AvatarUrl = string.IsNullOrWhiteSpace(userData.AvatarUrl) ? null : userData.AvatarUrl;
             if (!string.IsNullOrWhiteSpace(userData.Theme))
                 user.Theme = userData.Theme;
             if (!string.IsNullOrWhiteSpace(userData.Language))
@@ -177,6 +179,7 @@ namespace ForumApp.BusinessLayer.Structure
             ID = user.ID,
             UserName = user.UserName,
             Bio = user.Bio,
+            AvatarUrl = user.AvatarUrl,
             Karma = user.Karma,
             Role = user.Role,
             CreatedAt = user.CreatedAt
