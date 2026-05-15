@@ -156,24 +156,34 @@ export const CreatePost = () => {
       alert('Title is required')
       return
     }
-    if (activeTab === 'Images' && !selectedImageFile) {
-      alert('Please upload an image.')
-      return
-    }
-
     setIsSubmitting(true)
 
     let imageUrl = null
-    if (activeTab === 'Images' && selectedImageFile) {
+    if (selectedImageFile) {
       imageUrl = await uploadImage(selectedImageFile, 'posts')
     }
 
+    const normalizedBody = postBody.trim()
+    const normalizedLink = postUrl.trim()
+    const hasImage = Boolean(imageUrl)
+    const hasBody = Boolean(normalizedBody)
+    const hasLink = Boolean(normalizedLink)
+    const contentKinds = [hasBody, hasImage, hasLink].filter(Boolean).length
+    const postType =
+      contentKinds > 1
+        ? 'Mixed'
+        : hasImage
+          ? 'Image'
+          : hasLink
+            ? 'Link'
+            : 'Text'
+
     const postData = {
       title: postTitle,
-      body: activeTab === 'Text' ? postBody : null,
-      imageUrl: activeTab === 'Images' ? imageUrl : null,
-      linkUrl: activeTab === 'Link' ? postUrl : null,
-      type: activeTab === 'Images' ? 'Image' : activeTab,
+      body: normalizedBody || null,
+      imageUrl,
+      linkUrl: normalizedLink || null,
+      type: postType,
       communityId: parseInt(communityId, 10),
     }
 

@@ -200,7 +200,7 @@ export const Home = () => {
 
                     {(postImageSrc || post.linkUrl) && (
                       <div className='post-media'>
-                        {postImageSrc ? (
+                        {postImageSrc && (
                           <Link
                             to={`/community/${encodeURIComponent(post.communitySlug)}/post/${post.id}`}
                             className='post-media-link'
@@ -209,7 +209,8 @@ export const Home = () => {
                               <img src={postImageSrc} alt='Post content' />
                             </div>
                           </Link>
-                        ) : (
+                        )}
+                        {post.linkUrl && (
                           <div className='media-placeholder'>
                             <a
                               href={post.linkUrl}

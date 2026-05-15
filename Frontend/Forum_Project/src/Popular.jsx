@@ -156,7 +156,7 @@ export const Popular = () => {
 
                     {(postImageSrc || post.linkUrl) && (
                       <div className='post-media'>
-                        {postImageSrc ? (
+                        {postImageSrc && (
                           <Link
                             to={getPostRoute(post)}
                             className='post-media-link'
@@ -165,7 +165,8 @@ export const Popular = () => {
                               <img src={postImageSrc} alt='Post content' />
                             </div>
                           </Link>
-                        ) : (
+                        )}
+                        {post.linkUrl && (
                           <div className='media-placeholder'>
                             <a
                               href={post.linkUrl}

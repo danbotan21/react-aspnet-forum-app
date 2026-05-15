@@ -266,7 +266,7 @@ export function CommunityPage() {
 
                         {(postImageSrc || post.linkUrl) && (
                           <div className='post-media'>
-                            {postImageSrc ? (
+                            {postImageSrc && (
                               <Link
                                 to={getPostRoute(community.slug, post.id)}
                                 className='post-media-link'
@@ -275,7 +275,8 @@ export function CommunityPage() {
                                   <img src={postImageSrc} alt='Post content' />
                                 </div>
                               </Link>
-                            ) : (
+                            )}
+                            {post.linkUrl && (
                               <div className='media-placeholder'>
                                 <a
                                   href={post.linkUrl}

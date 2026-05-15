@@ -97,28 +97,29 @@ export function PostPage() {
             <h1>{post.title}</h1>
             {post.body && <p>{post.body}</p>}
 
-            {(postImageSrc || post.linkUrl) &&
-              (postImageSrc ? (
+            {postImageSrc && (
                 <img
                   src={postImageSrc}
                   alt='Post media'
                   className='post-page-image'
                 />
-              ) : (
-                <a
-                  href={post.linkUrl}
-                  target='_blank'
-                  rel='noopener noreferrer'
-                  style={{
-                    display: 'block',
-                    margin: '1rem 0',
-                    color: '#0066cc',
-                    textDecoration: 'underline',
-                  }}
-                >
-                  {post.linkUrl}
-                </a>
-              ))}
+            )}
+
+            {post.linkUrl && (
+              <a
+                href={post.linkUrl}
+                target='_blank'
+                rel='noopener noreferrer'
+                style={{
+                  display: 'block',
+                  margin: '1rem 0',
+                  color: '#0066cc',
+                  textDecoration: 'underline',
+                }}
+              >
+                {post.linkUrl}
+              </a>
+            )}
 
             <footer className='post-page-actions'>
               <button type='button' className='post-chip post-chip-vote'>
