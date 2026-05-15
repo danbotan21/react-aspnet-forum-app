@@ -367,12 +367,14 @@
   cursor: pointer;
 }
 
-.vote-icon.upvote:hover {
-  color: #ea580c;
+.vote-icon.upvote:hover,
+.vote-icon.upvote.active {
+  color: #2563eb;
 }
 
-.vote-icon.downvote:hover {
-  color: #2563eb;
+.vote-icon.downvote:hover,
+.vote-icon.downvote.active {
+  color: #ea580c;
 }
 
 .vote-count,

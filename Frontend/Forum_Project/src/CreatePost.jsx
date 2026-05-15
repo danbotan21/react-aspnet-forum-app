@@ -1,7 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  FaSearch,
   FaTimes,
   FaPen,
   FaTrash,
@@ -29,6 +28,9 @@ export const CreatePost = () => {
   const [uploadError, setUploadError] = useState('')
   const [previewUrl, setPreviewUrl] = useState('')
   const [selectedImageFile, setSelectedImageFile] = useState(null)
+  const [drafts, setDrafts] = useState([])
+  const [isLoadingDrafts, setIsLoadingDrafts] = useState(false)
+  const [draftsError, setDraftsError] = useState('')
 
   const dragCounterRef = useRef(0)
   const fileInputRef = useRef(null)
@@ -124,6 +126,28 @@ export const CreatePost = () => {
     }
   }, [isDraftsOpen])
 
+  useEffect(() => {
+    if (!isDraftsOpen || !user?.id) return
+
+    setIsLoadingDrafts(true)
+    setDraftsError('')
+
+    fetch(`/api/draft/user?authorId=${user.id}`)
+      .then((res) => {
+        if (!res.ok) throw new Error('Failed to load drafts')
+        return res.json()
+      })
+      .then((data) => {
+        setDrafts(Array.isArray(data) ? data : [])
+      })
+      .catch((err) => {
+        setDraftsError(err.message)
+      })
+      .finally(() => {
+        setIsLoadingDrafts(false)
+      })
+  }, [isDraftsOpen, user?.id])
+
   // Fetch only communities where the current user is a member
   useEffect(() => {
     if (!user?.id) {
@@ -141,6 +165,99 @@ export const CreatePost = () => {
       })
       .catch((err) => console.error(err))
   }, [user?.id])
+
+  const handleSaveDraft = async () => {
+    if (!user?.id) {
+      alert('Please login to save drafts.')
+      return
+    }
+
+    if (!postTitle.trim()) {
+      alert('Add a title first so we can map a post to this draft.')
+      return
+    }
+
+    try {
+      const postsResponse = await fetch(`/api/posts/user/${user.id}`)
+      if (!postsResponse.ok) {
+        throw new Error('Could not read your posts for draft mapping.')
+      }
+
+      const userPosts = await postsResponse.json()
+      const matchingPost = userPosts.find(
+        (post) =>
+          (post.title || '').trim().toLowerCase() ===
+          postTitle.trim().toLowerCase(),
+      )
+
+      if (!matchingPost) {
+        alert(
+          'Current Draft API stores references to existing posts only. Create a post first (same title), then save draft.',
+        )
+        return
+      }
+
+      const createDraftResponse = await fetch(`/api/draft?authorId=${user.id}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          postId: matchingPost.id,
+        }),
+      })
+
+      if (!createDraftResponse.ok) {
+        throw new Error('Failed to save draft')
+      }
+
+      const createdDraft = await createDraftResponse.json()
+      setDrafts((currentDrafts) => {
+        const createdDraftId = createdDraft.id ?? createdDraft.Id
+        const alreadyExists = currentDrafts.some(
+          (draft) => (draft.id ?? draft.Id) === createdDraftId,
+        )
+        return alreadyExists ? currentDrafts : [createdDraft, ...currentDrafts]
+      })
+      setIsDraftsOpen(true)
+    } catch (err) {
+      alert(err.message)
+    }
+  }
+
+  const handleDeleteDraft = async (draftId) => {
+    if (!user?.id) return
+
+    try {
+      const response = await fetch(`/api/draft/${draftId}?authorId=${user.id}`, {
+        method: 'DELETE',
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to delete draft')
+      }
+
+      setDrafts((currentDrafts) =>
+        currentDrafts.filter((draft) => (draft.id ?? draft.Id) !== draftId),
+      )
+    } catch (err) {
+      alert(err.message)
+    }
+  }
+
+  const handleOpenDraft = async (draftPostId) => {
+    try {
+      const response = await fetch(`/api/posts/${draftPostId}`)
+      if (!response.ok) {
+        throw new Error('Failed to open draft post')
+      }
+
+      const post = await response.json()
+      navigate(`/community/${post.communitySlug}/post/${post.id}`)
+    } catch (err) {
+      alert(err.message)
+    }
+  }
 
   const handleSubmit = async () => {
     if (!user?.id) {
@@ -238,7 +355,7 @@ export const CreatePost = () => {
             aria-expanded={isDraftsOpen}
           >
             <span className='create-post-drafts-label'>Drafts</span>
-            <span className='create-post-drafts-count'>2</span>
+            <span className='create-post-drafts-count'>{drafts.length}</span>
           </button>
         </header>
 
@@ -392,6 +509,7 @@ export const CreatePost = () => {
             <button
               type='button'
               className='create-post-btn create-post-btn-secondary'
+              onClick={handleSaveDraft}
             >
               Save Draft
             </button>
@@ -434,7 +552,7 @@ export const CreatePost = () => {
             <div className='drafts-header'>
               <div className='drafts-title'>
                 <span>Drafts</span>
-                <span className='drafts-count'>2/20</span>
+                <span className='drafts-count'>{drafts.length}/20</span>
               </div>
               <button
                 type='button'
@@ -447,67 +565,64 @@ export const CreatePost = () => {
             </div>
 
             <ul className='drafts-list'>
-              <li className='drafts-item'>
-                <div className='drafts-item-main'>
-                  <div className='drafts-item-title'>Incerc Draft</div>
-                  <div className='drafts-item-sub'>
-                    <span className='drafts-item-community'>
-                      r/15minutefood
-                    </span>
-                    <span className='drafts-dot'>*</span>
-                    <span className='drafts-item-edited'>
-                      Edited 44 min. ago
-                    </span>
+              {isLoadingDrafts ? (
+                <li className='drafts-item'>
+                  <div className='drafts-item-main'>Loading drafts...</div>
+                </li>
+              ) : draftsError ? (
+                <li className='drafts-item'>
+                  <div className='drafts-item-main' style={{ color: '#c62828' }}>
+                    {draftsError}
                   </div>
-                </div>
-                <div className='drafts-item-actions'>
-                  <button
-                    type='button'
-                    className='drafts-icon-btn'
-                    aria-label='Edit draft'
-                  >
-                    <FaPen />
-                  </button>
-                  <button
-                    type='button'
-                    className='drafts-icon-btn'
-                    aria-label='Delete draft'
-                  >
-                    <FaTrash />
-                  </button>
-                </div>
-              </li>
+                </li>
+              ) : drafts.length === 0 ? (
+                <li className='drafts-item'>
+                  <div className='drafts-item-main'>No drafts available.</div>
+                </li>
+              ) : (
+                drafts.map((draft) => {
+                  const draftId = draft.id ?? draft.Id
+                  const draftPostId = draft.postId ?? draft.PostId
+                  const draftPostTitle = draft.postTitle ?? draft.PostTitle
+                  const draftLastModifiedAt =
+                    draft.lastModifiedAt ?? draft.LastModifiedAt
 
-              <li className='drafts-item'>
-                <div className='drafts-item-main'>
-                  <div className='drafts-item-title'>
-                    Idee postare despre frontend
-                  </div>
-                  <div className='drafts-item-sub'>
-                    <span className='drafts-item-community'>r/webdev</span>
-                    <span className='drafts-dot'>*</span>
-                    <span className='drafts-item-edited'>
-                      Edited 2 hours ago
-                    </span>
-                  </div>
-                </div>
-                <div className='drafts-item-actions'>
-                  <button
-                    type='button'
-                    className='drafts-icon-btn'
-                    aria-label='Edit draft'
-                  >
-                    <FaPen />
-                  </button>
-                  <button
-                    type='button'
-                    className='drafts-icon-btn'
-                    aria-label='Delete draft'
-                  >
-                    <FaTrash />
-                  </button>
-                </div>
-              </li>
+                  return (
+                  <li className='drafts-item' key={draftId}>
+                    <div className='drafts-item-main'>
+                      <div className='drafts-item-title'>{draftPostTitle}</div>
+                      <div className='drafts-item-sub'>
+                        <span className='drafts-item-community'>
+                          Post #{draftPostId}
+                        </span>
+                        <span className='drafts-dot'>*</span>
+                        <span className='drafts-item-edited'>
+                          Edited {new Date(draftLastModifiedAt).toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+                    <div className='drafts-item-actions'>
+                      <button
+                        type='button'
+                        className='drafts-icon-btn'
+                        aria-label='Open draft'
+                        onClick={() => handleOpenDraft(draftPostId)}
+                      >
+                        <FaPen />
+                      </button>
+                      <button
+                        type='button'
+                        className='drafts-icon-btn'
+                        aria-label='Delete draft'
+                        onClick={() => handleDeleteDraft(draftId)}
+                      >
+                        <FaTrash />
+                      </button>
+                    </div>
+                  </li>
+                  )
+                })
+              )}
             </ul>
           </div>
         </div>

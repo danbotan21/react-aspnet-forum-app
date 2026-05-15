@@ -371,12 +371,12 @@
 
 .vote-icon.upvote:hover,
 .vote-icon.upvote.active {
-  color: #7193ff;
+  color: #2563eb;
 }
 
 .vote-icon.downvote:hover,
 .vote-icon.downvote.active {
-  color: #ff4500;
+  color: #ea580c;
 }
 
 .comment-icon,

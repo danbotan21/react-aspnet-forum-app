@@ -4,6 +4,13 @@ import './Styles/Home.css'
 import avatar from './img/avatar.webp'
 import { FaCaretUp, FaCaretDown, FaComment } from 'react-icons/fa'
 import { normalizeImageSrc } from './utils/media'
+import { useAuth } from './AuthContext'
+import {
+  deletePostVote,
+  fetchUserPostVotes,
+  submitPostVote,
+  voteValueFromDirection,
+} from './utils/voteApi'
 
 const SORT_OPTIONS = [
   { id: 'popular', label: 'Popular' },
@@ -11,17 +18,8 @@ const SORT_OPTIONS = [
   { id: 'mostComments', label: 'Most comments' },
 ]
 
-// We will fetch posts from the backend, so we don't need the hardcoded array.
-
-const handleVote = (type) => {
-  if (type === 'up') {
-    console.log('Upvoted')
-  } else if (type === 'down') {
-    console.log('Downvoted')
-  }
-}
-
 export const Home = () => {
+  const { user } = useAuth()
   const [openMorePostId, setOpenMorePostId] = useState(null)
   const [sortBy, setSortBy] = useState('popular')
   const [isSortOpen, setIsSortOpen] = useState(false)
@@ -31,8 +29,9 @@ export const Home = () => {
 
   const [posts, setPosts] = useState([])
   const [isLoading, setIsLoading] = useState(true)
+  const [postVotesById, setPostVotesById] = useState({})
+  const [pendingPostVotes, setPendingPostVotes] = useState({})
 
-  // Fetch posts from backend
   useEffect(() => {
     setIsLoading(true)
     fetch(`/api/posts?sortBy=${sortBy}`)
@@ -49,6 +48,28 @@ export const Home = () => {
         setIsLoading(false)
       })
   }, [sortBy])
+
+  useEffect(() => {
+    if (!user?.id || posts.length === 0) {
+      setPostVotesById({})
+      return
+    }
+
+    let cancelled = false
+
+    fetchUserPostVotes(
+      posts.map((post) => post.id),
+      user.id,
+    ).then((votesMap) => {
+      if (!cancelled) {
+        setPostVotesById(votesMap)
+      }
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [posts, user?.id])
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -72,6 +93,105 @@ export const Home = () => {
 
   const currentSortLabel =
     SORT_OPTIONS.find((option) => option.id === sortBy)?.label ?? 'Popular'
+
+  const handlePostVote = async (postId, direction) => {
+    if (!user?.id) {
+      alert('Please login to vote.')
+      return
+    }
+    if (pendingPostVotes[postId]) return
+
+    const nextVoteType = voteValueFromDirection(direction)
+    const previousVote = postVotesById[postId] || { id: null, type: 0 }
+    const previousVoteType = previousVote.type ?? 0
+
+    if (previousVoteType === nextVoteType && !previousVote.id) return
+
+    setPendingPostVotes((currentPending) => ({
+      ...currentPending,
+      [postId]: true,
+    }))
+
+    if (previousVoteType === nextVoteType && previousVote.id) {
+      setPosts((currentPosts) =>
+        currentPosts.map((post) =>
+          post.id === postId
+            ? { ...post, votes: (post.votes ?? 0) - previousVoteType }
+            : post,
+        ),
+      )
+      setPostVotesById((currentVotes) => ({
+        ...currentVotes,
+        [postId]: { id: null, type: 0 },
+      }))
+
+      try {
+        await deletePostVote({ voteId: previousVote.id, userId: user.id })
+      } catch (error) {
+        setPosts((currentPosts) =>
+          currentPosts.map((post) =>
+            post.id === postId
+              ? { ...post, votes: (post.votes ?? 0) + previousVoteType }
+              : post,
+          ),
+        )
+        setPostVotesById((currentVotes) => ({
+          ...currentVotes,
+          [postId]: previousVote,
+        }))
+        alert(error.message)
+      } finally {
+        setPendingPostVotes((currentPending) => ({
+          ...currentPending,
+          [postId]: false,
+        }))
+      }
+      return
+    }
+
+    const voteDelta = nextVoteType - previousVoteType
+
+    setPosts((currentPosts) =>
+      currentPosts.map((post) =>
+        post.id === postId ? { ...post, votes: (post.votes ?? 0) + voteDelta } : post,
+      ),
+    )
+    setPostVotesById((currentVotes) => ({
+      ...currentVotes,
+      [postId]: { ...(currentVotes[postId] || {}), type: nextVoteType },
+    }))
+
+    try {
+      const vote = await submitPostVote({
+        postId,
+        voteType: nextVoteType,
+        userId: user.id,
+      })
+
+      setPostVotesById((currentVotes) => ({
+        ...currentVotes,
+        [postId]: { id: vote.id, type: vote.type },
+      }))
+    } catch (error) {
+      setPosts((currentPosts) =>
+        currentPosts.map((post) =>
+          post.id === postId
+            ? { ...post, votes: (post.votes ?? 0) - voteDelta }
+            : post,
+        ),
+      )
+      setPostVotesById((currentVotes) => ({
+        ...currentVotes,
+        [postId]: { ...(currentVotes[postId] || {}), type: previousVoteType },
+      }))
+      alert(error.message)
+    } finally {
+      setPendingPostVotes((currentPending) => ({
+        ...currentPending,
+        [postId]: false,
+      }))
+    }
+  }
 
   return (
     <div className='home'>
@@ -232,13 +352,21 @@ export const Home = () => {
                   <footer className='post-footer'>
                     <div className='action-chip vote-chip'>
                       <FaCaretUp
-                        className='vote-icon upvote'
-                        onClick={() => handleVote('up')}
+                        className={`vote-icon upvote ${postVotesById[post.id]?.type === 1 ? 'active' : ''}`}
+                        onClick={() => handlePostVote(post.id, 'up')}
+                        style={{
+                          pointerEvents: pendingPostVotes[post.id] ? 'none' : 'auto',
+                          opacity: pendingPostVotes[post.id] ? 0.6 : 1,
+                        }}
                       />
                       <span className='vote-count'>{post.votes}</span>
                       <FaCaretDown
-                        className='vote-icon downvote'
-                        onClick={() => handleVote('down')}
+                        className={`vote-icon downvote ${postVotesById[post.id]?.type === -1 ? 'active' : ''}`}
+                        onClick={() => handlePostVote(post.id, 'down')}
+                        style={{
+                          pointerEvents: pendingPostVotes[post.id] ? 'none' : 'auto',
+                          opacity: pendingPostVotes[post.id] ? 0.6 : 1,
+                        }}
                       />
                     </div>
 

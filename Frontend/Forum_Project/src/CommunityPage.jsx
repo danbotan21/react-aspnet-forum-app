@@ -6,6 +6,12 @@ import './Styles/CommunityPage.css'
 import avatar from './img/avatar.webp'
 import coding from './img/coding.jpg'
 import { normalizeImageSrc } from './utils/media'
+import {
+  deletePostVote,
+  fetchUserPostVotes,
+  submitPostVote,
+  voteValueFromDirection,
+} from './utils/voteApi'
 
 const SORT_OPTIONS = ['Popular', 'New', 'Top']
 
@@ -25,6 +31,8 @@ export function CommunityPage() {
 
   const [posts, setPosts] = useState([])
   const [isLoadingPosts, setIsLoadingPosts] = useState(true)
+  const [postVotesById, setPostVotesById] = useState({})
+  const [pendingPostVotes, setPendingPostVotes] = useState({})
 
   const postsWrapRef = useRef(null)
 
@@ -73,6 +81,28 @@ export function CommunityPage() {
   }, [community?.id, sortBy])
 
   useEffect(() => {
+    if (!user?.id || posts.length === 0) {
+      setPostVotesById({})
+      return
+    }
+
+    let cancelled = false
+
+    fetchUserPostVotes(
+      posts.map((post) => post.id),
+      user.id,
+    ).then((votesMap) => {
+      if (!cancelled) {
+        setPostVotesById(votesMap)
+      }
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [posts, user?.id])
+
+  useEffect(() => {
     const handleClickOutside = (e) => {
       if (postsWrapRef.current && !postsWrapRef.current.contains(e.target)) {
         setOpenMorePostId(null)
@@ -105,6 +135,105 @@ export function CommunityPage() {
     normalizeImageSrc(community.bannerUrl) ||
     normalizeImageSrc(community.avatarUrl)
   const communityAvatarSrc = normalizeImageSrc(community.avatarUrl)
+
+  const handlePostVote = async (postId, direction) => {
+    if (!user?.id) {
+      alert('Please login to vote.')
+      return
+    }
+    if (pendingPostVotes[postId]) return
+
+    const nextVoteType = voteValueFromDirection(direction)
+    const previousVote = postVotesById[postId] || { id: null, type: 0 }
+    const previousVoteType = previousVote.type ?? 0
+
+    if (previousVoteType === nextVoteType && !previousVote.id) return
+
+    setPendingPostVotes((currentPending) => ({
+      ...currentPending,
+      [postId]: true,
+    }))
+
+    if (previousVoteType === nextVoteType && previousVote.id) {
+      setPosts((currentPosts) =>
+        currentPosts.map((post) =>
+          post.id === postId
+            ? { ...post, votes: (post.votes ?? 0) - previousVoteType }
+            : post,
+        ),
+      )
+      setPostVotesById((currentVotes) => ({
+        ...currentVotes,
+        [postId]: { id: null, type: 0 },
+      }))
+
+      try {
+        await deletePostVote({ voteId: previousVote.id, userId: user.id })
+      } catch (voteError) {
+        setPosts((currentPosts) =>
+          currentPosts.map((post) =>
+            post.id === postId
+              ? { ...post, votes: (post.votes ?? 0) + previousVoteType }
+              : post,
+          ),
+        )
+        setPostVotesById((currentVotes) => ({
+          ...currentVotes,
+          [postId]: previousVote,
+        }))
+        alert(voteError.message)
+      } finally {
+        setPendingPostVotes((currentPending) => ({
+          ...currentPending,
+          [postId]: false,
+        }))
+      }
+      return
+    }
+
+    const voteDelta = nextVoteType - previousVoteType
+
+    setPosts((currentPosts) =>
+      currentPosts.map((post) =>
+        post.id === postId ? { ...post, votes: (post.votes ?? 0) + voteDelta } : post,
+      ),
+    )
+    setPostVotesById((currentVotes) => ({
+      ...currentVotes,
+      [postId]: { ...(currentVotes[postId] || {}), type: nextVoteType },
+    }))
+
+    try {
+      const vote = await submitPostVote({
+        postId,
+        voteType: nextVoteType,
+        userId: user.id,
+      })
+
+      setPostVotesById((currentVotes) => ({
+        ...currentVotes,
+        [postId]: { id: vote.id, type: vote.type },
+      }))
+    } catch (error) {
+      setPosts((currentPosts) =>
+        currentPosts.map((post) =>
+          post.id === postId
+            ? { ...post, votes: (post.votes ?? 0) - voteDelta }
+            : post,
+        ),
+      )
+      setPostVotesById((currentVotes) => ({
+        ...currentVotes,
+        [postId]: { ...(currentVotes[postId] || {}), type: previousVoteType },
+      }))
+      alert(error.message)
+    } finally {
+      setPendingPostVotes((currentPending) => ({
+        ...currentPending,
+        [postId]: false,
+      }))
+    }
+  }
 
   return (
     <main className='community-page'>
@@ -297,9 +426,23 @@ export function CommunityPage() {
 
                       <footer className='post-footer'>
                         <div className='action-chip vote-chip'>
-                          <FaCaretUp className='vote-icon upvote' />
+                          <FaCaretUp
+                            className={`vote-icon upvote ${postVotesById[post.id]?.type === 1 ? 'active' : ''}`}
+                            onClick={() => handlePostVote(post.id, 'up')}
+                            style={{
+                              pointerEvents: pendingPostVotes[post.id] ? 'none' : 'auto',
+                              opacity: pendingPostVotes[post.id] ? 0.6 : 1,
+                            }}
+                          />
                           <span className='vote-count'>{post.votes}</span>
-                          <FaCaretDown className='vote-icon downvote' />
+                          <FaCaretDown
+                            className={`vote-icon downvote ${postVotesById[post.id]?.type === -1 ? 'active' : ''}`}
+                            onClick={() => handlePostVote(post.id, 'down')}
+                            style={{
+                              pointerEvents: pendingPostVotes[post.id] ? 'none' : 'auto',
+                              opacity: pendingPostVotes[post.id] ? 0.6 : 1,
+                            }}
+                          />
                         </div>
 
                         <button type='button' className='action-chip'>

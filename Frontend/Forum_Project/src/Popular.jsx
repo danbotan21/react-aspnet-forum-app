@@ -4,14 +4,13 @@ import './Styles/Popular.css'
 import avatar from './img/avatar.webp'
 import { FaCaretUp, FaCaretDown, FaComment } from 'react-icons/fa'
 import { normalizeImageSrc } from './utils/media'
-
-const handleVote = (type) => {
-  if (type === 'up') {
-    console.log('Upvoted')
-  } else if (type === 'down') {
-    console.log('Downvoted')
-  }
-}
+import { useAuth } from './AuthContext'
+import {
+  deletePostVote,
+  fetchUserPostVotes,
+  submitPostVote,
+  voteValueFromDirection,
+} from './utils/voteApi'
 
 const getPostRoute = (post) =>
   `/community/${encodeURIComponent(post.communitySlug)}/post/${post.id}`
@@ -24,10 +23,13 @@ const getRecentPopularityScore = (post) => {
 }
 
 export const Popular = () => {
+  const { user } = useAuth()
   const [openMorePostId, setOpenMorePostId] = useState(null)
   const [posts, setPosts] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [postVotesById, setPostVotesById] = useState({})
+  const [pendingPostVotes, setPendingPostVotes] = useState({})
 
   const postsWrapRef = useRef(null)
 
@@ -51,6 +53,28 @@ export const Popular = () => {
   }, [])
 
   useEffect(() => {
+    if (!user?.id || posts.length === 0) {
+      setPostVotesById({})
+      return
+    }
+
+    let cancelled = false
+
+    fetchUserPostVotes(
+      posts.map((post) => post.id),
+      user.id,
+    ).then((votesMap) => {
+      if (!cancelled) {
+        setPostVotesById(votesMap)
+      }
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [posts, user?.id])
+
+  useEffect(() => {
     const handleClickOutside = (e) => {
       if (postsWrapRef.current && !postsWrapRef.current.contains(e.target)) {
         setOpenMorePostId(null)
@@ -65,6 +89,105 @@ export const Popular = () => {
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
+
+  const handlePostVote = async (postId, direction) => {
+    if (!user?.id) {
+      alert('Please login to vote.')
+      return
+    }
+    if (pendingPostVotes[postId]) return
+
+    const nextVoteType = voteValueFromDirection(direction)
+    const previousVote = postVotesById[postId] || { id: null, type: 0 }
+    const previousVoteType = previousVote.type ?? 0
+
+    if (previousVoteType === nextVoteType && !previousVote.id) return
+
+    setPendingPostVotes((currentPending) => ({
+      ...currentPending,
+      [postId]: true,
+    }))
+
+    if (previousVoteType === nextVoteType && previousVote.id) {
+      setPosts((currentPosts) =>
+        currentPosts.map((post) =>
+          post.id === postId
+            ? { ...post, votes: (post.votes ?? 0) - previousVoteType }
+            : post,
+        ),
+      )
+      setPostVotesById((currentVotes) => ({
+        ...currentVotes,
+        [postId]: { id: null, type: 0 },
+      }))
+
+      try {
+        await deletePostVote({ voteId: previousVote.id, userId: user.id })
+      } catch (voteError) {
+        setPosts((currentPosts) =>
+          currentPosts.map((post) =>
+            post.id === postId
+              ? { ...post, votes: (post.votes ?? 0) + previousVoteType }
+              : post,
+          ),
+        )
+        setPostVotesById((currentVotes) => ({
+          ...currentVotes,
+          [postId]: previousVote,
+        }))
+        alert(voteError.message)
+      } finally {
+        setPendingPostVotes((currentPending) => ({
+          ...currentPending,
+          [postId]: false,
+        }))
+      }
+      return
+    }
+
+    const voteDelta = nextVoteType - previousVoteType
+
+    setPosts((currentPosts) =>
+      currentPosts.map((post) =>
+        post.id === postId ? { ...post, votes: (post.votes ?? 0) + voteDelta } : post,
+      ),
+    )
+    setPostVotesById((currentVotes) => ({
+      ...currentVotes,
+      [postId]: { ...(currentVotes[postId] || {}), type: nextVoteType },
+    }))
+
+    try {
+      const vote = await submitPostVote({
+        postId,
+        voteType: nextVoteType,
+        userId: user.id,
+      })
+
+      setPostVotesById((currentVotes) => ({
+        ...currentVotes,
+        [postId]: { id: vote.id, type: vote.type },
+      }))
+    } catch (voteError) {
+      setPosts((currentPosts) =>
+        currentPosts.map((post) =>
+          post.id === postId
+            ? { ...post, votes: (post.votes ?? 0) - voteDelta }
+            : post,
+        ),
+      )
+      setPostVotesById((currentVotes) => ({
+        ...currentVotes,
+        [postId]: { ...(currentVotes[postId] || {}), type: previousVoteType },
+      }))
+      alert(voteError.message)
+    } finally {
+      setPendingPostVotes((currentPending) => ({
+        ...currentPending,
+        [postId]: false,
+      }))
+    }
+  }
 
   return (
     <div className='popular-page'>
@@ -188,13 +311,21 @@ export const Popular = () => {
                   <footer className='post-footer'>
                     <div className='action-chip vote-chip'>
                       <FaCaretUp
-                        className='vote-icon upvote'
-                        onClick={() => handleVote('up')}
+                        className={`vote-icon upvote ${postVotesById[post.id]?.type === 1 ? 'active' : ''}`}
+                        onClick={() => handlePostVote(post.id, 'up')}
+                        style={{
+                          pointerEvents: pendingPostVotes[post.id] ? 'none' : 'auto',
+                          opacity: pendingPostVotes[post.id] ? 0.6 : 1,
+                        }}
                       />
                       <span className='vote-count'>{post.votes}</span>
                       <FaCaretDown
-                        className='vote-icon downvote'
-                        onClick={() => handleVote('down')}
+                        className={`vote-icon downvote ${postVotesById[post.id]?.type === -1 ? 'active' : ''}`}
+                        onClick={() => handlePostVote(post.id, 'down')}
+                        style={{
+                          pointerEvents: pendingPostVotes[post.id] ? 'none' : 'auto',
+                          opacity: pendingPostVotes[post.id] ? 0.6 : 1,
+                        }}
                       />
                     </div>
 

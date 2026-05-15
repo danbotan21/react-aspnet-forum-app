@@ -127,6 +127,25 @@
   color: #2563eb;
 }
 
+.post-chip-vote-icon.upvote.active {
+  color: #2563eb;
+}
+
+.post-chip-vote-icon.downvote.active {
+  color: #ea580c;
+}
+
+.post-comment-submit {
+  border-color: #bfd4f5;
+  background: #edf4ff;
+  color: #1d4ea0;
+}
+
+.post-comment-submit:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
 .post-comments {
   margin-top: 12px;
   border: 1px solid #d7e1ef;
@@ -193,6 +212,18 @@
 
 .post-comment-card footer button:hover {
   color: #2563eb;
+}
+
+.post-comment-vote-icon {
+  color: #8aa2c2;
+}
+
+.post-comment-vote-icon.upvote.active {
+  color: #2563eb;
+}
+
+.post-comment-vote-icon.downvote.active {
+  color: #ea580c;
 }
 
 .post-page-side {
