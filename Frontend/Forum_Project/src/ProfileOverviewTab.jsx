@@ -1,13 +1,21 @@
-export function ProfileOverviewTab({ displayName, statCards, isOwnProfile }) {
+export function ProfileOverviewTab({
+  displayName,
+  statCards,
+  isOwnProfile,
+  bio,
+}) {
+  const normalizedBio = bio?.trim()
+
   return (
     <section className='tab-panel'>
       <div className='overview-grid'>
         <article className='overview-card'>
           <h2>Profile description</h2>
           <p>
-            {isOwnProfile
-              ? 'Here is the description of the user. He can write in here whatever he will want. Here is the description of the user. He can write in here whatever he will want. Here is the description of the user. He can write in here whatever he will want.'
-              : `${displayName} has not added a bio yet. Check their posts and comments to learn more about them.`}
+            {normalizedBio ||
+              (isOwnProfile
+                ? 'You have not added a bio yet. Open Settings to add one.'
+                : `${displayName} has not added a bio yet. Check their posts and comments to learn more about them.`)}
           </p>
         </article>
         <article className='overview-card'>

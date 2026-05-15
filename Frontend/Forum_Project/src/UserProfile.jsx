@@ -323,6 +323,7 @@ export function UserProfile() {
           displayName={displayName}
           statCards={statCards}
           isOwnProfile={isOwnProfile}
+          bio={profileUser?.bio || (isOwnProfile ? authUser?.bio : null)}
         />
       )
     if (activeTab === 'Posts')

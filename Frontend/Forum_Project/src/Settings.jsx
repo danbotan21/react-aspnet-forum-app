@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   FaUserEdit,
   FaEnvelope,
@@ -8,25 +8,42 @@ import {
   FaShieldAlt,
   FaExclamationTriangle,
 } from 'react-icons/fa'
+import { useAuth } from './AuthContext'
+import { readResponseError } from './utils/imageUpload'
 import './Styles/Settings.css'
 
+const INITIAL_FORM_DATA = {
+  username: '',
+  email: '',
+  bio: '',
+  currentPassword: '',
+  newPassword: '',
+  confirmPassword: '',
+  theme: 'light',
+  language: 'en',
+  profileVisibility: 'public',
+  showActivity: true,
+  emailNotifications: true,
+  pushNotifications: false,
+}
+
 export const Settings = () => {
+  const { token, user, updateUser, updateAuthTokens } = useAuth()
   const [activeSection, setActiveSection] = useState('account')
-  const [formData, setFormData] = useState({
-    username: 'username',
-    email: 'user@example.com',
-    bio: '',
-    bioSaved: '',
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: '',
-    theme: 'light',
-    language: 'en',
-    profileVisibility: 'public',
-    showActivity: true,
-    emailNotifications: true,
-    pushNotifications: false,
-  })
+  const [formData, setFormData] = useState(() => ({
+    ...INITIAL_FORM_DATA,
+    username: user?.userName || '',
+    email: user?.email || '',
+    bio: user?.bio || '',
+  }))
+  const [isSavingAccount, setIsSavingAccount] = useState(false)
+  const [isChangingPassword, setIsChangingPassword] = useState(false)
+  const [accountError, setAccountError] = useState('')
+  const [accountSuccess, setAccountSuccess] = useState('')
+  const [passwordError, setPasswordError] = useState('')
+  const [passwordSuccess, setPasswordSuccess] = useState('')
+  const updateUserRef = useRef(updateUser)
+  const updateAuthTokensRef = useRef(updateAuthTokens)
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target
@@ -36,27 +53,220 @@ export const Settings = () => {
     }))
   }
 
-  const handleSaveAccount = (e) => {
-    e.preventDefault()
-    setFormData((prev) => ({ ...prev, bioSaved: prev.bio }))
-    console.log('Saving account settings:', formData)
-    alert('Account settings saved!')
+  useEffect(() => {
+    updateUserRef.current = updateUser
+    updateAuthTokensRef.current = updateAuthTokens
+  }, [updateUser, updateAuthTokens])
+
+  const executeWithAuth = async (requestFactory) => {
+    if (!token) return null
+
+    let response = await requestFactory(token)
+    if (response.status !== 401) return response
+
+    const refreshToken = localStorage.getItem('refreshToken')
+    if (!refreshToken) return response
+
+    const refreshResponse = await fetch('/api/auth/refresh', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refreshToken }),
+    })
+
+    if (!refreshResponse.ok) return response
+
+    const refreshData = await refreshResponse.json()
+    if (!refreshData?.token) return response
+
+    updateAuthTokensRef.current(
+      refreshData.token,
+      refreshData.refreshToken,
+      refreshData.user,
+    )
+
+    return requestFactory(refreshData.token)
   }
 
-  const handleChangePassword = (e) => {
+  useEffect(() => {
+    if (!token) return
+
+    let cancelled = false
+
+    const loadProfile = async () => {
+      try {
+        setAccountError('')
+
+        const response = await executeWithAuth((accessToken) =>
+          fetch('/api/auth/me', {
+            method: 'GET',
+            headers: { Authorization: `Bearer ${accessToken}` },
+          }),
+        )
+
+        if (cancelled || !response) return
+
+        if (!response.ok) {
+          const message = await readResponseError(
+            response,
+            'Failed to load profile settings.',
+          )
+          if (!cancelled) setAccountError(message)
+          return
+        }
+
+        const profile = await response.json()
+        if (!cancelled) {
+          updateUserRef.current(profile)
+          setFormData((prev) => ({
+            ...prev,
+            username: profile?.userName || prev.username,
+            email: profile?.email || prev.email,
+            bio: profile?.bio || '',
+          }))
+        }
+      } catch (error) {
+        if (cancelled) return
+        setAccountError(error?.message || 'Failed to load profile settings.')
+      }
+    }
+
+    loadProfile()
+
+    return () => {
+      cancelled = true
+    }
+  }, [token])
+
+  const handleSaveAccount = async (e) => {
     e.preventDefault()
-    if (formData.newPassword !== formData.confirmPassword) {
-      alert('Passwords do not match!')
+    setAccountError('')
+    setAccountSuccess('')
+
+    if (!token) {
+      setAccountError('Please login before updating account details.')
       return
     }
-    console.log('Changing password')
-    alert('Password changed successfully!')
-    setFormData((prev) => ({
-      ...prev,
-      currentPassword: '',
-      newPassword: '',
-      confirmPassword: '',
-    }))
+
+    const trimmedUsername = formData.username.trim()
+    if (trimmedUsername.length < 6) {
+      setAccountError('Username must have at least 6 characters.')
+      return
+    }
+
+    try {
+      setIsSavingAccount(true)
+
+      const response = await executeWithAuth((accessToken) =>
+        fetch('/api/auth/me', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({
+            userName: trimmedUsername,
+            bio: formData.bio,
+          }),
+        }),
+      )
+
+      if (!response) {
+        setIsSavingAccount(false)
+        setAccountError('Please login before updating account details.')
+        return
+      }
+
+      if (!response.ok) {
+        const message = await readResponseError(
+          response,
+          'Failed to save account settings.',
+        )
+        setAccountError(message)
+        setIsSavingAccount(false)
+        return
+      }
+
+      const updatedUser = await response.json()
+      updateUser(updatedUser)
+      setFormData((prev) => ({
+        ...prev,
+        username: updatedUser?.userName || prev.username,
+        bio: updatedUser?.bio || '',
+      }))
+      setAccountSuccess('Account settings saved successfully.')
+      setIsSavingAccount(false)
+    } catch (error) {
+      setAccountError(error?.message || 'Failed to save account settings.')
+      setIsSavingAccount(false)
+    }
+  }
+
+  const handleChangePassword = async (e) => {
+    e.preventDefault()
+    setPasswordError('')
+    setPasswordSuccess('')
+
+    if (!token) {
+      setPasswordError('Please login before changing your password.')
+      return
+    }
+
+    if (formData.newPassword !== formData.confirmPassword) {
+      setPasswordError('Passwords do not match.')
+      return
+    }
+
+    if (formData.newPassword.trim().length < 6) {
+      setPasswordError('New password must have at least 6 characters.')
+      return
+    }
+
+    try {
+      setIsChangingPassword(true)
+
+      const response = await executeWithAuth((accessToken) =>
+        fetch('/api/auth/me/password', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({
+            currentPassword: formData.currentPassword,
+            newPassword: formData.newPassword,
+            confirmPassword: formData.confirmPassword,
+          }),
+        }),
+      )
+
+      if (!response) {
+        setIsChangingPassword(false)
+        setPasswordError('Please login before changing your password.')
+        return
+      }
+
+      if (!response.ok) {
+        const message = await readResponseError(
+          response,
+          'Failed to update password.',
+        )
+        setPasswordError(message)
+        setIsChangingPassword(false)
+        return
+      }
+
+      setPasswordSuccess('Password changed successfully.')
+      setFormData((prev) => ({
+        ...prev,
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: '',
+      }))
+      setIsChangingPassword(false)
+    } catch (error) {
+      setPasswordError(error?.message || 'Failed to update password.')
+      setIsChangingPassword(false)
+    }
   }
 
   const handleSavePreferences = (e) => {
@@ -151,6 +361,16 @@ export const Settings = () => {
               <p className='settings-section-subtitle'>
                 Update your account details
               </p>
+              {accountError && (
+                <p className='settings-status settings-status-error'>
+                  {accountError}
+                </p>
+              )}
+              {accountSuccess && (
+                <p className='settings-status settings-status-success'>
+                  {accountSuccess}
+                </p>
+              )}
 
               <form className='settings-form' onSubmit={handleSaveAccount}>
                 <div className='settings-form-group'>
@@ -166,6 +386,7 @@ export const Settings = () => {
                     value={formData.username}
                     onChange={handleInputChange}
                     placeholder='Enter username'
+                    disabled={isSavingAccount}
                   />
                 </div>
 
@@ -181,7 +402,7 @@ export const Settings = () => {
                     className='settings-input'
                     value={formData.email}
                     onChange={handleInputChange}
-                    placeholder='Enter email'
+                    placeholder='Email address'
                   />
                 </div>
 
@@ -198,18 +419,20 @@ export const Settings = () => {
                     onChange={handleInputChange}
                     placeholder='Tell the community a bit about yourself...'
                     rows={4}
-                    maxLength={300}
+                    maxLength={200}
+                    disabled={isSavingAccount}
                   />
                   <span className='settings-char-count'>
-                    {formData.bio.length}/300
+                    {formData.bio.length}/200
                   </span>
                 </div>
 
                 <button
                   type='submit'
                   className='settings-btn settings-btn-primary'
+                  disabled={isSavingAccount}
                 >
-                  Save Changes
+                  {isSavingAccount ? 'Saving...' : 'Save Changes'}
                 </button>
               </form>
             </div>
@@ -222,6 +445,16 @@ export const Settings = () => {
               <p className='settings-section-subtitle'>
                 Update your password to keep your account secure
               </p>
+              {passwordError && (
+                <p className='settings-status settings-status-error'>
+                  {passwordError}
+                </p>
+              )}
+              {passwordSuccess && (
+                <p className='settings-status settings-status-success'>
+                  {passwordSuccess}
+                </p>
+              )}
 
               <form className='settings-form' onSubmit={handleChangePassword}>
                 <div className='settings-form-group'>
@@ -237,6 +470,7 @@ export const Settings = () => {
                     value={formData.currentPassword}
                     onChange={handleInputChange}
                     placeholder='Enter current password'
+                    disabled={isChangingPassword}
                   />
                 </div>
 
@@ -253,6 +487,7 @@ export const Settings = () => {
                     value={formData.newPassword}
                     onChange={handleInputChange}
                     placeholder='Enter new password'
+                    disabled={isChangingPassword}
                   />
                 </div>
 
@@ -269,14 +504,16 @@ export const Settings = () => {
                     value={formData.confirmPassword}
                     onChange={handleInputChange}
                     placeholder='Confirm new password'
+                    disabled={isChangingPassword}
                   />
                 </div>
 
                 <button
                   type='submit'
                   className='settings-btn settings-btn-primary'
+                  disabled={isChangingPassword}
                 >
-                  Update Password
+                  {isChangingPassword ? 'Updating...' : 'Update Password'}
                 </button>
               </form>
             </div>

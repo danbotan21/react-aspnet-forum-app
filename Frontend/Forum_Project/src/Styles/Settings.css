@@ -189,6 +189,25 @@
   margin-top: 4px;
 }
 
+.settings-status {
+  margin: 0 0 20px 0;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 0.9rem;
+}
+
+.settings-status-error {
+  background-color: #fff0f0;
+  color: #c0392b;
+  border: 1px solid #f3c2bf;
+}
+
+.settings-status-success {
+  background-color: #edf8ef;
+  color: #1f7a37;
+  border: 1px solid #bde4c7;
+}
+
 /* ===== Toggle Switches ===== */
 .settings-toggle-group {
   display: flex;
@@ -315,6 +334,11 @@
 
 .settings-btn-primary:active {
   transform: scale(0.98);
+}
+
+.settings-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
 }
 
 .settings-btn-danger {
