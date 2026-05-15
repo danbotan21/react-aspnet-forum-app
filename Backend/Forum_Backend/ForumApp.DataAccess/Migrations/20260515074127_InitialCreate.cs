@@ -64,6 +64,7 @@ namespace ForumApp.DataAccess.Migrations
                     ProfileVisibility = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
                     Theme = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
                     Language = table.Column<string>(type: "nvarchar(10)", maxLength: 10, nullable: false),
+                    AvatarUrl = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Karma = table.Column<int>(type: "int", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     RefreshToken = table.Column<string>(type: "nvarchar(max)", nullable: true),

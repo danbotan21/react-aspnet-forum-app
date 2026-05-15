@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace ForumApp.DataAccess.Migrations
 {
     [DbContext(typeof(ForumDbContext))]
-    [Migration("20260508115320_InitialCreate")]
+    [Migration("20260515074127_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -368,6 +368,9 @@ namespace ForumApp.DataAccess.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ID"));
+
+                    b.Property<string>("AvatarUrl")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Bio")
                         .HasMaxLength(200)
