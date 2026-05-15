@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useNavigate } from 'react-router-dom'
 import { FaCaretUp, FaCaretDown, FaComment, FaShare } from 'react-icons/fa'
 import { useAuth } from './AuthContext'
 import './Styles/CommunityPage.css'
@@ -14,6 +14,7 @@ const getPostRoute = (communitySlug, postId) =>
 
 export function CommunityPage() {
   const { communityname } = useParams()
+  const navigate = useNavigate()
   const { user } = useAuth()
   const [sortBy, setSortBy] = useState('Popular')
   const [openMorePostId, setOpenMorePostId] = useState(null)
@@ -88,6 +89,56 @@ export function CommunityPage() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
+  const handleToggleMembership = async () => {
+    if (!user?.id || !community?.id) {
+      alert('Trebuie sa fii logat pentru a putea intra sau iesi dintr-o comunitate.')
+      return
+    }
+
+    try {
+      if (isMember) {
+        // Leave
+        const response = await fetch(
+          `/api/Communities/${community.id}/leave?userId=${user.id}`,
+          { method: 'DELETE' }
+        )
+        if (response.ok) {
+          const text = await response.text()
+          if (text.includes('deleted')) {
+            // Owner has left and community was deleted
+            alert('Comunitatea a fost stearsa fiindca erai creatorul.')
+            navigate('/') // Sau catre o lista generala de comunitati
+            return
+          }
+          setIsMember(false)
+          setCommunity((prev) => ({
+            ...prev,
+            membersCount: Math.max(0, prev.membersCount - 1),
+          }))
+        } else {
+          console.error('Failed to leave:', await response.text())
+        }
+      } else {
+        // Join
+        const response = await fetch(
+          `/api/Communities/${community.id}/join?userId=${user.id}`,
+          { method: 'POST' }
+        )
+        if (response.ok) {
+          setIsMember(true)
+          setCommunity((prev) => ({
+            ...prev,
+            membersCount: prev.membersCount + 1,
+          }))
+        } else {
+          console.error('Failed to join:', await response.text())
+        }
+      }
+    } catch (err) {
+      console.error('Membership toggle failed:', err)
+    }
+  }
+
   if (loading)
     return (
       <div className='community-page'>
@@ -141,6 +192,7 @@ export function CommunityPage() {
               <button
                 type='button'
                 className={`community-join-btn ${isMember ? 'community-leave-btn' : ''}`}
+                onClick={handleToggleMembership}
                 style={
                   isMember
                     ? {
