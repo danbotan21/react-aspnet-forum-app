@@ -258,6 +258,31 @@ namespace ForumApp.BusinessLayer.Structure
             var community = await _context.Communities
                 .FirstOrDefaultAsync(c => c.Id == communityId, ct);
 
+            // METODA TEMPORARA: Identificam "ownerul" ca fiind primul membru care a intrat
+            var oldestMember = await _context.CommunityMembers
+                .Where(m => m.CommunityId == communityId)
+                .OrderBy(m => m.JoinedAt)
+                .FirstOrDefaultAsync(ct);
+
+            if (oldestMember != null && oldestMember.UserId == userId)
+            {
+                // Este ownerul, deci stergem complet comunitatea
+                if (community != null)
+                {
+                    _context.Communities.Remove(community);
+                    try
+                    {
+                        await _context.SaveChangesAsync(ct);
+                        return new ActionResponse { IsSuccess = true, Message = "Community deleted because the owner left." };
+                    }
+                    catch (DbUpdateException)
+                    {
+                        return new ActionResponse { IsSuccess = false, Message = "Failed to delete community on owner leave." };
+                    }
+                }
+            }
+
+            // Daca nu este ownerul, face leave in mod normal
             _context.CommunityMembers.Remove(membership);
 
             if (community != null && community.MembersCount > 0)
