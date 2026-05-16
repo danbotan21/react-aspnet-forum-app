@@ -63,7 +63,7 @@ namespace ForumApp.API.Controller
             var created = await _postService.CreatePostAsync(postData, authorId, ct);
 
             if (created == null)
-                return BadRequest("Community not found or post could not be saved.");
+                return BadRequest("Community not found, user is not a member, or post could not be saved.");
 
             return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
         }
