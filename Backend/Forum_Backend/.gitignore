@@ -21,6 +21,7 @@ x86/
 *.cache
 *.csproj.user
 *.DotSettings.user
+*.lscache
 
 #NuGet and packages
 packages/

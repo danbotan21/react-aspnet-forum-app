@@ -106,7 +106,7 @@ namespace ForumApp.API.Controller
             var result = await _voteService.GetUserVoteOnPostAsync(postId, userId);
 
             if (result == null)
-                return NotFound(new { message = "No vote found for this post" });
+                return Ok(null);
 
             return Ok(result);
         }
@@ -122,7 +122,7 @@ namespace ForumApp.API.Controller
             var result = await _voteService.GetUserVoteOnCommentAsync(commentId, userId);
 
             if (result == null)
-                return NotFound(new { message = "No vote found for this comment" });
+                return Ok(null);
 
             return Ok(result);
         }
