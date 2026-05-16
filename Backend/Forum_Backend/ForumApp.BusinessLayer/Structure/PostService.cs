@@ -104,6 +104,11 @@ namespace ForumApp.BusinessLayer.Structure
 
             if (!communityExists) return null;
 
+            var isAuthorCommunityMember = await _context.CommunityMembers
+                .AnyAsync(m => m.CommunityId == postData.CommunityId && m.UserId == authorId, ct);
+
+            if (!isAuthorCommunityMember) return null;
+
             var post = new PostData
             {
                 Title = postData.Title,
