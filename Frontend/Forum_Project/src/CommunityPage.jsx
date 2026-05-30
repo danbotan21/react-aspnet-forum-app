@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { FaCaretUp, FaCaretDown, FaComment, FaShare } from 'react-icons/fa'
 import { useAuth } from './AuthContext'
@@ -12,11 +12,8 @@ import {
   submitPostVote,
   voteValueFromDirection,
 } from './utils/voteApi'
-import {
-  fetchUserSavedPosts,
-  savePost,
-  unsaveItem,
-} from './utils/savedItemApi'
+import { fetchUserSavedPosts, savePost, unsaveItem } from './utils/savedItemApi'
+import { fetchCommunityPostsPage } from './utils/postFeedApi'
 
 const SORT_OPTIONS = ['Popular', 'New', 'Top']
 
@@ -24,6 +21,7 @@ const getPostRoute = (communitySlug, postId) =>
   `/community/${encodeURIComponent(communitySlug)}/post/${postId}`
 
 export function CommunityPage() {
+  const PAGE_SIZE = 15
   const { communityname } = useParams()
   const { user } = useAuth()
   const [sortBy, setSortBy] = useState('Popular')
@@ -36,12 +34,17 @@ export function CommunityPage() {
 
   const [posts, setPosts] = useState([])
   const [isLoadingPosts, setIsLoadingPosts] = useState(true)
+  const [isLoadingMorePosts, setIsLoadingMorePosts] = useState(false)
+  const [postsError, setPostsError] = useState(null)
+  const [page, setPage] = useState(1)
+  const [hasMorePosts, setHasMorePosts] = useState(true)
   const [postVotesById, setPostVotesById] = useState({})
   const [pendingPostVotes, setPendingPostVotes] = useState({})
   const [savedPostsById, setSavedPostsById] = useState({})
   const [pendingSavedPosts, setPendingSavedPosts] = useState({})
 
   const postsWrapRef = useRef(null)
+  const loadMoreTriggerRef = useRef(null)
 
   useEffect(() => {
     const fetchCommunityAndMembership = async () => {
@@ -75,35 +78,129 @@ export function CommunityPage() {
   }, [communityname, user])
 
   useEffect(() => {
-    if (!community?.id) return
+    setPosts([])
+    setPage(1)
+    setHasMorePosts(true)
+    setPostsError(null)
     setIsLoadingPosts(true)
-    fetch(`/api/posts/community/${community.id}?sortBy=${sortBy.toLowerCase()}`)
-      .then((res) => res.json())
-      .then((data) => {
-        setPosts(data)
-        setIsLoadingPosts(false)
-      })
-      .catch((err) => {
-        console.error(err)
-        setIsLoadingPosts(false)
-      })
+    setIsLoadingMorePosts(false)
   }, [community?.id, sortBy])
 
   useEffect(() => {
-    if (!user?.id || posts.length === 0) {
+    if (!community?.id) return
+
+    let cancelled = false
+    const isInitialPage = page === 1
+
+    const loadPostsPage = async () => {
+      if (isInitialPage) {
+        setIsLoadingPosts(true)
+      } else {
+        setIsLoadingMorePosts(true)
+      }
+
+      try {
+        const batch = await fetchCommunityPostsPage({
+          communityId: community.id,
+          sortBy: sortBy.toLowerCase(),
+          page,
+          pageSize: PAGE_SIZE,
+        })
+        if (cancelled) return
+
+        setPosts((currentPosts) => {
+          if (isInitialPage) return batch.items
+          const existingIds = new Set(currentPosts.map((post) => post.id))
+          const nextItems = batch.items.filter(
+            (post) => !existingIds.has(post.id),
+          )
+          return [...currentPosts, ...nextItems]
+        })
+        setHasMorePosts(batch.hasMore)
+        setPostsError(null)
+      } catch (fetchError) {
+        if (!cancelled) {
+          setPostsError(fetchError.message)
+          setHasMorePosts(false)
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoadingPosts(false)
+          setIsLoadingMorePosts(false)
+        }
+      }
+    }
+
+    loadPostsPage()
+
+    return () => {
+      cancelled = true
+    }
+  }, [community?.id, page, sortBy])
+
+  const loadNextPostsPage = useCallback(() => {
+    if (isLoadingPosts || isLoadingMorePosts || !hasMorePosts || postsError)
+      return
+    setPage((currentPage) => currentPage + 1)
+  }, [hasMorePosts, isLoadingMorePosts, isLoadingPosts, postsError])
+
+  useEffect(() => {
+    const target = loadMoreTriggerRef.current
+    if (
+      !target ||
+      isLoadingPosts ||
+      isLoadingMorePosts ||
+      !hasMorePosts ||
+      postsError
+    )
+      return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          loadNextPostsPage()
+        }
+      },
+      { rootMargin: '400px 0px' },
+    )
+
+    observer.observe(target)
+    return () => observer.disconnect()
+  }, [
+    hasMorePosts,
+    isLoadingMorePosts,
+    isLoadingPosts,
+    loadNextPostsPage,
+    postsError,
+  ])
+
+  useEffect(() => {
+    if (!user?.id) {
       setPostVotesById({})
       return
     }
 
+    if (posts.length === 0) return
+
     let cancelled = false
 
-    fetchUserPostVotes(
-      posts.map((post) => post.id),
-      user.id,
-    ).then((votesMap) => {
-      if (!cancelled) {
-        setPostVotesById(votesMap)
-      }
+    setPostVotesById((currentVotes) => {
+      const missingPostIds = posts
+        .map((post) => post.id)
+        .filter((postId) => currentVotes[postId] === undefined)
+
+      if (missingPostIds.length === 0) return currentVotes
+
+      fetchUserPostVotes(missingPostIds, user.id).then((votesMap) => {
+        if (!cancelled) {
+          setPostVotesById((prev) => ({ ...prev, ...votesMap }))
+        }
+      })
+
+      const loadingEntries = Object.fromEntries(
+        missingPostIds.map((postId) => [postId, null]),
+      )
+      return { ...currentVotes, ...loadingEntries }
     })
 
     return () => {
@@ -112,20 +209,32 @@ export function CommunityPage() {
   }, [posts, user?.id])
 
   useEffect(() => {
-    if (!user?.id || posts.length === 0) {
+    if (!user?.id) {
       setSavedPostsById({})
       return
     }
 
+    if (posts.length === 0) return
+
     let cancelled = false
 
-    fetchUserSavedPosts(
-      posts.map((post) => post.id),
-      user.id,
-    ).then((savedMap) => {
-      if (!cancelled) {
-        setSavedPostsById(savedMap)
-      }
+    setSavedPostsById((currentSaved) => {
+      const missingPostIds = posts
+        .map((post) => post.id)
+        .filter((postId) => currentSaved[postId] === undefined)
+
+      if (missingPostIds.length === 0) return currentSaved
+
+      fetchUserSavedPosts(missingPostIds, user.id).then((savedMap) => {
+        if (!cancelled) {
+          setSavedPostsById((prev) => ({ ...prev, ...savedMap }))
+        }
+      })
+
+      const loadingEntries = Object.fromEntries(
+        missingPostIds.map((postId) => [postId, null]),
+      )
+      return { ...currentSaved, ...loadingEntries }
     })
 
     return () => {
@@ -151,7 +260,9 @@ export function CommunityPage() {
 
   const handleToggleMembership = async () => {
     if (!user?.id || !community?.id) {
-      alert('Trebuie sa fii logat pentru a putea intra sau iesi dintr-o comunitate.')
+      alert(
+        'Trebuie sa fii logat pentru a putea intra sau iesi dintr-o comunitate.',
+      )
       return
     }
 
@@ -282,7 +393,9 @@ export function CommunityPage() {
 
     setPosts((currentPosts) =>
       currentPosts.map((post) =>
-        post.id === postId ? { ...post, votes: (post.votes ?? 0) + voteDelta } : post,
+        post.id === postId
+          ? { ...post, votes: (post.votes ?? 0) + voteDelta }
+          : post,
       ),
     )
     setPostVotesById((currentVotes) => ({
@@ -347,7 +460,10 @@ export function CommunityPage() {
         const createdSavedItem = await savePost({ postId, userId: user.id })
         setSavedPostsById((currentSaved) => ({
           ...currentSaved,
-          [postId]: { id: createdSavedItem.id, postId: createdSavedItem.postId },
+          [postId]: {
+            id: createdSavedItem.id,
+            postId: createdSavedItem.postId,
+          },
         }))
       }
     } catch (error) {
@@ -436,6 +552,10 @@ export function CommunityPage() {
               <p style={{ textAlign: 'center', padding: '2rem' }}>
                 Loading posts...
               </p>
+            ) : postsError ? (
+              <p style={{ textAlign: 'center', padding: '2rem', color: 'red' }}>
+                {postsError}
+              </p>
             ) : posts.length === 0 ? (
               <p style={{ textAlign: 'center', padding: '2rem' }}>
                 No posts found in this community.
@@ -502,7 +622,9 @@ export function CommunityPage() {
                                 onClick={() => handleToggleSavePost(post.id)}
                                 disabled={pendingSavedPosts[post.id]}
                               >
-                                {savedPostsById[post.id]?.id ? 'Unsave' : 'Save'}
+                                {savedPostsById[post.id]?.id
+                                  ? 'Unsave'
+                                  : 'Save'}
                               </button>
                               <button
                                 className='more-menu-item more-menu-danger'
@@ -563,7 +685,9 @@ export function CommunityPage() {
                             className={`vote-icon upvote ${postVotesById[post.id]?.type === 1 ? 'active' : ''}`}
                             onClick={() => handlePostVote(post.id, 'up')}
                             style={{
-                              pointerEvents: pendingPostVotes[post.id] ? 'none' : 'auto',
+                              pointerEvents: pendingPostVotes[post.id]
+                                ? 'none'
+                                : 'auto',
                               opacity: pendingPostVotes[post.id] ? 0.6 : 1,
                             }}
                           />
@@ -572,7 +696,9 @@ export function CommunityPage() {
                             className={`vote-icon downvote ${postVotesById[post.id]?.type === -1 ? 'active' : ''}`}
                             onClick={() => handlePostVote(post.id, 'down')}
                             style={{
-                              pointerEvents: pendingPostVotes[post.id] ? 'none' : 'auto',
+                              pointerEvents: pendingPostVotes[post.id]
+                                ? 'none'
+                                : 'auto',
                               opacity: pendingPostVotes[post.id] ? 0.6 : 1,
                             }}
                           />
@@ -593,6 +719,27 @@ export function CommunityPage() {
                   </article>
                 )
               })
+            )}
+            {!isLoadingPosts && !postsError && posts.length > 0 && (
+              <>
+                <div ref={loadMoreTriggerRef} style={{ height: '1px' }} />
+                {isLoadingMorePosts && (
+                  <p style={{ textAlign: 'center', padding: '1rem 0' }}>
+                    Loading more posts...
+                  </p>
+                )}
+                {!hasMorePosts && (
+                  <p
+                    style={{
+                      textAlign: 'center',
+                      padding: '1rem 0',
+                      opacity: 0.7,
+                    }}
+                  >
+                    You reached the end.
+                  </p>
+                )}
+              </>
             )}
           </section>
         </div>

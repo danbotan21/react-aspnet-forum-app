@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import './Styles/Home.css'
 import avatar from './img/avatar.webp'
@@ -11,11 +11,8 @@ import {
   submitPostVote,
   voteValueFromDirection,
 } from './utils/voteApi'
-import {
-  fetchUserSavedPosts,
-  savePost,
-  unsaveItem,
-} from './utils/savedItemApi'
+import { fetchUserSavedPosts, savePost, unsaveItem } from './utils/savedItemApi'
+import { fetchPostsPage } from './utils/postFeedApi'
 
 const SORT_OPTIONS = [
   { id: 'popular', label: 'Popular' },
@@ -24,6 +21,7 @@ const SORT_OPTIONS = [
 ]
 
 export const Home = () => {
+  const PAGE_SIZE = 15
   const { user } = useAuth()
   const [openMorePostId, setOpenMorePostId] = useState(null)
   const [sortBy, setSortBy] = useState('popular')
@@ -31,46 +29,127 @@ export const Home = () => {
 
   const sortRef = useRef(null)
   const postsWrapRef = useRef(null)
+  const loadMoreTriggerRef = useRef(null)
 
   const [posts, setPosts] = useState([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
+  const [feedError, setFeedError] = useState(null)
+  const [page, setPage] = useState(1)
+  const [hasMore, setHasMore] = useState(true)
   const [postVotesById, setPostVotesById] = useState({})
   const [pendingPostVotes, setPendingPostVotes] = useState({})
   const [savedPostsById, setSavedPostsById] = useState({})
   const [pendingSavedPosts, setPendingSavedPosts] = useState({})
 
   useEffect(() => {
+    setPosts([])
+    setPage(1)
+    setHasMore(true)
+    setFeedError(null)
     setIsLoading(true)
-    fetch(`/api/posts?sortBy=${sortBy}`)
-      .then((res) => {
-        if (!res.ok) throw new Error(`HTTP error: ${res.status}`)
-        return res.json()
-      })
-      .then((data) => {
-        setPosts(data)
-        setIsLoading(false)
-      })
-      .catch((err) => {
-        console.error('[Posts fetch error]', err)
-        setIsLoading(false)
-      })
+    setIsLoadingMore(false)
   }, [sortBy])
 
   useEffect(() => {
-    if (!user?.id || posts.length === 0) {
+    let cancelled = false
+
+    const loadPage = async () => {
+      const isInitialPage = page === 1
+      if (isInitialPage) {
+        setIsLoading(true)
+      } else {
+        setIsLoadingMore(true)
+      }
+
+      try {
+        const batch = await fetchPostsPage({
+          sortBy,
+          page,
+          pageSize: PAGE_SIZE,
+        })
+        if (cancelled) return
+
+        setPosts((currentPosts) => {
+          if (isInitialPage) return batch.items
+          const existingIds = new Set(currentPosts.map((post) => post.id))
+          const nextItems = batch.items.filter(
+            (post) => !existingIds.has(post.id),
+          )
+          return [...currentPosts, ...nextItems]
+        })
+        setHasMore(batch.hasMore)
+        setFeedError(null)
+      } catch (error) {
+        if (!cancelled) {
+          setFeedError(error.message)
+          setHasMore(false)
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false)
+          setIsLoadingMore(false)
+        }
+      }
+    }
+
+    loadPage()
+
+    return () => {
+      cancelled = true
+    }
+  }, [page, sortBy])
+
+  const loadNextPage = useCallback(() => {
+    if (isLoading || isLoadingMore || !hasMore || feedError) return
+    setPage((currentPage) => currentPage + 1)
+  }, [feedError, hasMore, isLoading, isLoadingMore])
+
+  useEffect(() => {
+    const target = loadMoreTriggerRef.current
+    if (!target || isLoading || isLoadingMore || !hasMore || feedError) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          loadNextPage()
+        }
+      },
+      { rootMargin: '400px 0px' },
+    )
+
+    observer.observe(target)
+    return () => observer.disconnect()
+  }, [feedError, hasMore, isLoading, isLoadingMore, loadNextPage])
+
+  useEffect(() => {
+    if (!user?.id) {
       setPostVotesById({})
       return
     }
 
+    if (posts.length === 0) return
+
     let cancelled = false
 
-    fetchUserPostVotes(
-      posts.map((post) => post.id),
-      user.id,
-    ).then((votesMap) => {
-      if (!cancelled) {
-        setPostVotesById(votesMap)
-      }
+    setPostVotesById((currentVotes) => {
+      const missingPostIds = posts
+        .map((post) => post.id)
+        .filter((postId) => currentVotes[postId] === undefined)
+
+      if (missingPostIds.length === 0) return currentVotes
+
+      fetchUserPostVotes(missingPostIds, user.id).then((votesMap) => {
+        if (!cancelled) {
+          setPostVotesById((prev) => ({ ...prev, ...votesMap }))
+        }
+      })
+
+      // Mark these IDs as loading (null) to prevent re-fetch
+      const loadingEntries = Object.fromEntries(
+        missingPostIds.map((postId) => [postId, null]),
+      )
+      return { ...currentVotes, ...loadingEntries }
     })
 
     return () => {
@@ -79,20 +158,33 @@ export const Home = () => {
   }, [posts, user?.id])
 
   useEffect(() => {
-    if (!user?.id || posts.length === 0) {
+    if (!user?.id) {
       setSavedPostsById({})
       return
     }
 
+    if (posts.length === 0) return
+
     let cancelled = false
 
-    fetchUserSavedPosts(
-      posts.map((post) => post.id),
-      user.id,
-    ).then((savedMap) => {
-      if (!cancelled) {
-        setSavedPostsById(savedMap)
-      }
+    setSavedPostsById((currentSaved) => {
+      const missingPostIds = posts
+        .map((post) => post.id)
+        .filter((postId) => currentSaved[postId] === undefined)
+
+      if (missingPostIds.length === 0) return currentSaved
+
+      fetchUserSavedPosts(missingPostIds, user.id).then((savedMap) => {
+        if (!cancelled) {
+          setSavedPostsById((prev) => ({ ...prev, ...savedMap }))
+        }
+      })
+
+      // Mark these IDs as loading (null) to prevent re-fetch
+      const loadingEntries = Object.fromEntries(
+        missingPostIds.map((postId) => [postId, null]),
+      )
+      return { ...currentSaved, ...loadingEntries }
     })
 
     return () => {
@@ -182,7 +274,9 @@ export const Home = () => {
 
     setPosts((currentPosts) =>
       currentPosts.map((post) =>
-        post.id === postId ? { ...post, votes: (post.votes ?? 0) + voteDelta } : post,
+        post.id === postId
+          ? { ...post, votes: (post.votes ?? 0) + voteDelta }
+          : post,
       ),
     )
     setPostVotesById((currentVotes) => ({
@@ -247,7 +341,10 @@ export const Home = () => {
         const createdSavedItem = await savePost({ postId, userId: user.id })
         setSavedPostsById((currentSaved) => ({
           ...currentSaved,
-          [postId]: { id: createdSavedItem.id, postId: createdSavedItem.postId },
+          [postId]: {
+            id: createdSavedItem.id,
+            postId: createdSavedItem.postId,
+          },
         }))
       }
     } catch (error) {
@@ -309,6 +406,10 @@ export const Home = () => {
         {isLoading ? (
           <p style={{ textAlign: 'center', padding: '2rem' }}>
             Loading posts...
+          </p>
+        ) : feedError ? (
+          <p style={{ textAlign: 'center', padding: '2rem', color: 'red' }}>
+            {feedError}
           </p>
         ) : posts.length === 0 ? (
           <p style={{ textAlign: 'center', padding: '2rem' }}>
@@ -432,7 +533,9 @@ export const Home = () => {
                         className={`vote-icon upvote ${postVotesById[post.id]?.type === 1 ? 'active' : ''}`}
                         onClick={() => handlePostVote(post.id, 'up')}
                         style={{
-                          pointerEvents: pendingPostVotes[post.id] ? 'none' : 'auto',
+                          pointerEvents: pendingPostVotes[post.id]
+                            ? 'none'
+                            : 'auto',
                           opacity: pendingPostVotes[post.id] ? 0.6 : 1,
                         }}
                       />
@@ -441,7 +544,9 @@ export const Home = () => {
                         className={`vote-icon downvote ${postVotesById[post.id]?.type === -1 ? 'active' : ''}`}
                         onClick={() => handlePostVote(post.id, 'down')}
                         style={{
-                          pointerEvents: pendingPostVotes[post.id] ? 'none' : 'auto',
+                          pointerEvents: pendingPostVotes[post.id]
+                            ? 'none'
+                            : 'auto',
                           opacity: pendingPostVotes[post.id] ? 0.6 : 1,
                         }}
                       />
@@ -461,6 +566,23 @@ export const Home = () => {
               </article>
             )
           })
+        )}
+        {!isLoading && !feedError && posts.length > 0 && (
+          <>
+            <div ref={loadMoreTriggerRef} style={{ height: '1px' }} />
+            {isLoadingMore && (
+              <p style={{ textAlign: 'center', padding: '1rem 0' }}>
+                Loading more posts...
+              </p>
+            )}
+            {!hasMore && (
+              <p
+                style={{ textAlign: 'center', padding: '1rem 0', opacity: 0.7 }}
+              >
+                You reached the end.
+              </p>
+            )}
+          </>
         )}
       </div>
     </div>

@@ -1,11 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import {
-  FaTimes,
-  FaPen,
-  FaTrash,
-  FaCloudUploadAlt,
-} from 'react-icons/fa'
+import { FaTimes, FaPen, FaTrash, FaCloudUploadAlt } from 'react-icons/fa'
 import { useAuth } from './AuthContext'
 import { uploadImage } from './utils/imageUpload'
 import './Styles/CreatePost.css'
@@ -178,12 +173,19 @@ export const CreatePost = () => {
     }
 
     try {
-      const postsResponse = await fetch(`/api/posts/user/${user.id}`)
+      const postsResponse = await fetch(
+        `/api/posts/user/${user.id}?page=1&pageSize=200`,
+      )
       if (!postsResponse.ok) {
         throw new Error('Could not read your posts for draft mapping.')
       }
 
-      const userPosts = await postsResponse.json()
+      const postsPayload = await postsResponse.json()
+      const userPosts = Array.isArray(postsPayload?.items)
+        ? postsPayload.items
+        : Array.isArray(postsPayload)
+          ? postsPayload
+          : []
       const matchingPost = userPosts.find(
         (post) =>
           (post.title || '').trim().toLowerCase() ===
@@ -197,15 +199,18 @@ export const CreatePost = () => {
         return
       }
 
-      const createDraftResponse = await fetch(`/api/draft?authorId=${user.id}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+      const createDraftResponse = await fetch(
+        `/api/draft?authorId=${user.id}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            postId: matchingPost.id,
+          }),
         },
-        body: JSON.stringify({
-          postId: matchingPost.id,
-        }),
-      })
+      )
 
       if (!createDraftResponse.ok) {
         throw new Error('Failed to save draft')
@@ -229,9 +234,12 @@ export const CreatePost = () => {
     if (!user?.id) return
 
     try {
-      const response = await fetch(`/api/draft/${draftId}?authorId=${user.id}`, {
-        method: 'DELETE',
-      })
+      const response = await fetch(
+        `/api/draft/${draftId}?authorId=${user.id}`,
+        {
+          method: 'DELETE',
+        },
+      )
 
       if (!response.ok) {
         throw new Error('Failed to delete draft')
@@ -571,7 +579,10 @@ export const CreatePost = () => {
                 </li>
               ) : draftsError ? (
                 <li className='drafts-item'>
-                  <div className='drafts-item-main' style={{ color: '#c62828' }}>
+                  <div
+                    className='drafts-item-main'
+                    style={{ color: '#c62828' }}
+                  >
                     {draftsError}
                   </div>
                 </li>
@@ -588,38 +599,41 @@ export const CreatePost = () => {
                     draft.lastModifiedAt ?? draft.LastModifiedAt
 
                   return (
-                  <li className='drafts-item' key={draftId}>
-                    <div className='drafts-item-main'>
-                      <div className='drafts-item-title'>{draftPostTitle}</div>
-                      <div className='drafts-item-sub'>
-                        <span className='drafts-item-community'>
-                          Post #{draftPostId}
-                        </span>
-                        <span className='drafts-dot'>*</span>
-                        <span className='drafts-item-edited'>
-                          Edited {new Date(draftLastModifiedAt).toLocaleString()}
-                        </span>
+                    <li className='drafts-item' key={draftId}>
+                      <div className='drafts-item-main'>
+                        <div className='drafts-item-title'>
+                          {draftPostTitle}
+                        </div>
+                        <div className='drafts-item-sub'>
+                          <span className='drafts-item-community'>
+                            Post #{draftPostId}
+                          </span>
+                          <span className='drafts-dot'>*</span>
+                          <span className='drafts-item-edited'>
+                            Edited{' '}
+                            {new Date(draftLastModifiedAt).toLocaleString()}
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                    <div className='drafts-item-actions'>
-                      <button
-                        type='button'
-                        className='drafts-icon-btn'
-                        aria-label='Open draft'
-                        onClick={() => handleOpenDraft(draftPostId)}
-                      >
-                        <FaPen />
-                      </button>
-                      <button
-                        type='button'
-                        className='drafts-icon-btn'
-                        aria-label='Delete draft'
-                        onClick={() => handleDeleteDraft(draftId)}
-                      >
-                        <FaTrash />
-                      </button>
-                    </div>
-                  </li>
+                      <div className='drafts-item-actions'>
+                        <button
+                          type='button'
+                          className='drafts-icon-btn'
+                          aria-label='Open draft'
+                          onClick={() => handleOpenDraft(draftPostId)}
+                        >
+                          <FaPen />
+                        </button>
+                        <button
+                          type='button'
+                          className='drafts-icon-btn'
+                          aria-label='Delete draft'
+                          onClick={() => handleDeleteDraft(draftId)}
+                        >
+                          <FaTrash />
+                        </button>
+                      </div>
+                    </li>
                   )
                 })
               )}

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import './Styles/UserProfile.css'
 import avatar from './img/avatar.webp'
@@ -10,6 +10,7 @@ import { ProfileSavedTab } from './ProfileSavedTab'
 import { ProfileVotedTab } from './ProfileVotedTab'
 import { useAuth } from './AuthContext'
 import { normalizeImageSrc } from './utils/media'
+import { fetchUserPostsPage } from './utils/postFeedApi'
 
 const PROFILE_TABS = [
   'Overview',
@@ -80,12 +81,18 @@ export function UserProfile() {
   const [activeTab, setActiveTab] = useState('Overview')
   const [profileUser, setProfileUser] = useState(null)
   const [posts, setPosts] = useState([])
+  const [totalPostsCount, setTotalPostsCount] = useState(0)
   const [comments, setComments] = useState([])
   const [savedItems, setSavedItems] = useState([])
   const [upvotedPosts, setUpvotedPosts] = useState([])
   const [downvotedPosts, setDownvotedPosts] = useState([])
   const [isProfileLoading, setIsProfileLoading] = useState(true)
   const [isActivityLoading, setIsActivityLoading] = useState(false)
+  const [isPostsLoading, setIsPostsLoading] = useState(false)
+  const [isPostsLoadingMore, setIsPostsLoadingMore] = useState(false)
+  const [postsPage, setPostsPage] = useState(1)
+  const [hasMorePosts, setHasMorePosts] = useState(true)
+  const [postsError, setPostsError] = useState(null)
   const [isProfileDataLoading, setIsProfileDataLoading] = useState(false)
   const [profileError, setProfileError] = useState(null)
 
@@ -99,6 +106,8 @@ export function UserProfile() {
   const [upvotedMenuPos, setUpvotedMenuPos] = useState({ top: 0, right: 0 })
   const [openMoreDownvotedId, setOpenMoreDownvotedId] = useState(null)
   const [downvotedMenuPos, setDownvotedMenuPos] = useState({ top: 0, right: 0 })
+
+  const postsLoadMoreRef = useRef(null)
 
   useEffect(() => {
     const close = (e) => {
@@ -177,7 +186,11 @@ export function UserProfile() {
   useEffect(() => {
     if (!profileUser?.id) {
       setPosts([])
+      setTotalPostsCount(0)
       setComments([])
+      setPostsPage(1)
+      setHasMorePosts(true)
+      setPostsError(null)
       return
     }
 
@@ -186,12 +199,9 @@ export function UserProfile() {
     const loadUserActivity = async () => {
       setIsActivityLoading(true)
       try {
-        const [postsResponse, commentsResponse] = await Promise.all([
-          fetch(`/api/posts/user/${profileUser.id}`),
-          fetch(`/api/comments/user/${profileUser.id}`),
-        ])
-
-        const fetchedPosts = postsResponse.ok ? await postsResponse.json() : []
+        const commentsResponse = await fetch(
+          `/api/comments/user/${profileUser.id}`,
+        )
         const fetchedComments = commentsResponse.ok
           ? await commentsResponse.json()
           : []
@@ -218,7 +228,6 @@ export function UserProfile() {
 
         if (cancelled) return
 
-        setPosts(fetchedPosts.map(mapPostToProfilePost))
         setComments(
           fetchedComments.map((comment) => {
             const relatedPost = commentPostsById.get(comment.postId)
@@ -237,7 +246,6 @@ export function UserProfile() {
         )
       } catch {
         if (!cancelled) {
-          setPosts([])
           setComments([])
         }
       } finally {
@@ -253,6 +261,102 @@ export function UserProfile() {
       cancelled = true
     }
   }, [profileUser?.id])
+
+  useEffect(() => {
+    if (!profileUser?.id) return
+
+    let cancelled = false
+    const isInitialPage = postsPage === 1
+
+    const loadPostsPage = async () => {
+      if (isInitialPage) {
+        setIsPostsLoading(true)
+      } else {
+        setIsPostsLoadingMore(true)
+      }
+
+      try {
+        const batch = await fetchUserPostsPage({
+          userId: profileUser.id,
+          page: postsPage,
+          pageSize: 15,
+        })
+
+        if (cancelled) return
+
+        const mappedPosts = batch.items.map(mapPostToProfilePost)
+        setPosts((currentPosts) => {
+          if (isInitialPage) return mappedPosts
+          const existingIds = new Set(currentPosts.map((post) => post.id))
+          const nextItems = mappedPosts.filter(
+            (post) => !existingIds.has(post.id),
+          )
+          return [...currentPosts, ...nextItems]
+        })
+        if (isInitialPage) {
+          setTotalPostsCount(mappedPosts.length)
+        } else {
+          setTotalPostsCount(
+            (currentTotal) => currentTotal + mappedPosts.length,
+          )
+        }
+        setHasMorePosts(batch.hasMore)
+        setPostsError(null)
+      } catch (error) {
+        if (!cancelled) {
+          setPostsError(error?.message || 'Failed to load posts')
+          setHasMorePosts(false)
+        }
+      } finally {
+        if (!cancelled) {
+          setIsPostsLoading(false)
+          setIsPostsLoadingMore(false)
+        }
+      }
+    }
+
+    loadPostsPage()
+
+    return () => {
+      cancelled = true
+    }
+  }, [postsPage, profileUser?.id])
+
+  const loadNextPostsPage = useCallback(() => {
+    if (isPostsLoading || isPostsLoadingMore || !hasMorePosts || postsError)
+      return
+    setPostsPage((currentPage) => currentPage + 1)
+  }, [hasMorePosts, isPostsLoading, isPostsLoadingMore, postsError])
+
+  useEffect(() => {
+    const target = postsLoadMoreRef.current
+    if (
+      !target ||
+      isPostsLoading ||
+      isPostsLoadingMore ||
+      !hasMorePosts ||
+      postsError
+    )
+      return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          loadNextPostsPage()
+        }
+      },
+      { rootMargin: '400px 0px' },
+    )
+
+    observer.observe(target)
+    return () => observer.disconnect()
+  }, [
+    hasMorePosts,
+    isPostsLoading,
+    isPostsLoadingMore,
+    loadNextPostsPage,
+    postsError,
+  ])
 
   useEffect(() => {
     if (!profileUser?.id) {
@@ -424,7 +528,7 @@ export function UserProfile() {
     }
   }, [profileUser?.id])
 
-  const hasPosts = posts.length > 0
+  const hasPosts = totalPostsCount > 0
   const hasComments = comments.length > 0
   const hasSaved = savedItems.length > 0
   const hasUpvoted = upvotedPosts.length > 0
@@ -433,7 +537,7 @@ export function UserProfile() {
   const statCards = useMemo(
     () => [
       { label: 'Karma', value: `${profileUser?.karma ?? 0}` },
-      { label: 'Posts', value: `${posts.length}` },
+      { label: 'Posts', value: `${totalPostsCount}` },
       { label: 'Comments', value: `${comments.length}` },
       { label: 'Cake Day', value: formatCakeDay(profileUser?.createdAt) },
     ],
@@ -517,20 +621,56 @@ export function UserProfile() {
       )
 
     if (activeTab === 'Posts')
-      return isActivityLoading ? (
+      return isPostsLoading && posts.length === 0 ? (
         <section className='tab-panel'>
           <p style={{ textAlign: 'center', padding: '1.5rem 0' }}>
             Loading posts...
           </p>
         </section>
       ) : (
-        <ProfilePostsTab
-          posts={posts}
-          hasPosts={hasPosts}
-          openMorePostId={openMorePostId}
-          onMenuOpen={handlePostMenu}
-          isOwnProfile={isOwnProfile}
-        />
+        <section className='tab-panel'>
+          <div>
+            <ProfilePostsTab
+              posts={posts}
+              hasPosts={hasPosts}
+              openMorePostId={openMorePostId}
+              onMenuOpen={handlePostMenu}
+              isOwnProfile={isOwnProfile}
+            />
+            {postsError && (
+              <p
+                style={{
+                  textAlign: 'center',
+                  padding: '1rem 0',
+                  color: '#c53030',
+                }}
+              >
+                {postsError}
+              </p>
+            )}
+            {!postsError && posts.length > 0 && (
+              <>
+                <div ref={postsLoadMoreRef} style={{ height: '1px' }} />
+                {isPostsLoadingMore && (
+                  <p style={{ textAlign: 'center', padding: '1rem 0' }}>
+                    Loading more posts...
+                  </p>
+                )}
+                {!hasMorePosts && (
+                  <p
+                    style={{
+                      textAlign: 'center',
+                      padding: '1rem 0',
+                      opacity: 0.7,
+                    }}
+                  >
+                    You reached the end.
+                  </p>
+                )}
+              </>
+            )}
+          </div>
+        </section>
       )
 
     if (activeTab === 'Comments')

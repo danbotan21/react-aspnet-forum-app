@@ -33,6 +33,20 @@ export function ProfilePostsTab({
     )
   }
 
+  if (!isOwnProfile && !hasPosts) {
+    return (
+      <section className='tab-panel'>
+        <div className='feed-filter'>
+          <span>Showing all posts</span>
+        </div>
+        <div className='feed-empty'>
+          <div className='feed-empty-icon'>0</div>
+          <h2>This user hasn&apos;t posted anything yet</h2>
+        </div>
+      </section>
+    )
+  }
+
   return (
     <section className='tab-panel'>
       <div className='feed-filter'>
