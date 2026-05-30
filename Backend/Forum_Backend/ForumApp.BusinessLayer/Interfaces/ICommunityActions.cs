@@ -18,6 +18,7 @@ namespace ForumApp.BusinessLayer.Interfaces
         Task<ActionResponse> JoinCommunityAsync(int communityId, int userId, CancellationToken ct = default);
         Task<ActionResponse> LeaveCommunityAsync(int communityId, int userId, CancellationToken ct = default);
         Task<bool> IsMemberAsync(int communityId, int userId, CancellationToken ct = default);
+        Task<bool> IsOwnerAsync(int communityId, int userId, CancellationToken ct = default);
     }
 
 }

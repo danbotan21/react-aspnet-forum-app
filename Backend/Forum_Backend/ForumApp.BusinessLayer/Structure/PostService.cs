@@ -246,7 +246,17 @@ namespace ForumApp.BusinessLayer.Structure
                 return new ActionResponse { IsSuccess = false, Message = "Post not found." };
 
             if (post.AuthorId != requestingUserId)
-                return new ActionResponse { IsSuccess = false, Message = "You are not the author of this post." };
+            {
+                var ownerUserId = await _context.CommunityMembers
+                    .Where(m => m.CommunityId == post.CommunityId)
+                    .OrderBy(m => m.JoinedAt)
+                    .ThenBy(m => m.Id)
+                    .Select(m => (int?)m.UserId)
+                    .FirstOrDefaultAsync(ct);
+
+                if (ownerUserId == null || ownerUserId != requestingUserId)
+                    return new ActionResponse { IsSuccess = false, Message = "You do not have permission to delete this post." };
+            }
 
             _context.Posts.Remove(post);
 

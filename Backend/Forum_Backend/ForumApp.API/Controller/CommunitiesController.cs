@@ -70,6 +70,14 @@ namespace ForumApp.API.Controller
             return Ok(result);
         }
 
+        // GET api/communities/{communityId}/isowner?userId=1
+        [HttpGet("{communityId:int}/isowner")]
+        public async Task<IActionResult> IsOwner(int communityId, [FromQuery] int userId, CancellationToken ct)
+        {
+            var result = await _communityService.IsOwnerAsync(communityId, userId, ct);
+            return Ok(result);
+        }
+
         // POST api/communities?authorId=1
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] CommunityCreateDto communityData, [FromQuery] int authorId, CancellationToken ct)

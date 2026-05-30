@@ -307,6 +307,12 @@ namespace ForumApp.BusinessLayer.Structure
                 .AnyAsync(m => m.CommunityId == communityId && m.UserId == userId, ct);
         }
 
+        public async Task<bool> IsOwnerAsync(int communityId, int userId, CancellationToken ct = default)
+        {
+            var ownerUserId = await GetOwnerUserIdAsync(communityId, ct);
+            return ownerUserId == userId;
+        }
+
 
 
     }

@@ -116,12 +116,15 @@ namespace ForumApp.API.Controller
 
         [Authorize]
         [HttpDelete("me")]
-        public async Task<IActionResult> DeleteAccount(CancellationToken ct)
+        public async Task<IActionResult> DeleteAccount([FromBody] DeleteAccountDto dto, CancellationToken ct)
         {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
             int userId = GetCurrentUserId();
-            var action = await _userService.DeleteAccountAsync(userId, ct);
+            var action = await _userService.DeleteAccountAsync(userId, dto, ct);
             if (!action.IsSuccess)
-                return NotFound(action.Message);
+                return BadRequest(new { message = action.Message });
 
             return Ok(action.Message);
         }

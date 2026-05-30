@@ -14,7 +14,7 @@ namespace ForumApp.BusinessLayer.Interfaces
         Task<UserResponseDto?> GetProfileAsync(int userId, CancellationToken ct = default);
         Task<UserResponseDto?> UpdateProfileAsync(int userId, UserUpdateDto userData, CancellationToken ct = default);
         Task<ActionResponse> ChangePasswordAsync(int userId, ChangePasswordDto passwordData, CancellationToken ct = default);
-        Task<ActionResponse> DeleteAccountAsync(int userId, CancellationToken ct = default);
+        Task<ActionResponse> DeleteAccountAsync(int userId, DeleteAccountDto dto, CancellationToken ct = default);
 
         // Public user queries
         Task<IReadOnlyList<UserResponseDto>> GetAllUsersAsync(CancellationToken ct = default);
