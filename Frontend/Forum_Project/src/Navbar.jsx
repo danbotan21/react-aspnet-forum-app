@@ -86,15 +86,13 @@ export const Navbar = () => {
   return (
     <header className='navbar'>
       <div className='navbar-inner'>
-        <a
-          href='http://localhost:5173/Home'
+        <Link
+          to='/home'
           className='navbar-logo'
-          aria-label='credit - home'
+          aria-label='InfoMeet - home'
         >
-          {/* ON Line  */}
           InfoMeet
-          {/* SPEAK-Line */}
-        </a>
+        </Link>
 
         <div
           className='navbar-search-wrap'

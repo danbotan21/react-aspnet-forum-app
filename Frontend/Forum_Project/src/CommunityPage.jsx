@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { FaCaretUp, FaCaretDown, FaComment, FaShare, FaShieldAlt } from 'react-icons/fa'
+import { FaCaretUp, FaCaretDown, FaComment, FaShare, FaShieldAlt, FaLock, FaGlobe, FaUserShield, FaThumbtack } from 'react-icons/fa'
 import { useAuth } from './AuthContext'
 import './Styles/CommunityPage.css'
 import avatar from './img/avatar.webp'
@@ -18,6 +18,15 @@ import { fetchMyRole } from './utils/modApi'
 import { ReportModal } from './ReportModal'
 
 const SORT_OPTIONS = ['Popular', 'New', 'Top']
+
+// Returns icon, label and CSS modifier for each community type
+const communityTypeMeta = (type) => {
+  switch ((type || '').toLowerCase()) {
+    case 'private':    return { icon: FaLock,       label: 'Private',    mod: 'private' }
+    case 'restricted': return { icon: FaUserShield,  label: 'Restricted', mod: 'restricted' }
+    default:           return { icon: FaGlobe,       label: 'Public',     mod: 'public' }
+  }
+}
 
 const getPostRoute = (communitySlug, postId) =>
   `/community/${encodeURIComponent(communitySlug)}/post/${postId}`
@@ -54,7 +63,8 @@ export function CommunityPage() {
     const fetchCommunityAndMembership = async () => {
       try {
         setLoading(true)
-        const response = await fetch(`/api/Communities/${communityname}`)
+        const headers = token ? { Authorization: `Bearer ${token}` } : {}
+        const response = await fetch(`/api/Communities/${communityname}`, { headers })
         if (!response.ok) {
           throw new Error('Community not found')
         }
@@ -115,6 +125,7 @@ export function CommunityPage() {
           sortBy: sortBy.toLowerCase(),
           page,
           pageSize: PAGE_SIZE,
+          token,
         })
         if (cancelled) return
 
@@ -513,26 +524,44 @@ export function CommunityPage() {
                 />
               )}
               <div className='community-meta'>
-                <h1>{community.title}</h1>
+                <h1>
+                  {community.title}
+                  {(() => {
+                    const { icon: TypeIcon, label, mod } = communityTypeMeta(community.type)
+                    return (
+                      <span className={`community-type-badge community-type-${mod}`}>
+                        <TypeIcon className='community-type-icon' />
+                        {label}
+                      </span>
+                    )
+                  })()}
+                </h1>
                 <p>c/{community.slug}</p>
                 <span>{community.membersCount} members</span>
               </div>
-              <button
-                type='button'
-                className={`community-join-btn ${isMember ? 'community-leave-btn' : ''}`}
-                onClick={handleToggleMembership}
-                style={
-                  isMember
-                    ? {
-                        backgroundColor: 'transparent',
-                        color: 'white',
-                        border: '1px solid white',
-                      }
-                    : {}
-                }
-              >
-                {isMember ? 'Leave' : 'Join'}
-              </button>
+              {/* Private communities: hide Join button for non-members (they can't join freely) */}
+              {community.type?.toLowerCase() !== 'private' || isMember ? (
+                <button
+                  type='button'
+                  className={`community-join-btn ${isMember ? 'community-leave-btn' : ''}`}
+                  onClick={handleToggleMembership}
+                  style={
+                    isMember
+                      ? {
+                          backgroundColor: 'transparent',
+                          color: 'white',
+                          border: '1px solid white',
+                        }
+                      : {}
+                  }
+                >
+                  {isMember ? 'Leave' : 'Join'}
+                </button>
+              ) : (
+                <div className='community-private-badge'>
+                  <FaLock /> Private Community
+                </div>
+              )}
             </div>
           </header>
 
@@ -552,7 +581,23 @@ export function CommunityPage() {
           </section>
 
           <section className='community-feed' ref={postsWrapRef}>
-            {isLoadingPosts ? (
+            {/* Restricted banner: anyone can see posts, but only mods can create */}
+            {community.type?.toLowerCase() === 'restricted' && myRole !== 'owner' && myRole !== 'moderator' && (
+              <div className='community-restricted-banner'>
+                <FaUserShield className='community-restricted-banner-icon' />
+                <span>
+                  <strong>Restricted community</strong> — Only moderators can post here. Members can comment on existing posts.
+                </span>
+              </div>
+            )}
+            {/* Private wall: only members can view posts */}
+            {community.type?.toLowerCase() === 'private' && !isMember ? (
+              <div className='community-private-wall'>
+                <FaLock className='community-private-wall-icon' />
+                <h2>Private Community</h2>
+                <p>This community is private. Only approved members can view posts and discussions.</p>
+              </div>
+            ) : isLoadingPosts ? (
               <p style={{ textAlign: 'center', padding: '2rem' }}>
                 Loading posts...
               </p>
@@ -570,7 +615,7 @@ export function CommunityPage() {
                   post.imageUrl ?? post.ImageUrl,
                 )
                 return (
-                  <article key={post.id} className='post'>
+                  <article key={post.id} className={`post${post.isPinned ? ' post--pinned' : ''}`}>
                     <div className='post-main'>
                       <header className='post-header'>
                         {post.authorName === '[deleted]' ? (
@@ -591,6 +636,11 @@ export function CommunityPage() {
                           </Link>
                         )}
                         <div className='post-meta'>
+                          {post.isPinned && (
+                            <span className='post-pinned-badge'>
+                              <FaThumbtack className='post-pinned-icon' /> Pinned
+                            </span>
+                          )}
                           {post.authorName === '[deleted]' ? (
                             <span className='author'>u/[deleted]</span>
                           ) : (
@@ -785,17 +835,22 @@ export function CommunityPage() {
 
           <section className='community-side-card'>
             <h3>Rules</h3>
-            <ol>
-              {(
-                community.rules || [
-                  'Fii respectuos in discutii.',
-                  'Postarile trebuie sa aiba context clar.',
-                  'Fara comportament toxic.',
-                ]
-              ).map((rule) => (
-                <li key={rule}>{rule}</li>
-              ))}
-            </ol>
+            {community.rules ? (
+              <ol>
+                {community.rules
+                  .split('\n')
+                  .filter(Boolean)
+                  .map((rule, i) => (
+                    <li key={i}>{rule}</li>
+                  ))}
+              </ol>
+            ) : (
+              <ol>
+                <li>Fii respectuos in discutii.</li>
+                <li>Postarile trebuie sa aiba context clar.</li>
+                <li>Fara comportament toxic.</li>
+              </ol>
+            )}
           </section>
         </aside>
       </section>

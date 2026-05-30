@@ -118,7 +118,8 @@ export function PostPage() {
 
   useEffect(() => {
     setIsLoading(true)
-    fetch(`/api/posts/${postId}`)
+    const headers = token ? { Authorization: `Bearer ${token}` } : {}
+    fetch(`/api/posts/${postId}`, { headers })
       .then((response) => {
         if (!response.ok) throw new Error('Post not found')
         return response.json()
@@ -131,11 +132,12 @@ export function PostPage() {
         setError(fetchError.message)
         setIsLoading(false)
       })
-  }, [postId])
+  }, [postId, token])
 
   useEffect(() => {
     setIsLoadingComments(true)
-    fetch(`/api/comments/post/${postId}`)
+    const headers = token ? { Authorization: `Bearer ${token}` } : {}
+    fetch(`/api/comments/post/${postId}`, { headers })
       .then((response) => {
         if (!response.ok) throw new Error('Failed to load comments')
         return response.json()

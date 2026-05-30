@@ -9,8 +9,9 @@ const authHeaders = (token) => ({
 })
 
 // Fetch community by slug and return its data (including id)
-export const fetchCommunityBySlug = async (slug) => {
-  const res = await fetch(`/api/Communities/${slug}`)
+export const fetchCommunityBySlug = async (slug, token) => {
+  const headers = token ? { Authorization: `Bearer ${token}` } : {}
+  const res = await fetch(`/api/Communities/${slug}`, { headers })
   if (!res.ok) throw new Error('Community not found')
   return res.json()
 }
@@ -122,4 +123,57 @@ export const transferOwnership = async (communityId, newOwnerId, token) => {
   const text = await safeText(res)
   if (!res.ok) throw new Error(text || 'Failed to transfer ownership')
   return text
+}
+
+// ── Pinned posts ──────────────────────────────────────────────────────────────
+
+// Returns all currently pinned posts for a community (public)
+export const fetchPinnedPosts = async (communityId, token) => {
+  const res = await fetch(`/api/Communities/${communityId}/posts/pinned`, {
+    headers: token ? authHeaders(token) : {},
+  })
+  if (!res.ok) throw new Error('Failed to fetch pinned posts')
+  return res.json()
+}
+
+// Pin a post (mod/owner only)
+export const pinPost = async (communityId, postId, token) => {
+  const res = await fetch(`/api/Communities/${communityId}/posts/${postId}/pin`, {
+    method: 'POST',
+    headers: authHeaders(token),
+  })
+  const text = await safeText(res)
+  if (!res.ok) throw new Error(text || 'Failed to pin post')
+  return text
+}
+
+// Unpin a post (mod/owner only)
+export const unpinPost = async (communityId, postId, token) => {
+  const res = await fetch(`/api/Communities/${communityId}/posts/${postId}/pin`, {
+    method: 'DELETE',
+    headers: authHeaders(token),
+  })
+  const text = await safeText(res)
+  if (!res.ok) throw new Error(text || 'Failed to unpin post')
+  return text
+}
+
+// Fetch mod log entries for a community (mods/owner only)
+export const fetchModLog = async (communityId, token, actionType = null) => {
+  const params = actionType && actionType !== 'all' ? `?actionType=${actionType}` : ''
+  const res = await fetch(`/api/Communities/${communityId}/modlog${params}`, {
+    headers: authHeaders(token),
+  })
+  if (!res.ok) throw new Error('Failed to fetch mod log')
+  return res.json()
+}
+
+// Fetch recent community posts for the "All Posts" picker in Pinned tab
+export const fetchCommunityPostsForMod = async (communityId, token) => {
+  const res = await fetch(
+    `/api/Posts/community/${communityId}?sortBy=new&page=1&pageSize=50`,
+    { headers: token ? authHeaders(token) : {} },
+  )
+  if (!res.ok) throw new Error('Failed to fetch community posts')
+  return res.json()
 }

@@ -51,7 +51,7 @@ export const Home = () => {
     setFeedError(null)
     setIsLoading(true)
     setIsLoadingMore(false)
-  }, [sortBy])
+  }, [sortBy, token])
 
   useEffect(() => {
     let cancelled = false
@@ -69,6 +69,7 @@ export const Home = () => {
           sortBy,
           page,
           pageSize: PAGE_SIZE,
+          token,
         })
         if (cancelled) return
 
@@ -100,7 +101,7 @@ export const Home = () => {
     return () => {
       cancelled = true
     }
-  }, [page, sortBy])
+  }, [page, sortBy, token])
 
   const loadNextPage = useCallback(() => {
     if (isLoading || isLoadingMore || !hasMore || feedError) return

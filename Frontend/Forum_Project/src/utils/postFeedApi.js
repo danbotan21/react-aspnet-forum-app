@@ -30,9 +30,10 @@ const parsePostBatch = (payload, fallbackPage, fallbackPageSize) => {
   }
 }
 
-export const fetchPostsPage = async ({ sortBy, page, pageSize }) => {
+export const fetchPostsPage = async ({ sortBy, page, pageSize, token }) => {
   const query = buildQueryString({ sortBy, page, pageSize })
-  const response = await fetch(`/api/posts?${query}`)
+  const headers = token ? { Authorization: `Bearer ${token}` } : {}
+  const response = await fetch(`/api/posts?${query}`, { headers })
   if (!response.ok) {
     throw new Error(`Failed to load posts (${response.status})`)
   }
@@ -45,9 +46,11 @@ export const fetchCommunityPostsPage = async ({
   sortBy,
   page,
   pageSize,
+  token,
 }) => {
   const query = buildQueryString({ sortBy, page, pageSize })
-  const response = await fetch(`/api/posts/community/${communityId}?${query}`)
+  const headers = token ? { Authorization: `Bearer ${token}` } : {}
+  const response = await fetch(`/api/posts/community/${communityId}?${query}`, { headers })
   if (!response.ok) {
     throw new Error(`Failed to load community posts (${response.status})`)
   }

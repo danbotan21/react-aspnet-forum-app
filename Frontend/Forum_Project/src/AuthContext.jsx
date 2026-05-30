@@ -16,9 +16,22 @@ export const AuthProvider = ({ children }) => {
   // On mount: attempt silent re-auth using the httpOnly refresh token cookie.
   // If the cookie is valid the backend returns a fresh access token.
   useEffect(() => {
+    const silentRefresh = () => {
+      fetch('/api/auth/refresh', { method: 'POST', credentials: 'include' })
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data?.token && data?.user) {
+            setToken(data.token)
+            setUser(data.user)
+            localStorage.setItem('user', JSON.stringify(data.user))
+          }
+        })
+        .catch(() => {})
+    }
+
     fetch('/api/auth/refresh', {
       method: 'POST',
-      credentials: 'include', // sends the httpOnly refreshToken cookie
+      credentials: 'include',
     })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
@@ -34,6 +47,10 @@ export const AuthProvider = ({ children }) => {
         localStorage.removeItem('user')
       })
       .finally(() => setLoading(false))
+
+    // Proactively refresh every 10 minutes so the access token never expires mid-session
+    const interval = setInterval(silentRefresh, 10 * 60 * 1000)
+    return () => clearInterval(interval)
   }, [])
 
   // Called after a successful login response from the backend.

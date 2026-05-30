@@ -38,6 +38,15 @@ export const Popular = () => {
   const loadMoreTriggerRef = useRef(null)
 
   useEffect(() => {
+    setPosts([])
+    setPage(1)
+    setHasMore(true)
+    setError(null)
+    setLoading(true)
+    setIsLoadingMore(false)
+  }, [token])
+
+  useEffect(() => {
     let cancelled = false
 
     const loadPage = async () => {
@@ -53,6 +62,7 @@ export const Popular = () => {
           sortBy: 'top',
           page,
           pageSize: PAGE_SIZE,
+          token,
         })
         if (cancelled) return
 
@@ -84,7 +94,7 @@ export const Popular = () => {
     return () => {
       cancelled = true
     }
-  }, [page])
+  }, [page, token])
 
   const loadNextPage = useCallback(() => {
     if (loading || isLoadingMore || !hasMore || error) return

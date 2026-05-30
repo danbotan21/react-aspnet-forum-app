@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { FaTimes, FaPen, FaTrash, FaCloudUploadAlt } from 'react-icons/fa'
+import { FaTimes, FaPen, FaTrash, FaCloudUploadAlt, FaUserShield } from 'react-icons/fa'
 import { useAuth } from './AuthContext'
 import { uploadImage } from './utils/imageUpload'
 import { normalizeImageSrc } from './utils/media'
@@ -29,6 +29,8 @@ export const CreatePost = () => {
   const [draftsError, setDraftsError] = useState('')
   const [currentDraftId, setCurrentDraftId] = useState(null)
   const [isSavingDraft, setIsSavingDraft] = useState(false)
+  const [submitError, setSubmitError] = useState('')
+  const [myRoleInSelected, setMyRoleInSelected] = useState(null)
 
   const dragCounterRef = useRef(0)
   const fileInputRef = useRef(null)
@@ -167,12 +169,14 @@ export const CreatePost = () => {
 
   // Fetch only communities where the current user is a member
   useEffect(() => {
-    if (!user?.id) {
+    if (!user?.id || !token) {
       setCommunities([])
       return
     }
 
-    fetch(`/api/communities/user/${user.id}`)
+    fetch(`/api/communities/user/${user.id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
       .then((res) => {
         if (!res.ok) throw new Error('Failed to fetch communities')
         return res.json()
@@ -181,7 +185,24 @@ export const CreatePost = () => {
         setCommunities(data)
       })
       .catch((err) => console.error(err))
-  }, [user?.id])
+  }, [user?.id, token])
+
+  // When a restricted community is selected, fetch the user's role to decide if posting is allowed
+  useEffect(() => {
+    setMyRoleInSelected(null)
+    setSubmitError('')
+    if (!communityId || !token) return
+
+    const selected = communities.find((c) => String(c.id) === String(communityId))
+    if (selected?.type?.toLowerCase() !== 'restricted') return
+
+    fetch(`/api/communities/${communityId}/myrole`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => setMyRoleInSelected(data?.role ?? null))
+      .catch(() => setMyRoleInSelected(null))
+  }, [communityId, token, communities])
 
   const handleSaveDraft = async () => {
     if (!token) {
@@ -305,19 +326,30 @@ export const CreatePost = () => {
   }
 
   const handleSubmit = async () => {
+    setSubmitError('')
+
     if (!token) {
-      alert('Please login to create a post.')
+      setSubmitError('Please login to create a post.')
       return
     }
 
     if (!communityId) {
-      alert('Please select a community')
+      setSubmitError('Please select a community.')
       return
     }
     if (!postTitle.trim()) {
-      alert('Title is required')
+      setSubmitError('Title is required.')
       return
     }
+
+    const selectedComm = communities.find((c) => String(c.id) === String(communityId))
+    if (selectedComm?.type?.toLowerCase() === 'restricted') {
+      if (myRoleInSelected !== 'owner' && myRoleInSelected !== 'moderator') {
+        setSubmitError('This is a restricted community — only moderators can post here.')
+        return
+      }
+    }
+
     setIsSubmitting(true)
 
     let imageUrl = null
@@ -385,7 +417,7 @@ export const CreatePost = () => {
       }
     } catch (error) {
       console.error(error)
-      alert('An error occurred while creating the post.')
+      setSubmitError('An error occurred while creating the post. Please try again.')
     } finally {
       setIsSubmitting(false)
     }
@@ -427,11 +459,25 @@ export const CreatePost = () => {
             </option>
             {communities.map((comm) => (
               <option key={comm.id} value={comm.id}>
-                r/{comm.slug}
+                r/{comm.slug}{comm.type === 'restricted' ? ' (restricted)' : comm.type === 'private' ? ' (private)' : ''}
               </option>
             ))}
           </select>
         </div>
+
+        {(() => {
+          const sel = communities.find((c) => String(c.id) === String(communityId))
+          if (!sel) return null
+          if (sel.type?.toLowerCase() === 'restricted' && myRoleInSelected !== 'owner' && myRoleInSelected !== 'moderator') {
+            return (
+              <div className='create-post-restricted-banner'>
+                <FaUserShield className='create-post-restricted-icon' />
+                <span><strong>Restricted community</strong> — Only moderators and the owner can post here.</span>
+              </div>
+            )
+          }
+          return null
+        })()}
 
         <div className='create-post-editor'>
           <div
@@ -560,6 +606,12 @@ export const CreatePost = () => {
               />
             )}
           </div>
+
+          {submitError && (
+            <div className='create-post-submit-error'>
+              {submitError}
+            </div>
+          )}
 
           <div className='create-post-actions'>
             <button

@@ -7,6 +7,7 @@ import {
   FaRobot,
   FaCode,
   FaGamepad,
+  FaUserShield,
 } from 'react-icons/fa'
 import { MdTravelExplore, MdLocalMovies } from 'react-icons/md'
 import './Styles/ExploreCommunities.css'
@@ -208,6 +209,11 @@ export const ExploreCommunities = () => {
                   >
                     {community.title}
                   </Link>
+                  {community.type?.toLowerCase() === 'restricted' && (
+                    <span className='explore-type-badge explore-type-restricted'>
+                      <FaUserShield /> Restricted
+                    </span>
+                  )}
                 </h3>
                 <p className='explore-visitors'>
                   {community.membersCount} members

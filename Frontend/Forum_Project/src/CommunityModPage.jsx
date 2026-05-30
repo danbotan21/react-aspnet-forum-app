@@ -34,6 +34,11 @@ import {
   banMember,
   unbanMember,
   transferOwnership,
+  fetchPinnedPosts,
+  pinPost,
+  unpinPost,
+  fetchCommunityPostsForMod,
+  fetchModLog,
 } from './utils/modApi'
 import {
   fetchCommunityReports,
@@ -44,131 +49,14 @@ import './Styles/CommunityModPage.css'
 import { normalizeImageSrc } from './utils/media'
 import { uploadImage } from './utils/imageUpload'
 
-// ─── MOCK DATA (Reports, Pinned, ModLog — backend pending) ───────────────────
-
-const MOCK_REPORTS = [
-  {
-    id: 1,
-    type: 'Post',
-    title: 'Make $10k in one week with this trick!',
-    contentPreview:
-      'This post promotes a fraudulent scheme and includes misleading affiliate links to external sites...',
-    hasImage: true,
-    viewUrl: '#',
-    reporter: 'user_alice',
-    reportedUser: 'spammer99',
-    reason: 'Spam / Misleading content',
-    createdAt: '2026-05-21',
-  },
-  {
-    id: 2,
-    type: 'Comment',
-    title: null,
-    contentPreview:
-      '"You are a complete idiot and should stop coding permanently. This advice is garbage."',
-    hasImage: false,
-    viewUrl: '#',
-    reporter: 'coder_bob',
-    reportedUser: 'angry_user',
-    reason: 'Hate speech / Personal attack',
-    createdAt: '2026-05-20',
-  },
-  {
-    id: 3,
-    type: 'Post',
-    title: 'Learn Python in 2 days (my affiliate link inside)',
-    contentPreview:
-      'Check out my new course for free, just click this link to get started and buy the premium tier...',
-    hasImage: false,
-    viewUrl: '#',
-    reporter: 'dev_charlie',
-    reportedUser: 'promo_account',
-    reason: 'Unsolicited promotion / Affiliate spam',
-    createdAt: '2026-05-19',
-  },
-]
-
-const MOCK_POSTS = [
-  {
-    id: 101,
-    title: 'Community Rules & Guidelines',
-    author: 'mod',
-    votes: 892,
-    pinned: true,
-    createdAt: '2024-01-16',
-  },
-  {
-    id: 102,
-    title: 'Weekly Discussion Thread — May 2026',
-    author: 'mod',
-    votes: 234,
-    pinned: true,
-    createdAt: '2026-05-01',
-  },
-  {
-    id: 103,
-    title: 'How to ask a good question',
-    author: 'mod',
-    votes: 567,
-    pinned: false,
-    createdAt: '2024-02-10',
-  },
-]
-
-const MOCK_MOD_LOG = [
-  {
-    id: 1,
-    action: 'Removed Post',
-    actionType: 'remove',
-    target: '"Make $10k in one week"',
-    targetUser: 'spammer99',
-    moderator: 'mod_alice',
-    date: '2026-05-21 14:32',
-  },
-  {
-    id: 2,
-    action: 'Kicked Member',
-    actionType: 'kick',
-    target: 'toxic_user99',
-    targetUser: 'toxic_user99',
-    moderator: 'owner',
-    date: '2026-05-20 09:15',
-  },
-  {
-    id: 3,
-    action: 'Dismissed Report',
-    actionType: 'dismiss',
-    target: 'Comment by user_xyz',
-    targetUser: 'user_xyz',
-    moderator: 'mod_alice',
-    date: '2026-05-19 16:40',
-  },
-  {
-    id: 4,
-    action: 'Promoted Moderator',
-    actionType: 'promote',
-    target: 'mod_bob',
-    targetUser: 'mod_bob',
-    moderator: 'owner',
-    date: '2024-03-10 16:00',
-  },
-  {
-    id: 5,
-    action: 'Pinned Post',
-    actionType: 'pin',
-    target: '"Community Rules & Guidelines"',
-    targetUser: null,
-    moderator: 'owner',
-    date: '2024-01-16 10:00',
-  },
-]
-
 const LOG_FILTERS = [
   { label: 'All', value: 'all' },
-  { label: 'Removed', value: 'remove' },
+  { label: 'Banned', value: 'ban' },
   { label: 'Kicked', value: 'kick' },
   { label: 'Promoted', value: 'promote' },
+  { label: 'Demoted', value: 'demote' },
   { label: 'Pinned', value: 'pin' },
+  { label: 'Removed', value: 'remove' },
   { label: 'Dismissed', value: 'dismiss' },
 ]
 
@@ -227,11 +115,16 @@ function TypeBadge({ type }) {
 
 function ActionLogBadge({ actionType }) {
   const map = {
-    remove: { label: 'Removed', cls: 'mod-log-remove' },
+    ban: { label: 'Banned', cls: 'mod-log-ban' },
+    unban: { label: 'Unbanned', cls: 'mod-log-unban' },
     kick: { label: 'Kicked', cls: 'mod-log-kick' },
-    dismiss: { label: 'Dismissed', cls: 'mod-log-dismiss' },
     promote: { label: 'Promoted', cls: 'mod-log-promote' },
+    demote: { label: 'Demoted', cls: 'mod-log-demote' },
+    transfer: { label: 'Transferred', cls: 'mod-log-transfer' },
     pin: { label: 'Pinned', cls: 'mod-log-pin' },
+    unpin: { label: 'Unpinned', cls: 'mod-log-unpin' },
+    remove: { label: 'Removed', cls: 'mod-log-remove' },
+    dismiss: { label: 'Dismissed', cls: 'mod-log-dismiss' },
   }
   const { label, cls } = map[actionType] || { label: actionType, cls: '' }
   return <span className={`mod-log-badge ${cls}`}>{label}</span>
@@ -263,6 +156,7 @@ function ErrorState({ message }) {
 function OverviewTab({ communityId, token, onNavigate, pendingReportsCount }) {
   const [stats, setStats] = useState(null)
   const [loadingStats, setLoadingStats] = useState(true)
+  const [recentLog, setRecentLog] = useState([])
 
   useEffect(() => {
     if (!communityId || !token) return
@@ -270,6 +164,9 @@ function OverviewTab({ communityId, token, onNavigate, pendingReportsCount }) {
       .then(setStats)
       .catch(() => {})
       .finally(() => setLoadingStats(false))
+    fetchModLog(communityId, token)
+      .then((data) => setRecentLog(data.slice(0, 5)))
+      .catch(() => {})
   }, [communityId, token])
 
   const pendingReports = pendingReportsCount
@@ -354,13 +251,41 @@ function OverviewTab({ communityId, token, onNavigate, pendingReportsCount }) {
 
       <div className='mod-recent-actions'>
         <h3 className='mod-subsection-title'>Recent Moderation Actions</h3>
-        <div className='mod-log-coming-soon'>
-          <FaList className='mod-log-coming-icon' />
-          <p>Mod log will be available in a future update.</p>
-          <button className='mod-link-btn' onClick={() => onNavigate('modlog')}>
-            View Mod Log →
-          </button>
-        </div>
+        {recentLog.length === 0 ? (
+          <div className='mod-log-coming-soon'>
+            <FaList className='mod-log-coming-icon' />
+            <p>No moderation actions recorded yet.</p>
+          </div>
+        ) : (
+          <>
+            <div className='mod-log-list'>
+              {recentLog.map((entry) => (
+                <div key={entry.id} className='mod-log-entry'>
+                  <div className='mod-log-entry-left'>
+                    <ActionLogBadge actionType={entry.actionType} />
+                  </div>
+                  <div className='mod-log-info'>
+                    <span className='mod-log-target'>
+                      {logEntryDescription(entry)}
+                    </span>
+                    <span className='mod-log-meta'>
+                      by u/{entry.actorUserName}
+                      <span className='mod-meta-sep'>·</span>
+                      {new Date(entry.createdAt).toLocaleDateString()}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <button
+              className='mod-link-btn'
+              style={{ marginTop: 8 }}
+              onClick={() => onNavigate('modlog')}
+            >
+              View full Mod Log →
+            </button>
+          </>
+        )}
       </div>
     </div>
   )
@@ -374,6 +299,8 @@ function ReportsTab({ communityId, token, communityname, onCountChange }) {
   const [error, setError] = useState(null)
   const [filter, setFilter] = useState('All')
   const [pending, setPending] = useState({})
+  const [banningReport, setBanningReport] = useState(null) // reportId being banned
+  const [banReason, setBanReason] = useState('')
 
   const load = async () => {
     try {
@@ -413,6 +340,43 @@ function ReportsTab({ communityId, token, communityname, onCountChange }) {
     )
       return
     withPending(id, () => removeReportedContent(id, token))
+  }
+
+  const handleBanAuthor = async (report) => {
+    if (!banReason.trim()) {
+      alert('Please provide a ban reason.')
+      return
+    }
+    const key = `ban-${report.id}`
+    if (pending[key]) return
+    // We need the userId — not directly in report DTO.
+    // We use the username to find it from members list; backend also handles unknown users gracefully.
+    // The cleanest approach: ban + remove content in sequence.
+    setPending((p) => ({ ...p, [key]: true }))
+    try {
+      // First remove content, then ban — backend resolves userId by checking members
+      // We call our combined action: removeReportedContent closes the report, then banMember by username lookup
+      // Since backend BanMember needs userId, we search members
+      const members = await fetchMembers(communityId, token)
+      const target = members.find(
+        (m) => m.userName === report.contentAuthorUserName,
+      )
+      if (!target) {
+        alert(
+          'Could not find user in community members. They may have already left.',
+        )
+        return
+      }
+      await banMember(communityId, target.userId, banReason, token)
+      await removeReportedContent(report.id, token)
+      setBanningReport(null)
+      setBanReason('')
+      await load()
+    } catch (e) {
+      alert(e.message)
+    } finally {
+      setPending((p) => ({ ...p, [key]: false }))
+    }
   }
 
   const filtered =
@@ -482,12 +446,13 @@ function ReportsTab({ communityId, token, communityname, onCountChange }) {
                         {report.contentPreview}
                       </p>
                     )}
-                    {report.typeName === 'Post' && report.hasImage && (
+                    {report.typeName === 'Post' && report.postImageUrl && (
                       <div className='mod-report-image-thumb'>
-                        <div className='mod-report-image-placeholder' />
-                        <span className='mod-report-image-label'>
-                          Post contains an image
-                        </span>
+                        <img
+                          src={normalizeImageSrc(report.postImageUrl)}
+                          alt='Post image'
+                          className='mod-report-image-preview'
+                        />
                       </div>
                     )}
                   </div>
@@ -497,7 +462,10 @@ function ReportsTab({ communityId, token, communityname, onCountChange }) {
                     </span>
                     <span className='mod-meta-sep'>·</span>
                     <span>
-                      Author: <strong>u/{report.contentAuthorUserName}</strong>
+                      Author:{' '}
+                      <strong className='mod-report-author-name'>
+                        u/{report.contentAuthorUserName}
+                      </strong>
                     </span>
                   </div>
                   <div className='mod-report-actions'>
@@ -523,7 +491,58 @@ function ReportsTab({ communityId, token, communityname, onCountChange }) {
                     >
                       <FaTrash /> Remove Content
                     </button>
+                    <button
+                      className='mod-btn mod-btn-ban'
+                      onClick={() => {
+                        setBanningReport(
+                          banningReport === report.id ? null : report.id,
+                        )
+                        setBanReason('')
+                      }}
+                      disabled={pending[`ban-${report.id}`]}
+                    >
+                      <FaBan /> Ban Author
+                    </button>
                   </div>
+
+                  {banningReport === report.id && (
+                    <div className='mod-ban-inline mod-ban-from-report'>
+                      <input
+                        className='mod-settings-input mod-ban-reason-input'
+                        placeholder={`Ban reason for u/${report.contentAuthorUserName}...`}
+                        value={banReason}
+                        onChange={(e) => setBanReason(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleBanAuthor(report)
+                          if (e.key === 'Escape') {
+                            setBanningReport(null)
+                            setBanReason('')
+                          }
+                        }}
+                        autoFocus
+                      />
+                      <button
+                        className='mod-btn mod-btn-sm mod-btn-danger-solid'
+                        onClick={() => handleBanAuthor(report)}
+                        disabled={pending[`ban-${report.id}`]}
+                      >
+                        {pending[`ban-${report.id}`] ? (
+                          <FaSpinner className='mod-spin' />
+                        ) : (
+                          'Confirm Ban + Remove'
+                        )}
+                      </button>
+                      <button
+                        className='mod-btn mod-btn-sm mod-btn-ghost'
+                        onClick={() => {
+                          setBanningReport(null)
+                          setBanReason('')
+                        }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -881,27 +900,69 @@ function BannedMembersTab({ communityId, token }) {
   )
 }
 
-// ─── PINNED POSTS TAB (mock) ─────────────────────────────────────────────────
+// ─── PINNED POSTS TAB ────────────────────────────────────────────────────────
 
-function PinnedTab() {
-  const [posts, setPosts] = useState(MOCK_POSTS)
-  const pinnedCount = posts.filter((p) => p.pinned).length
+function PinnedTab({ communityId, token }) {
+  const [pinnedPosts, setPinnedPosts] = useState([])
+  const [allPosts, setAllPosts] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [pending, setPending] = useState({})
 
-  const togglePin = (id) => {
-    setPosts((prev) =>
-      prev.map((p) => {
-        if (p.id !== id) return p
-        if (!p.pinned && pinnedCount >= MAX_PINS) {
-          alert(`Maximum ${MAX_PINS} posts can be pinned at the same time.`)
-          return p
-        }
-        return { ...p, pinned: !p.pinned }
-      }),
-    )
+  const load = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      const [pinnedBatch, allBatch] = await Promise.all([
+        fetchPinnedPosts(communityId, token),
+        fetchCommunityPostsForMod(communityId, token),
+      ])
+      const pinnedIds = new Set((pinnedBatch.items ?? []).map((p) => p.id))
+      setPinnedPosts(pinnedBatch.items ?? [])
+      // allPosts = all community posts not currently pinned (for the "All Posts" picker)
+      setAllPosts((allBatch.items ?? []).filter((p) => !pinnedIds.has(p.id)))
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const pinned = posts.filter((p) => p.pinned)
-  const unpinned = posts.filter((p) => !p.pinned)
+  useEffect(() => {
+    if (communityId && token) load()
+  }, [communityId, token])
+
+  const pinnedCount = pinnedPosts.length
+
+  const handlePin = async (postId) => {
+    if (pending[postId]) return
+    if (pinnedCount >= MAX_PINS) {
+      alert(`Maximum ${MAX_PINS} posts can be pinned at the same time.`)
+      return
+    }
+    setPending((p) => ({ ...p, [postId]: true }))
+    try {
+      await pinPost(communityId, postId, token)
+      await load()
+    } catch (e) {
+      alert(e.message)
+    } finally {
+      setPending((p) => ({ ...p, [postId]: false }))
+    }
+  }
+
+  const handleUnpin = async (postId) => {
+    if (pending[postId]) return
+    setPending((p) => ({ ...p, [postId]: true }))
+    try {
+      await unpinPost(communityId, postId, token)
+      await load()
+    } catch (e) {
+      alert(e.message)
+    } finally {
+      setPending((p) => ({ ...p, [postId]: false }))
+    }
+  }
 
   return (
     <div className='mod-tab-content'>
@@ -913,62 +974,89 @@ function PinnedTab() {
         </p>
       </div>
 
-      {pinned.length > 0 && (
-        <div className='mod-pinned-section'>
-          <h3 className='mod-subsection-title'>
-            Currently Pinned ({pinned.length}/{MAX_PINS})
-          </h3>
-          <div className='mod-post-list'>
-            {pinned.map((post) => (
-              <div key={post.id} className='mod-post-card mod-post-pinned'>
-                <FaThumbtack className='mod-pin-icon' />
-                <div className='mod-post-info'>
-                  <span className='mod-post-title'>{post.title}</span>
-                  <span className='mod-post-meta'>
-                    by u/{post.author} · {post.votes} votes · {post.createdAt}
-                  </span>
-                </div>
-                <button
-                  className='mod-btn mod-btn-sm mod-btn-ghost'
-                  onClick={() => togglePin(post.id)}
-                >
-                  Unpin
-                </button>
+      {loading ? (
+        <LoadingState />
+      ) : error ? (
+        <ErrorState message={error} />
+      ) : (
+        <>
+          {pinnedPosts.length > 0 && (
+            <div className='mod-pinned-section'>
+              <h3 className='mod-subsection-title'>
+                Currently Pinned ({pinnedPosts.length}/{MAX_PINS})
+              </h3>
+              <div className='mod-post-list'>
+                {pinnedPosts.map((post) => (
+                  <div key={post.id} className='mod-post-card mod-post-pinned'>
+                    <FaThumbtack className='mod-pin-icon' />
+                    <div className='mod-post-info'>
+                      <span className='mod-post-title'>{post.title}</span>
+                      <span className='mod-post-meta'>
+                        by u/{post.authorName} · {post.votes} votes ·{' '}
+                        {new Date(post.createdAt).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <button
+                      className='mod-btn mod-btn-sm mod-btn-ghost'
+                      onClick={() => handleUnpin(post.id)}
+                      disabled={pending[post.id]}
+                    >
+                      {pending[post.id] ? (
+                        <FaSpinner className='mod-spin' />
+                      ) : (
+                        'Unpin'
+                      )}
+                    </button>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        </div>
-      )}
+            </div>
+          )}
 
-      <div className='mod-pinned-section'>
-        <h3 className='mod-subsection-title'>All Posts</h3>
-        {unpinned.length === 0 ? (
-          <div className='mod-empty-state' style={{ padding: '24px' }}>
-            <FaThumbtack className='mod-empty-icon' />
-            <p>All posts are already pinned.</p>
-          </div>
-        ) : (
-          <div className='mod-post-list'>
-            {unpinned.map((post) => (
-              <div key={post.id} className='mod-post-card'>
-                <div className='mod-post-info'>
-                  <span className='mod-post-title'>{post.title}</span>
-                  <span className='mod-post-meta'>
-                    by u/{post.author} · {post.votes} votes · {post.createdAt}
-                  </span>
-                </div>
-                <button
-                  className={`mod-btn mod-btn-sm mod-btn-blue ${pinnedCount >= MAX_PINS ? 'mod-btn-disabled' : ''}`}
-                  onClick={() => togglePin(post.id)}
-                  disabled={pinnedCount >= MAX_PINS}
-                >
-                  <FaThumbtack /> Pin
-                </button>
+          <div className='mod-pinned-section'>
+            <h3 className='mod-subsection-title'>All Posts</h3>
+            {allPosts.length === 0 ? (
+              <div className='mod-empty-state' style={{ padding: '24px' }}>
+                <FaThumbtack className='mod-empty-icon' />
+                <p>
+                  {pinnedPosts.length === 0
+                    ? 'No posts in this community yet.'
+                    : 'All posts are already pinned.'}
+                </p>
               </div>
-            ))}
+            ) : (
+              <div className='mod-post-list'>
+                {allPosts.map((post) => (
+                  <div key={post.id} className='mod-post-card'>
+                    <div className='mod-post-info'>
+                      <span className='mod-post-title'>{post.title}</span>
+                      <span className='mod-post-meta'>
+                        by u/{post.authorName} · {post.votes} votes ·{' '}
+                        {new Date(post.createdAt).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <button
+                      className={`mod-btn mod-btn-sm mod-btn-blue ${
+                        pinnedCount >= MAX_PINS ? 'mod-btn-disabled' : ''
+                      }`}
+                      onClick={() => handlePin(post.id)}
+                      disabled={pinnedCount >= MAX_PINS || pending[post.id]}
+                    >
+                      {pending[post.id] ? (
+                        <FaSpinner className='mod-spin' />
+                      ) : (
+                        <>
+                          <FaThumbtack /> Pin
+                        </>
+                      )}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        </>
+      )}
     </div>
   )
 }
@@ -1175,369 +1263,423 @@ function CommunitySettingsTab({
         </p>
       </div>
 
-      {savedMsg && <div className='mod-status-success'>{savedMsg}</div>}
-
-      <form className='mod-settings-form' onSubmit={handleSave}>
-        <div className='mod-settings-section'>
-          <h3 className='mod-settings-section-title'>Identity</h3>
-
-          <div className='mod-media-upload-row'>
-            {/* Avatar */}
-            <div className='mod-media-upload-item'>
-              <label className='mod-settings-label'>Community Avatar</label>
-              {(() => {
-                const src =
-                  avatarPreview ||
-                  (!clearAvatar && normalizeImageSrc(communityData?.avatarUrl))
-                return src ? (
-                  <div
-                    className='mod-media-upload-zone mod-media-avatar-zone has-image'
-                    onClick={() => avatarInputRef.current?.click()}
-                  >
-                    <img
-                      src={src}
-                      alt='Avatar'
-                      className='mod-media-upload-img'
-                    />
-                    <div className='mod-media-upload-overlay'>
-                      <button
-                        type='button'
-                        className='mod-media-upload-btn'
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          avatarInputRef.current?.click()
-                        }}
-                      >
-                        Change
-                      </button>
-                      <button
-                        type='button'
-                        className='mod-media-upload-btn mod-media-upload-btn-remove'
-                        onClick={handleAvatarRemove}
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div
-                    className='mod-media-upload-zone mod-media-avatar-zone'
-                    onClick={() => avatarInputRef.current?.click()}
-                  >
-                    <FaEdit className='mod-media-icon' />
-                    <span className='mod-media-hint'>Click to upload</span>
-                  </div>
-                )
-              })()}
-              <input
-                ref={avatarInputRef}
-                type='file'
-                accept='image/*'
-                style={{ display: 'none' }}
-                onChange={handleAvatarChange}
-                disabled={saving}
-              />
-            </div>
-
-            {/* Banner */}
-            <div className='mod-media-upload-item mod-media-banner-item'>
-              <label className='mod-settings-label'>Community Banner</label>
-              {(() => {
-                const src =
-                  bannerPreview ||
-                  (!clearBanner && normalizeImageSrc(communityData?.bannerUrl))
-                return src ? (
-                  <div
-                    className='mod-media-upload-zone mod-media-banner-zone has-image'
-                    onClick={() => bannerInputRef.current?.click()}
-                  >
-                    <img
-                      src={src}
-                      alt='Banner'
-                      className='mod-media-upload-img'
-                    />
-                    <div className='mod-media-upload-overlay'>
-                      <button
-                        type='button'
-                        className='mod-media-upload-btn'
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          bannerInputRef.current?.click()
-                        }}
-                      >
-                        Change
-                      </button>
-                      <button
-                        type='button'
-                        className='mod-media-upload-btn mod-media-upload-btn-remove'
-                        onClick={handleBannerRemove}
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div
-                    className='mod-media-upload-zone mod-media-banner-zone'
-                    onClick={() => bannerInputRef.current?.click()}
-                  >
-                    <FaEdit className='mod-media-icon' />
-                    <span className='mod-media-hint'>
-                      Click to upload · 1920×320 px recomandat
-                    </span>
-                  </div>
-                )
-              })()}
-              <input
-                ref={bannerInputRef}
-                type='file'
-                accept='image/*'
-                style={{ display: 'none' }}
-                onChange={handleBannerChange}
-                disabled={saving}
-              />
-            </div>
-          </div>
-
-          <div className='mod-form-group'>
-            <label className='mod-settings-label'>Community Name</label>
-            <input
-              className='mod-settings-input'
-              value={form.title ?? ''}
-              onChange={(e) =>
-                setForm((prev) => ({ ...prev, title: e.target.value }))
-              }
-              placeholder='Community name'
-            />
-          </div>
-
-          <div className='mod-form-group'>
-            <label className='mod-settings-label'>Description</label>
-            <textarea
-              className='mod-settings-input mod-settings-textarea'
-              value={form.description ?? ''}
-              onChange={(e) =>
-                setForm((prev) => ({ ...prev, description: e.target.value }))
-              }
-              rows={4}
-              maxLength={500}
-              placeholder='Describe your community...'
-            />
-            <span className='mod-char-count'>
-              {(form.description ?? '').length}/500
-            </span>
-          </div>
-
-          <div className='mod-form-row'>
-            <div className='mod-form-group'>
-              <label className='mod-settings-label'>Category</label>
-              <select
-                className='mod-settings-input mod-settings-select'
-                value={form.category ?? ''}
-                onChange={(e) =>
-                  setForm((prev) => ({ ...prev, category: e.target.value }))
-                }
-              >
-                {[
-                  'Technology',
-                  'Science',
-                  'Gaming',
-                  'Sports',
-                  'Art',
-                  'Music',
-                  'Education',
-                  'Other',
-                ].map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className='mod-form-group'>
-              <label className='mod-settings-label'>Community Type</label>
-              <select
-                className='mod-settings-input mod-settings-select'
-                value={form.type ?? ''}
-                onChange={(e) =>
-                  setForm((prev) => ({ ...prev, type: e.target.value }))
-                }
-              >
-                <option value='public'>
-                  Public — anyone can view and post
-                </option>
-                <option value='restricted'>
-                  Restricted — anyone can view, only mods post
-                </option>
-                <option value='private'>Private — invite only</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        {/* Rules */}
-        <div className='mod-settings-section'>
-          <h3 className='mod-settings-section-title'>Community Rules</h3>
-          <p className='mod-settings-section-desc'>
-            Rules are shown in the community sidebar to all visitors.
+      {myRole !== 'owner' ? (
+        <div className='mod-settings-readonly-notice'>
+          <FaShieldAlt className='mod-settings-readonly-icon' />
+          <h3>Settings — Read Only</h3>
+          <p>
+            Only the community owner can modify settings. Contact the owner if
+            you need changes made.
           </p>
-          <div className='mod-rules-list'>
-            {rules.map((rule, i) => (
-              <div key={i} className='mod-rule-item'>
-                <span className='mod-rule-number'>{i + 1}</span>
-                <span className='mod-rule-text'>{rule}</span>
-                <button
-                  type='button'
-                  className='mod-rule-remove'
-                  onClick={() => removeRule(i)}
-                  aria-label='Remove rule'
-                >
-                  <FaTimes />
-                </button>
-              </div>
-            ))}
-          </div>
-          <div className='mod-add-rule-row'>
-            <input
-              className='mod-settings-input'
-              placeholder='Add a new rule...'
-              value={newRule}
-              onChange={(e) => setNewRule(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault()
-                  addRule()
-                }
-              }}
-            />
-            <button
-              type='button'
-              className='mod-btn mod-btn-secondary'
-              onClick={addRule}
-            >
-              Add Rule
-            </button>
-          </div>
         </div>
+      ) : (
+        <>
+          {savedMsg && <div className='mod-status-success'>{savedMsg}</div>}
 
-        <div className='mod-form-actions'>
-          <button
-            type='submit'
-            className='mod-btn mod-btn-primary'
-            disabled={saving}
-          >
-            {saving ? 'Saving...' : 'Save Changes'}
-          </button>
-        </div>
+          <form className='mod-settings-form' onSubmit={handleSave}>
+            <div className='mod-settings-section'>
+              <h3 className='mod-settings-section-title'>Identity</h3>
 
-        {/* Danger Zone — owner only */}
-        {myRole === 'owner' && (
-          <div className='mod-danger-zone'>
-            <h3 className='mod-danger-title'>
-              <FaExclamationTriangle /> Danger Zone
-            </h3>
+              <div className='mod-media-upload-row'>
+                {/* Avatar */}
+                <div className='mod-media-upload-item'>
+                  <label className='mod-settings-label'>Community Avatar</label>
+                  {(() => {
+                    const src =
+                      avatarPreview ||
+                      (!clearAvatar &&
+                        normalizeImageSrc(communityData?.avatarUrl))
+                    return src ? (
+                      <div
+                        className='mod-media-upload-zone mod-media-avatar-zone has-image'
+                        onClick={() => avatarInputRef.current?.click()}
+                      >
+                        <img
+                          src={src}
+                          alt='Avatar'
+                          className='mod-media-upload-img'
+                        />
+                        <div className='mod-media-upload-overlay'>
+                          <button
+                            type='button'
+                            className='mod-media-upload-btn'
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              avatarInputRef.current?.click()
+                            }}
+                          >
+                            Change
+                          </button>
+                          <button
+                            type='button'
+                            className='mod-media-upload-btn mod-media-upload-btn-remove'
+                            onClick={handleAvatarRemove}
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div
+                        className='mod-media-upload-zone mod-media-avatar-zone'
+                        onClick={() => avatarInputRef.current?.click()}
+                      >
+                        <FaEdit className='mod-media-icon' />
+                        <span className='mod-media-hint'>Click to upload</span>
+                      </div>
+                    )
+                  })()}
+                  <input
+                    ref={avatarInputRef}
+                    type='file'
+                    accept='image/*'
+                    style={{ display: 'none' }}
+                    onChange={handleAvatarChange}
+                    disabled={saving}
+                  />
+                </div>
 
-            <div className='mod-danger-item'>
-              <div className='mod-danger-info'>
-                <strong>Transfer Ownership</strong>
-                <p>
-                  Hand over this community to one of your moderators. You will
-                  become a regular moderator.
-                </p>
+                {/* Banner */}
+                <div className='mod-media-upload-item mod-media-banner-item'>
+                  <label className='mod-settings-label'>Community Banner</label>
+                  {(() => {
+                    const src =
+                      bannerPreview ||
+                      (!clearBanner &&
+                        normalizeImageSrc(communityData?.bannerUrl))
+                    return src ? (
+                      <div
+                        className='mod-media-upload-zone mod-media-banner-zone has-image'
+                        onClick={() => bannerInputRef.current?.click()}
+                      >
+                        <img
+                          src={src}
+                          alt='Banner'
+                          className='mod-media-upload-img'
+                        />
+                        <div className='mod-media-upload-overlay'>
+                          <button
+                            type='button'
+                            className='mod-media-upload-btn'
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              bannerInputRef.current?.click()
+                            }}
+                          >
+                            Change
+                          </button>
+                          <button
+                            type='button'
+                            className='mod-media-upload-btn mod-media-upload-btn-remove'
+                            onClick={handleBannerRemove}
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div
+                        className='mod-media-upload-zone mod-media-banner-zone'
+                        onClick={() => bannerInputRef.current?.click()}
+                      >
+                        <FaEdit className='mod-media-icon' />
+                        <span className='mod-media-hint'>
+                          Click to upload · 1920×320 px recomandat
+                        </span>
+                      </div>
+                    )
+                  })()}
+                  <input
+                    ref={bannerInputRef}
+                    type='file'
+                    accept='image/*'
+                    style={{ display: 'none' }}
+                    onChange={handleBannerChange}
+                    disabled={saving}
+                  />
+                </div>
               </div>
-              {!showTransfer && (
-                <button
-                  type='button'
-                  className='mod-btn mod-btn-warning'
-                  onClick={() => setShowTransfer(true)}
-                >
-                  Transfer Ownership
-                </button>
-              )}
+
+              <div className='mod-form-group'>
+                <label className='mod-settings-label'>Community Name</label>
+                <input
+                  className='mod-settings-input'
+                  value={form.title ?? ''}
+                  onChange={(e) =>
+                    setForm((prev) => ({ ...prev, title: e.target.value }))
+                  }
+                  placeholder='Community name'
+                />
+              </div>
+
+              <div className='mod-form-group'>
+                <label className='mod-settings-label'>Description</label>
+                <textarea
+                  className='mod-settings-input mod-settings-textarea'
+                  value={form.description ?? ''}
+                  onChange={(e) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      description: e.target.value,
+                    }))
+                  }
+                  rows={4}
+                  maxLength={500}
+                  placeholder='Describe your community...'
+                />
+                <span className='mod-char-count'>
+                  {(form.description ?? '').length}/500
+                </span>
+              </div>
+
+              <div className='mod-form-row'>
+                <div className='mod-form-group'>
+                  <label className='mod-settings-label'>Category</label>
+                  <select
+                    className='mod-settings-input mod-settings-select'
+                    value={form.category ?? ''}
+                    onChange={(e) =>
+                      setForm((prev) => ({ ...prev, category: e.target.value }))
+                    }
+                  >
+                    {[
+                      'Technology',
+                      'Science',
+                      'Gaming',
+                      'Sports',
+                      'Art',
+                      'Music',
+                      'Education',
+                      'Other',
+                    ].map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className='mod-form-group'>
+                  <label className='mod-settings-label'>Community Type</label>
+                  <select
+                    className='mod-settings-input mod-settings-select'
+                    value={form.type ?? ''}
+                    onChange={(e) =>
+                      setForm((prev) => ({ ...prev, type: e.target.value }))
+                    }
+                  >
+                    <option value='public'>
+                      Public — anyone can view and post
+                    </option>
+                    <option value='restricted'>
+                      Restricted — anyone can view, only mods post
+                    </option>
+                    <option value='private'>Private — invite only</option>
+                  </select>
+                </div>
+              </div>
             </div>
 
-            {showTransfer && (
-              <div className='mod-transfer-form'>
-                <p className='mod-transfer-warning'>
-                  <FaExclamationTriangle /> This action is permanent. The new
-                  owner will have full control over the community.
-                </p>
-                {moderators.length === 0 ? (
-                  <p style={{ color: '#566a89', fontSize: '14px' }}>
-                    No moderators available. Promote a member first.
-                  </p>
-                ) : (
-                  <div className='mod-transfer-row'>
-                    <select
-                      className='mod-settings-input mod-settings-select'
-                      value={transferTarget}
-                      onChange={(e) => setTransferTarget(e.target.value)}
-                    >
-                      <option value=''>Select a moderator...</option>
-                      {moderators.map((m) => (
-                        <option key={m.userId} value={m.userId}>
-                          u/{m.userName}
-                        </option>
-                      ))}
-                    </select>
+            {/* Rules */}
+            <div className='mod-settings-section'>
+              <h3 className='mod-settings-section-title'>Community Rules</h3>
+              <p className='mod-settings-section-desc'>
+                Rules are shown in the community sidebar to all visitors.
+              </p>
+              <div className='mod-rules-list'>
+                {rules.map((rule, i) => (
+                  <div key={i} className='mod-rule-item'>
+                    <span className='mod-rule-number'>{i + 1}</span>
+                    <span className='mod-rule-text'>{rule}</span>
                     <button
                       type='button'
-                      className='mod-btn mod-btn-danger-solid'
-                      disabled={!transferTarget || transferring}
-                      onClick={handleTransfer}
+                      className='mod-rule-remove'
+                      onClick={() => removeRule(i)}
+                      aria-label='Remove rule'
                     >
-                      {transferring ? 'Transferring...' : 'Confirm Transfer'}
+                      <FaTimes />
                     </button>
                   </div>
-                )}
+                ))}
+              </div>
+              <div className='mod-add-rule-row'>
+                <input
+                  className='mod-settings-input'
+                  placeholder='Add a new rule...'
+                  value={newRule}
+                  onChange={(e) => setNewRule(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      addRule()
+                    }
+                  }}
+                />
                 <button
                   type='button'
-                  className='mod-btn mod-btn-ghost'
-                  onClick={() => {
-                    setShowTransfer(false)
-                    setTransferTarget('')
-                  }}
+                  className='mod-btn mod-btn-secondary'
+                  onClick={addRule}
                 >
-                  Cancel
+                  Add Rule
                 </button>
               </div>
-            )}
+            </div>
 
-            <div className='mod-danger-divider' />
-
-            <div className='mod-danger-item'>
-              <div className='mod-danger-info'>
-                <strong>Delete Community</strong>
-                <p>
-                  Permanently delete this community and all its posts. This
-                  action cannot be undone.
-                </p>
-              </div>
+            <div className='mod-form-actions'>
               <button
-                type='button'
-                className='mod-btn mod-btn-danger-solid'
-                disabled={deleting}
-                onClick={handleDelete}
+                type='submit'
+                className='mod-btn mod-btn-primary'
+                disabled={saving}
               >
-                {deleting ? 'Deleting...' : 'Delete Community'}
+                {saving ? 'Saving...' : 'Save Changes'}
               </button>
             </div>
-          </div>
-        )}
-      </form>
+          </form>
+
+          {/* Danger Zone — owner only */}
+          {myRole === 'owner' && (
+            <div className='mod-danger-zone'>
+              <h3 className='mod-danger-title'>
+                <FaExclamationTriangle /> Danger Zone
+              </h3>
+
+              <div className='mod-danger-item'>
+                <div className='mod-danger-info'>
+                  <strong>Transfer Ownership</strong>
+                  <p>
+                    Hand over this community to one of your moderators. You will
+                    become a regular moderator.
+                  </p>
+                </div>
+                {!showTransfer && (
+                  <button
+                    type='button'
+                    className='mod-btn mod-btn-warning'
+                    onClick={() => setShowTransfer(true)}
+                  >
+                    Transfer Ownership
+                  </button>
+                )}
+              </div>
+
+              {showTransfer && (
+                <div className='mod-transfer-form'>
+                  <p className='mod-transfer-warning'>
+                    <FaExclamationTriangle /> This action is permanent. The new
+                    owner will have full control over the community.
+                  </p>
+                  {moderators.length === 0 ? (
+                    <p style={{ color: '#566a89', fontSize: '14px' }}>
+                      No moderators available. Promote a member first.
+                    </p>
+                  ) : (
+                    <div className='mod-transfer-row'>
+                      <select
+                        className='mod-settings-input mod-settings-select'
+                        value={transferTarget}
+                        onChange={(e) => setTransferTarget(e.target.value)}
+                      >
+                        <option value=''>Select a moderator...</option>
+                        {moderators.map((m) => (
+                          <option key={m.userId} value={m.userId}>
+                            u/{m.userName}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        type='button'
+                        className='mod-btn mod-btn-danger-solid'
+                        disabled={!transferTarget || transferring}
+                        onClick={handleTransfer}
+                      >
+                        {transferring ? 'Transferring...' : 'Confirm Transfer'}
+                      </button>
+                    </div>
+                  )}
+                  <button
+                    type='button'
+                    className='mod-btn mod-btn-ghost'
+                    onClick={() => {
+                      setShowTransfer(false)
+                      setTransferTarget('')
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
+
+              <div className='mod-danger-divider' />
+
+              <div className='mod-danger-item'>
+                <div className='mod-danger-info'>
+                  <strong>Delete Community</strong>
+                  <p>
+                    Permanently delete this community and all its posts. This
+                    action cannot be undone.
+                  </p>
+                </div>
+                <button
+                  type='button'
+                  className='mod-btn mod-btn-danger-solid'
+                  disabled={deleting}
+                  onClick={handleDelete}
+                >
+                  {deleting ? 'Deleting...' : 'Delete Community'}
+                </button>
+              </div>
+            </div>
+          )}
+        </>
+      )}
     </div>
   )
 }
 
-// ─── MOD LOG TAB (mock) ──────────────────────────────────────────────────────
+// ─── MOD LOG TAB ─────────────────────────────────────────────────────────────
 
-function ModLogTab() {
+function logEntryDescription(entry) {
+  const type = entry.actionType
+  if (type === 'ban')
+    return `Banned u/${entry.targetUserName}${entry.details ? ` — ${entry.details}` : ''}`
+  if (type === 'unban') return `Unbanned u/${entry.targetUserName}`
+  if (type === 'kick') return `Kicked u/${entry.targetUserName}`
+  if (type === 'promote')
+    return `Promoted u/${entry.targetUserName} to Moderator`
+  if (type === 'demote')
+    return `Demoted u/${entry.targetUserName} from Moderator`
+  if (type === 'transfer')
+    return `Transferred ownership to u/${entry.targetUserName}`
+  if (type === 'pin') return `Pinned post #${entry.targetPostId}`
+  if (type === 'unpin') return `Unpinned post #${entry.targetPostId}`
+  if (type === 'remove')
+    return `Removed content${entry.details ? ` (${entry.details})` : ''}`
+  if (type === 'dismiss')
+    return `Dismissed report${entry.details ? ` (${entry.details})` : ''}`
+  return type
+}
+
+function ModLogTab({ communityId, token }) {
   const [logFilter, setLogFilter] = useState('all')
+  const [entries, setEntries] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
-  const filtered =
-    logFilter === 'all'
-      ? MOCK_MOD_LOG
-      : MOCK_MOD_LOG.filter((e) => e.actionType === logFilter)
+  useEffect(() => {
+    if (!communityId || !token) return
+    const load = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        const data = await fetchModLog(communityId, token, logFilter)
+        setEntries(data)
+      } catch (e) {
+        setError(e.message)
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
+  }, [communityId, token, logFilter])
 
   return (
     <div className='mod-tab-content'>
@@ -1561,45 +1703,36 @@ function ModLogTab() {
         ))}
       </div>
 
-      {filtered.length === 0 ? (
+      {loading ? (
+        <LoadingState />
+      ) : error ? (
+        <ErrorState message={error} />
+      ) : entries.length === 0 ? (
         <div className='mod-empty-state'>
           <FaList className='mod-empty-icon' />
           <p>No actions of this type found.</p>
         </div>
       ) : (
         <div className='mod-log-list mod-log-full'>
-          {filtered.map((entry) => (
+          {entries.map((entry) => (
             <div key={entry.id} className='mod-log-entry mod-log-entry-full'>
               <div className='mod-log-entry-left'>
                 <ActionLogBadge actionType={entry.actionType} />
               </div>
               <div className='mod-log-info'>
                 <span className='mod-log-target'>
-                  <strong>{entry.action}</strong>: {entry.target}
-                  {entry.targetUser && (
-                    <>
-                      {' '}
-                      (
-                      <Link
-                        to={`/user/${entry.targetUser}`}
-                        className='mod-log-user-link'
-                      >
-                        u/{entry.targetUser}
-                      </Link>
-                      )
-                    </>
-                  )}
+                  {logEntryDescription(entry)}
                 </span>
                 <span className='mod-log-meta'>
                   by{' '}
                   <Link
-                    to={`/user/${entry.moderator}`}
+                    to={`/user/${entry.actorUserName}`}
                     className='mod-log-user-link'
                   >
-                    u/{entry.moderator}
+                    u/{entry.actorUserName}
                   </Link>
                   <span className='mod-meta-sep'>·</span>
-                  {entry.date}
+                  {new Date(entry.createdAt).toLocaleString()}
                 </span>
               </div>
             </div>
@@ -1627,7 +1760,7 @@ export function CommunityModPage() {
   useEffect(() => {
     const load = async () => {
       try {
-        const data = await fetchCommunityBySlug(communityname)
+        const data = await fetchCommunityBySlug(communityname, token)
         setCommunity(data)
         setCommunityId(data.id)
 
@@ -1685,7 +1818,7 @@ export function CommunityModPage() {
       case 'banned':
         return <BannedMembersTab communityId={communityId} token={token} />
       case 'pinned':
-        return <PinnedTab />
+        return <PinnedTab communityId={communityId} token={token} />
       case 'settings':
         return (
           <CommunitySettingsTab
@@ -1697,7 +1830,7 @@ export function CommunityModPage() {
           />
         )
       case 'modlog':
-        return <ModLogTab />
+        return <ModLogTab communityId={communityId} token={token} />
       default:
         return (
           <OverviewTab

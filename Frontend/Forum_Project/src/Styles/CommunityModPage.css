@@ -200,13 +200,13 @@
   border: 1px solid transparent;
 }
 
-.mod-stat-orange { background: linear-gradient(135deg, #fff7ed, #ffedd5); border-color: #fed7aa; }
-.mod-stat-blue   { background: linear-gradient(135deg, #eff6ff, #dbeafe); border-color: #bfdbfe; }
+.mod-stat-orange { background: linear-gradient(135deg, #eef2fb, #e2e8f5); border-color: #c8d5e8; }
+.mod-stat-blue   { background: linear-gradient(135deg, #edf4ff, #dce9ff); border-color: #bfd4f5; }
 .mod-stat-teal   { background: linear-gradient(135deg, #f0fdfa, #ccfbf1); border-color: #99f6e4; }
 .mod-stat-purple { background: linear-gradient(135deg, #faf5ff, #ede9fe); border-color: #c4b5fd; }
 
 .mod-stat-icon { font-size: 22px; }
-.mod-stat-orange .mod-stat-icon { color: #ea580c; }
+.mod-stat-orange .mod-stat-icon { color: #102543; }
 .mod-stat-blue   .mod-stat-icon { color: rgb(15, 67, 199); }
 .mod-stat-teal   .mod-stat-icon { color: #0d9488; }
 .mod-stat-purple .mod-stat-icon { color: #7c3aed; }
@@ -345,7 +345,7 @@
   gap: 5px;
   font-size: 13px;
   font-weight: 600;
-  color: #c2410c;
+  color: #2b4367;
 }
 
 .mod-reason-icon { font-size: 12px; }
@@ -405,25 +405,13 @@
   gap: 5px;
 }
 
-.mod-report-image-placeholder {
+.mod-report-image-preview {
   width: 90px;
   height: 70px;
   border-radius: 8px;
-  background: linear-gradient(135deg, #c7d9f5 0%, #a8c4f0 40%, #8fb3ea 100%);
+  object-fit: cover;
   border: 1px solid #bfd4f5;
-  position: relative;
-  overflow: hidden;
-}
-
-.mod-report-image-placeholder::after {
-  content: '🖼';
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 24px;
-  opacity: 0.6;
+  display: block;
 }
 
 .mod-report-image-label {
@@ -1167,11 +1155,16 @@
   white-space: nowrap;
 }
 
-.mod-log-remove  { background: #fee2e2; color: #dc2626; }
-.mod-log-kick    { background: #ffedd5; color: #c2410c; }
-.mod-log-dismiss { background: #f1f5f9; color: #475569; }
-.mod-log-promote { background: #dcfce7; color: #15803d; }
-.mod-log-pin     { background: #dbeafe; color: #1d4ed8; }
+.mod-log-ban      { background: #fee2e2; color: #dc2626; }
+.mod-log-unban    { background: #dcfce7; color: #15803d; }
+.mod-log-kick     { background: #eef2fb; color: #102543; }
+.mod-log-promote  { background: #dcfce7; color: #15803d; }
+.mod-log-demote   { background: #f1f5f9; color: #475569; }
+.mod-log-transfer { background: #ede9fe; color: #6d28d9; }
+.mod-log-pin      { background: #dbeafe; color: #1d4ed8; }
+.mod-log-unpin    { background: #f1f5f9; color: #475569; }
+.mod-log-remove   { background: #fee2e2; color: #dc2626; }
+.mod-log-dismiss  { background: #f1f5f9; color: #475569; }
 
 /* ─── EMPTY STATE ─────────────────────────────────────────────── */
 
@@ -1264,11 +1257,11 @@
 .mod-btn-ghost:hover { background: #e2e8f0; color: #334155; }
 
 .mod-btn-warning {
-  background: linear-gradient(135deg, #fff7ed, #ffedd5);
-  color: #c2410c;
-  border-color: #fed7aa;
+  background: linear-gradient(135deg, #eef2fb, #e2e8f5);
+  color: #102543;
+  border-color: #c8d5e8;
 }
-.mod-btn-warning:hover { background: linear-gradient(135deg, #ffedd5, #fed7aa); }
+.mod-btn-warning:hover { background: linear-gradient(135deg, #e2e8f5, #d5dff0); }
 
 .mod-btn-danger {
   background: linear-gradient(135deg, #fee2e2, #fecaca);
@@ -1399,4 +1392,85 @@
   .mod-btn {
     justify-content: center;
   }
+}
+
+/* ─── SETTINGS READONLY NOTICE (Gap C) ────────────────────────── */
+
+.mod-settings-readonly-notice {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  text-align: center;
+  padding: 48px 32px;
+  background: linear-gradient(180deg, #ffffff 0%, #edf3fb 100%);
+  border: 1px solid #d7e1ef;
+  border-radius: 16px;
+  color: #2b4367;
+}
+
+.mod-settings-readonly-icon {
+  font-size: 2.8rem;
+  color: rgb(15, 67, 199);
+  opacity: 0.75;
+}
+
+.mod-settings-readonly-notice h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #102543;
+}
+
+.mod-settings-readonly-notice p {
+  margin: 0;
+  font-size: 14px;
+  color: #2b4367;
+  line-height: 1.5;
+  max-width: 380px;
+}
+
+/* ─── SPINNER ANIMATION ────────────────────────────────────────── */
+
+@keyframes mod-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.mod-spin {
+  animation: mod-spin 0.8s linear infinite;
+}
+
+/* ─── BAN AUTHOR BUTTON ────────────────────────────────────────── */
+
+.mod-btn-ban {
+  background: linear-gradient(135deg, #f5f3ff, #ede9fe);
+  color: #6d28d9;
+  border: 1px solid #c4b5fd;
+}
+
+.mod-btn-ban:hover:not(:disabled) {
+  background: linear-gradient(135deg, #ede9fe, #ddd6fe);
+  border-color: #a78bfa;
+  color: #5b21b6;
+}
+
+/* Inline ban form inside a report card */
+.mod-ban-from-report {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+  padding: 12px 14px;
+  background: linear-gradient(135deg, #fdf4ff, #fae8ff);
+  border: 1px solid #e9d5ff;
+  border-radius: 10px;
+}
+
+.mod-ban-from-report .mod-ban-reason-input {
+  flex: 1;
+  min-width: 200px;
+  height: 38px;
 }
