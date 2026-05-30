@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, useParams, useNavigate } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import { FaCaretUp, FaCaretDown, FaComment, FaShare } from 'react-icons/fa'
 import { useAuth } from './AuthContext'
 import './Styles/CommunityPage.css'
@@ -12,6 +12,11 @@ import {
   submitPostVote,
   voteValueFromDirection,
 } from './utils/voteApi'
+import {
+  fetchUserSavedPosts,
+  savePost,
+  unsaveItem,
+} from './utils/savedItemApi'
 
 const SORT_OPTIONS = ['Popular', 'New', 'Top']
 
@@ -20,7 +25,6 @@ const getPostRoute = (communitySlug, postId) =>
 
 export function CommunityPage() {
   const { communityname } = useParams()
-  const navigate = useNavigate()
   const { user } = useAuth()
   const [sortBy, setSortBy] = useState('Popular')
   const [openMorePostId, setOpenMorePostId] = useState(null)
@@ -34,6 +38,8 @@ export function CommunityPage() {
   const [isLoadingPosts, setIsLoadingPosts] = useState(true)
   const [postVotesById, setPostVotesById] = useState({})
   const [pendingPostVotes, setPendingPostVotes] = useState({})
+  const [savedPostsById, setSavedPostsById] = useState({})
+  const [pendingSavedPosts, setPendingSavedPosts] = useState({})
 
   const postsWrapRef = useRef(null)
 
@@ -56,6 +62,8 @@ export function CommunityPage() {
             const memberStatus = await membershipRes.json()
             setIsMember(memberStatus === true)
           }
+        } else {
+          setIsMember(false)
         }
       } catch (err) {
         setError(err.message)
@@ -104,6 +112,28 @@ export function CommunityPage() {
   }, [posts, user?.id])
 
   useEffect(() => {
+    if (!user?.id || posts.length === 0) {
+      setSavedPostsById({})
+      return
+    }
+
+    let cancelled = false
+
+    fetchUserSavedPosts(
+      posts.map((post) => post.id),
+      user.id,
+    ).then((savedMap) => {
+      if (!cancelled) {
+        setSavedPostsById(savedMap)
+      }
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [posts, user?.id])
+
+  useEffect(() => {
     const handleClickOutside = (e) => {
       if (postsWrapRef.current && !postsWrapRef.current.contains(e.target)) {
         setOpenMorePostId(null)
@@ -130,41 +160,47 @@ export function CommunityPage() {
         // Leave
         const response = await fetch(
           `/api/Communities/${community.id}/leave?userId=${user.id}`,
-          { method: 'DELETE' }
+          { method: 'DELETE' },
         )
         if (response.ok) {
           const text = await response.text()
-          if (text.includes('deleted')) {
-            // Owner has left and community was deleted
-            alert('Comunitatea a fost stearsa fiindca erai creatorul.')
-            navigate('/') // Sau catre o lista generala de comunitati
-            return
-          }
           setIsMember(false)
           setCommunity((prev) => ({
             ...prev,
             membersCount: Math.max(0, prev.membersCount - 1),
           }))
+          window.dispatchEvent(new Event('communities-membership-updated'))
+          if (text) {
+            alert(text)
+          }
         } else {
-          console.error('Failed to leave:', await response.text())
+          const errorMessage = await response.text()
+          alert(errorMessage || 'Failed to leave community.')
         }
       } else {
         // Join
         const response = await fetch(
           `/api/Communities/${community.id}/join?userId=${user.id}`,
-          { method: 'POST' }
+          { method: 'POST' },
         )
         if (response.ok) {
+          const text = await response.text()
           setIsMember(true)
           setCommunity((prev) => ({
             ...prev,
             membersCount: prev.membersCount + 1,
           }))
+          window.dispatchEvent(new Event('communities-membership-updated'))
+          if (text) {
+            alert(text)
+          }
         } else {
-          console.error('Failed to join:', await response.text())
+          const errorMessage = await response.text()
+          alert(errorMessage || 'Failed to join community.')
         }
       }
     } catch (err) {
+      alert('Membership toggle failed.')
       console.error('Membership toggle failed:', err)
     }
   }
@@ -283,6 +319,49 @@ export function CommunityPage() {
         ...currentPending,
         [postId]: false,
       }))
+    }
+  }
+
+  const handleToggleSavePost = async (postId) => {
+    if (!user?.id) {
+      alert('Please login to save posts.')
+      return
+    }
+    if (pendingSavedPosts[postId]) return
+
+    const previousSavedItem = savedPostsById[postId] ?? null
+
+    setPendingSavedPosts((currentPending) => ({
+      ...currentPending,
+      [postId]: true,
+    }))
+
+    try {
+      if (previousSavedItem?.id) {
+        setSavedPostsById((currentSaved) => ({
+          ...currentSaved,
+          [postId]: null,
+        }))
+        await unsaveItem({ savedItemId: previousSavedItem.id, userId: user.id })
+      } else {
+        const createdSavedItem = await savePost({ postId, userId: user.id })
+        setSavedPostsById((currentSaved) => ({
+          ...currentSaved,
+          [postId]: { id: createdSavedItem.id, postId: createdSavedItem.postId },
+        }))
+      }
+    } catch (error) {
+      setSavedPostsById((currentSaved) => ({
+        ...currentSaved,
+        [postId]: previousSavedItem,
+      }))
+      alert(error.message)
+    } finally {
+      setPendingSavedPosts((currentPending) => ({
+        ...currentPending,
+        [postId]: false,
+      }))
+      setOpenMorePostId(null)
     }
   }
 
@@ -420,8 +499,10 @@ export function CommunityPage() {
                               <button
                                 className='more-menu-item'
                                 role='menuitem'
+                                onClick={() => handleToggleSavePost(post.id)}
+                                disabled={pendingSavedPosts[post.id]}
                               >
-                                Save
+                                {savedPostsById[post.id]?.id ? 'Unsave' : 'Save'}
                               </button>
                               <button
                                 className='more-menu-item more-menu-danger'

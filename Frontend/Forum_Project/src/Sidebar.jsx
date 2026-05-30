@@ -24,21 +24,37 @@ export const SideBar = () => {
   const [userCommunities, setUserCommunities] = useState([])
 
   useEffect(() => {
-    if (user?.id) {
-      const fetchUserCommunities = async () => {
-        try {
-          const res = await fetch(`/api/Communities/user/${user.id}`)
-          if (res.ok) {
-            const data = await res.json()
-            setUserCommunities(data || [])
-          }
-        } catch (err) {
-          console.error('Failed to load user communities', err)
-        }
+    const fetchUserCommunities = async () => {
+      if (!user?.id) {
+        setUserCommunities([])
+        return
       }
+
+      try {
+        const res = await fetch(`/api/Communities/user/${user.id}`)
+        if (res.ok) {
+          const data = await res.json()
+          setUserCommunities(data || [])
+        }
+      } catch (err) {
+        console.error('Failed to load user communities', err)
+      }
+    }
+
+    fetchUserCommunities()
+
+    const handleMembershipUpdated = () => {
       fetchUserCommunities()
     }
-  }, [user])
+
+    window.addEventListener('communities-membership-updated', handleMembershipUpdated)
+    return () => {
+      window.removeEventListener(
+        'communities-membership-updated',
+        handleMembershipUpdated,
+      )
+    }
+  }, [user?.id])
 
   const toggleCommunities = () => {
     setShowCommunities(!showCommunities)

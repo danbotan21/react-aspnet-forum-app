@@ -11,6 +11,11 @@ import {
   submitPostVote,
   voteValueFromDirection,
 } from './utils/voteApi'
+import {
+  fetchUserSavedPosts,
+  savePost,
+  unsaveItem,
+} from './utils/savedItemApi'
 
 const SORT_OPTIONS = [
   { id: 'popular', label: 'Popular' },
@@ -31,6 +36,8 @@ export const Home = () => {
   const [isLoading, setIsLoading] = useState(true)
   const [postVotesById, setPostVotesById] = useState({})
   const [pendingPostVotes, setPendingPostVotes] = useState({})
+  const [savedPostsById, setSavedPostsById] = useState({})
+  const [pendingSavedPosts, setPendingSavedPosts] = useState({})
 
   useEffect(() => {
     setIsLoading(true)
@@ -63,6 +70,28 @@ export const Home = () => {
     ).then((votesMap) => {
       if (!cancelled) {
         setPostVotesById(votesMap)
+      }
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [posts, user?.id])
+
+  useEffect(() => {
+    if (!user?.id || posts.length === 0) {
+      setSavedPostsById({})
+      return
+    }
+
+    let cancelled = false
+
+    fetchUserSavedPosts(
+      posts.map((post) => post.id),
+      user.id,
+    ).then((savedMap) => {
+      if (!cancelled) {
+        setSavedPostsById(savedMap)
       }
     })
 
@@ -193,6 +222,49 @@ export const Home = () => {
     }
   }
 
+  const handleToggleSavePost = async (postId) => {
+    if (!user?.id) {
+      alert('Please login to save posts.')
+      return
+    }
+    if (pendingSavedPosts[postId]) return
+
+    const previousSavedItem = savedPostsById[postId] ?? null
+
+    setPendingSavedPosts((currentPending) => ({
+      ...currentPending,
+      [postId]: true,
+    }))
+
+    try {
+      if (previousSavedItem?.id) {
+        setSavedPostsById((currentSaved) => ({
+          ...currentSaved,
+          [postId]: null,
+        }))
+        await unsaveItem({ savedItemId: previousSavedItem.id, userId: user.id })
+      } else {
+        const createdSavedItem = await savePost({ postId, userId: user.id })
+        setSavedPostsById((currentSaved) => ({
+          ...currentSaved,
+          [postId]: { id: createdSavedItem.id, postId: createdSavedItem.postId },
+        }))
+      }
+    } catch (error) {
+      setSavedPostsById((currentSaved) => ({
+        ...currentSaved,
+        [postId]: previousSavedItem,
+      }))
+      alert(error.message)
+    } finally {
+      setPendingSavedPosts((currentPending) => ({
+        ...currentPending,
+        [postId]: false,
+      }))
+      setOpenMorePostId(null)
+    }
+  }
+
   return (
     <div className='home'>
       <div className='home-sort-bar' ref={sortRef}>
@@ -293,8 +365,13 @@ export const Home = () => {
                       </button>
                       {openMorePostId === post.id && (
                         <div className='more-menu' role='menu'>
-                          <button className='more-menu-item' role='menuitem'>
-                            Save
+                          <button
+                            className='more-menu-item'
+                            role='menuitem'
+                            onClick={() => handleToggleSavePost(post.id)}
+                            disabled={pendingSavedPosts[post.id]}
+                          >
+                            {savedPostsById[post.id]?.id ? 'Unsave' : 'Save'}
                           </button>
                           <button
                             className='more-menu-item more-menu-danger'

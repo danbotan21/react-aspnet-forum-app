@@ -1,9 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import './Styles/UserProfile.css'
 import avatar from './img/avatar.webp'
 import nature from './img/nature.jpg'
-import coding from './img/coding.jpg'
 import { ProfileOverviewTab } from './ProfileOverviewTab'
 import { ProfilePostsTab } from './ProfilePostsTab'
 import { ProfileCommentsTab } from './ProfileCommentsTab'
@@ -12,209 +11,92 @@ import { ProfileVotedTab } from './ProfileVotedTab'
 import { useAuth } from './AuthContext'
 import { normalizeImageSrc } from './utils/media'
 
+const PROFILE_TABS = [
+  'Overview',
+  'Posts',
+  'Comments',
+  'Saved',
+  'Upvoted',
+  'Downvoted',
+]
+
 const getCommunitySlug = (community) => community.replace(/^r\//, '')
 const getCommentPostRoute = (comment) =>
   `/community/${encodeURIComponent(getCommunitySlug(comment.community))}/post/${comment.postId}`
 
-const USER_POSTS = [
-  {
-    id: 1,
-    community: 'r/frontend',
-    time: '2 hours ago',
-    title: 'How would you design a modern forum homepage?',
-    text: 'I am working on a frontend forum project and would love feedback on layout, typography, and interactions. What patterns do you think are essential?',
-    image: coding,
-    votes: 124,
-    comments: 18,
-  },
-  {
-    id: 2,
-    community: 'r/webdev',
-    time: '1 day ago',
-    title: 'Best practices for React component organization',
-    text: 'Looking for opinions on how to best organize large React applications with many shared components and pages.',
-    image: nature,
-    votes: 87,
-    comments: 11,
-  },
-]
+const formatDate = (value) => {
+  if (!value) return 'Unknown date'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return 'Unknown date'
+  return date.toLocaleDateString()
+}
 
-const USER_COMMENTS = [
-  {
-    id: 1,
-    community: 'r/ketorecipes',
-    postTitle: 'Skirt Steak - best method for maximum flavor',
-    postId: 1,
-    content:
-      'Great method. I tried it with smoked paprika and it worked perfectly. Would definitely recommend this approach.',
-    votes: 7,
-    time: '11 hr. ago',
-  },
-  {
-    id: 2,
-    community: 'r/15minutefood',
-    postTitle: 'Quick lunch ideas for busy weekdays',
-    postId: 2,
-    content:
-      'Loved this, super fast and still healthy. Made it twice this week already.',
-    votes: 3,
-    time: '12 hr. ago',
-  },
-  {
-    id: 3,
-    community: 'r/webdev',
-    postTitle: 'Best practices for React component organization',
-    postId: 3,
-    content:
-      'Great point about folder structure. I usually separate by feature rather than by type.',
-    votes: 12,
-    time: '1 day ago',
-  },
-]
+const formatCakeDay = (value) => {
+  if (!value) return '-'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return '-'
+  return date.toLocaleDateString(undefined, { month: 'short', year: 'numeric' })
+}
 
-const SAVED_ITEMS = [
-  {
-    id: 's1',
-    type: 'post',
-    community: 'r/frontend',
-    author: 'u/exampleUser',
-    time: '6 hours ago',
-    title: 'How would you design a modern forum homepage?',
-    text: 'I am working on a frontend forum project and would love feedback on layout, typography, and interactions.',
-    image: coding,
-    votes: 324,
-    comments: 67,
-    postId: 1,
-  },
-  {
-    id: 's2',
-    type: 'comment',
-    community: 'r/ketorecipes',
-    author: 'u/chefMike',
-    postTitle: 'Skirt Steak - best method for maximum flavor',
-    postId: 1,
-    content:
-      'Great method. I tried it with smoked paprika and it worked perfectly. Would definitely recommend this approach.',
-    votes: 14,
-    time: '11 hr. ago',
-  },
-  {
-    id: 's3',
-    type: 'post',
-    community: 'r/webdev',
-    author: 'u/devFlow',
-    time: '1 day ago',
-    title: 'Best practices for React component organization',
-    text: 'Looking for opinions on how to best organize large React applications with many shared components.',
-    image: nature,
-    votes: 87,
-    comments: 11,
-    postId: 2,
-  },
-]
+const mapPostToProfilePost = (post) => ({
+  id: post.id,
+  community: `r/${post.communitySlug}`,
+  time: formatDate(post.createdAt),
+  title: post.title,
+  text: post.body || '',
+  image: normalizeImageSrc(post.imageUrl),
+  votes: post.votes ?? 0,
+  comments: post.commentsCount ?? 0,
+})
 
-const UPVOTED_POSTS = [
-  {
-    id: 'u1',
-    community: 'r/frontend',
-    author: 'u/exampleUser',
-    time: '6 hours ago',
-    title: 'How would you design a modern forum homepage?',
-    text: 'I am working on a frontend forum project and would love feedback on layout, typography, and interactions.',
-    image: coding,
-    votes: 324,
-    comments: 67,
-    postId: 1,
-  },
-  {
-    id: 'u2',
-    community: 'r/webdev',
-    author: 'u/devFlow',
-    time: '1 day ago',
-    title: 'Best practices for React component organization',
-    text: 'Looking for opinions on how to best organize large React applications with many shared components and pages.',
-    image: nature,
-    votes: 87,
-    comments: 11,
-    postId: 2,
-  },
-]
-
-const DOWNVOTED_POSTS = [
-  {
-    id: 'd1',
-    community: 'r/memes',
-    author: 'u/lolMaster',
-    time: '3 hours ago',
-    title: 'This meme format is getting old already',
-    text: 'Seen this same template reposted at least fifty times this week. Not funny anymore.',
-    image: nature,
-    votes: 12,
-    comments: 8,
-    postId: 3,
-  },
-  {
-    id: 'd2',
-    community: 'r/technology',
-    author: 'u/techBro',
-    time: '2 days ago',
-    title: 'Why every app needs a subscription model now',
-    text: 'Arguing that subscription revenue is the only sustainable model for modern software products.',
-    image: coding,
-    votes: -34,
-    comments: 142,
-    postId: 4,
-  },
-]
+const mapPostToVotedItem = (vote, post) => {
+  if (!post) return null
+  return {
+    id: `vote-${vote.id}`,
+    community: `r/${post.communitySlug}`,
+    author: `u/${post.authorName}`,
+    time: formatDate(vote.votedAt),
+    title: post.title,
+    text: post.body || '',
+    image: normalizeImageSrc(post.imageUrl),
+    votes: post.votes ?? 0,
+    comments: post.commentsCount ?? 0,
+    postId: post.id,
+  }
+}
 
 export function UserProfile() {
   const { username } = useParams()
   const { user: authUser } = useAuth()
 
-  const loggedUser = authUser?.userName || 'username'
-  const displayName = decodeURIComponent(username ?? 'guest')
-  const isOwnProfile = displayName.toLowerCase() === loggedUser.toLowerCase()
+  const loggedUser = authUser?.userName?.trim() || ''
+  const displayName = decodeURIComponent(username ?? 'guest').trim() || 'guest'
+  const isOwnProfile =
+    loggedUser.length > 0 &&
+    displayName.toLowerCase() === loggedUser.toLowerCase()
 
-  const ownTabs = [
-    'Overview',
-    'Posts',
-    'Comments',
-    'Saved',
-    'Upvoted',
-    'Downvoted',
-  ]
-  const visitorTabs = ['Overview', 'Posts', 'Comments']
-  const tabs = isOwnProfile ? ownTabs : visitorTabs
+  const tabs = PROFILE_TABS
 
-  const ownStatCards = [
-    { label: 'Karma', value: '1.2k' },
-    { label: 'Contributions', value: '214' },
-    { label: 'Cake Day', value: '3y' },
-    { label: 'Followers', value: '12' },
-  ]
-  const visitorStatCards = [
-    { label: 'Karma', value: '619' },
-    { label: 'Contributions', value: '84' },
-    { label: 'Cake Day', value: '1y' },
-    { label: 'Followers', value: '5' },
-  ]
-  const statCards = isOwnProfile ? ownStatCards : visitorStatCards
-
-  const [activeTab, setActiveTab] = useState(tabs[0])
+  const [activeTab, setActiveTab] = useState('Overview')
   const [profileUser, setProfileUser] = useState(null)
-  const [hasPosts, setHasPosts] = useState(true)
+  const [posts, setPosts] = useState([])
+  const [comments, setComments] = useState([])
+  const [savedItems, setSavedItems] = useState([])
+  const [upvotedPosts, setUpvotedPosts] = useState([])
+  const [downvotedPosts, setDownvotedPosts] = useState([])
+  const [isProfileLoading, setIsProfileLoading] = useState(true)
+  const [isActivityLoading, setIsActivityLoading] = useState(false)
+  const [isProfileDataLoading, setIsProfileDataLoading] = useState(false)
+  const [profileError, setProfileError] = useState(null)
+
   const [openMorePostId, setOpenMorePostId] = useState(null)
   const [postMenuPos, setPostMenuPos] = useState({ top: 0, right: 0 })
-  const [hasComments, setHasComments] = useState(true)
   const [openMoreCommentId, setOpenMoreCommentId] = useState(null)
   const [commentMenuPos, setCommentMenuPos] = useState({ top: 0, right: 0 })
-  const [hasSaved, setHasSaved] = useState(true)
   const [openMoreSavedId, setOpenMoreSavedId] = useState(null)
   const [savedMenuPos, setSavedMenuPos] = useState({ top: 0, right: 0 })
-  const [hasUpvoted, setHasUpvoted] = useState(true)
   const [openMoreUpvotedId, setOpenMoreUpvotedId] = useState(null)
   const [upvotedMenuPos, setUpvotedMenuPos] = useState({ top: 0, right: 0 })
-  const [hasDownvoted, setHasDownvoted] = useState(true)
   const [openMoreDownvotedId, setOpenMoreDownvotedId] = useState(null)
   const [downvotedMenuPos, setDownvotedMenuPos] = useState({ top: 0, right: 0 })
 
@@ -236,20 +118,327 @@ export function UserProfile() {
   }, [])
 
   useEffect(() => {
+    setActiveTab('Overview')
+    setOpenMorePostId(null)
+    setOpenMoreCommentId(null)
+    setOpenMoreSavedId(null)
+    setOpenMoreUpvotedId(null)
+    setOpenMoreDownvotedId(null)
+  }, [displayName, isOwnProfile])
+
+  useEffect(() => {
+    if (!tabs.includes(activeTab)) {
+      setActiveTab('Overview')
+    }
+  }, [activeTab, tabs])
+
+  useEffect(() => {
     if (!displayName) return
 
-    fetch(`/api/users/by-username/${encodeURIComponent(displayName)}`)
-      .then((res) => {
-        if (!res.ok) return null
-        return res.json()
-      })
-      .then((data) => {
-        setProfileUser(data || null)
-      })
-      .catch(() => {
-        setProfileUser(null)
-      })
+    let cancelled = false
+
+    const loadProfile = async () => {
+      setIsProfileLoading(true)
+      setProfileError(null)
+      setProfileUser(null)
+
+      try {
+        const response = await fetch(
+          `/api/users/by-username/${encodeURIComponent(displayName)}`,
+        )
+
+        if (!response.ok) {
+          throw new Error('Profile not found')
+        }
+
+        const data = await response.json()
+        if (!cancelled) {
+          setProfileUser(data)
+        }
+      } catch {
+        if (!cancelled) {
+          setProfileError('Profile not found')
+          setProfileUser(null)
+        }
+      } finally {
+        if (!cancelled) {
+          setIsProfileLoading(false)
+        }
+      }
+    }
+
+    loadProfile()
+
+    return () => {
+      cancelled = true
+    }
   }, [displayName])
+
+  useEffect(() => {
+    if (!profileUser?.id) {
+      setPosts([])
+      setComments([])
+      return
+    }
+
+    let cancelled = false
+
+    const loadUserActivity = async () => {
+      setIsActivityLoading(true)
+      try {
+        const [postsResponse, commentsResponse] = await Promise.all([
+          fetch(`/api/posts/user/${profileUser.id}`),
+          fetch(`/api/comments/user/${profileUser.id}`),
+        ])
+
+        const fetchedPosts = postsResponse.ok ? await postsResponse.json() : []
+        const fetchedComments = commentsResponse.ok
+          ? await commentsResponse.json()
+          : []
+
+        const commentPostIds = [
+          ...new Set(fetchedComments.map((comment) => comment.postId)),
+        ].filter(Boolean)
+
+        const commentPosts = await Promise.all(
+          commentPostIds.map(async (postId) => {
+            try {
+              const response = await fetch(`/api/posts/${postId}`)
+              if (!response.ok) return [postId, null]
+              return [postId, await response.json()]
+            } catch {
+              return [postId, null]
+            }
+          }),
+        )
+
+        const commentPostsById = new Map(
+          commentPosts.filter(([, post]) => post !== null),
+        )
+
+        if (cancelled) return
+
+        setPosts(fetchedPosts.map(mapPostToProfilePost))
+        setComments(
+          fetchedComments.map((comment) => {
+            const relatedPost = commentPostsById.get(comment.postId)
+            return {
+              id: comment.id,
+              community: relatedPost
+                ? `r/${relatedPost.communitySlug}`
+                : 'r/unknown',
+              postTitle: relatedPost?.title || `Post #${comment.postId}`,
+              postId: comment.postId,
+              content: comment.body,
+              votes: comment.votes ?? 0,
+              time: formatDate(comment.createdAt),
+            }
+          }),
+        )
+      } catch {
+        if (!cancelled) {
+          setPosts([])
+          setComments([])
+        }
+      } finally {
+        if (!cancelled) {
+          setIsActivityLoading(false)
+        }
+      }
+    }
+
+    loadUserActivity()
+
+    return () => {
+      cancelled = true
+    }
+  }, [profileUser?.id])
+
+  useEffect(() => {
+    if (!profileUser?.id) {
+      setSavedItems([])
+      setUpvotedPosts([])
+      setDownvotedPosts([])
+      setIsProfileDataLoading(false)
+      return
+    }
+
+    let cancelled = false
+
+    const loadOwnData = async () => {
+      setIsProfileDataLoading(true)
+
+      try {
+        const [savedResponse, votesResponse] = await Promise.all([
+          fetch(`/api/saveditem/user?userId=${profileUser.id}`),
+          fetch('/api/vote'),
+        ])
+
+        const fetchedSaved = savedResponse.ok ? await savedResponse.json() : []
+        const allVotes = votesResponse.ok ? await votesResponse.json() : []
+
+        const userPostVotes = allVotes.filter(
+          (vote) => vote.authorId === profileUser.id && Boolean(vote.postId),
+        )
+
+        const savedCommentIds = [
+          ...new Set(
+            fetchedSaved
+              .map((item) => item.commentId)
+              .filter((commentId) => commentId !== null),
+          ),
+        ]
+        const savedPostIds = fetchedSaved
+          .map((item) => item.postId)
+          .filter((postId) => postId !== null)
+
+        const votedPostIds = userPostVotes
+          .map((vote) => vote.postId)
+          .filter((postId) => postId !== null)
+
+        const savedComments = await Promise.all(
+          savedCommentIds.map(async (commentId) => {
+            try {
+              const response = await fetch(`/api/comments/${commentId}`)
+              if (!response.ok) return [commentId, null]
+              return [commentId, await response.json()]
+            } catch {
+              return [commentId, null]
+            }
+          }),
+        )
+
+        const savedCommentsById = new Map(
+          savedComments.filter(([, comment]) => comment !== null),
+        )
+
+        const postIdsFromComments = [
+          ...new Set(
+            Array.from(savedCommentsById.values())
+              .map((comment) => comment.postId)
+              .filter(Boolean),
+          ),
+        ]
+
+        const allPostIds = [
+          ...new Set([
+            ...savedPostIds,
+            ...postIdsFromComments,
+            ...votedPostIds,
+          ]),
+        ]
+
+        const fetchedPosts = await Promise.all(
+          allPostIds.map(async (postId) => {
+            try {
+              const response = await fetch(`/api/posts/${postId}`)
+              if (!response.ok) return [postId, null]
+              return [postId, await response.json()]
+            } catch {
+              return [postId, null]
+            }
+          }),
+        )
+
+        const postsById = new Map(
+          fetchedPosts.filter(([, post]) => post !== null),
+        )
+
+        const mappedSavedItems = fetchedSaved
+          .map((savedItem) => {
+            if (savedItem.postId) {
+              const post = postsById.get(savedItem.postId)
+              if (!post) return null
+              return {
+                id: `saved-${savedItem.id}`,
+                type: 'post',
+                community: `r/${post.communitySlug}`,
+                author: `u/${post.authorName}`,
+                time: formatDate(savedItem.createdAt),
+                title: post.title,
+                text: post.body || '',
+                image: normalizeImageSrc(post.imageUrl),
+                votes: post.votes ?? 0,
+                comments: post.commentsCount ?? 0,
+                postId: post.id,
+              }
+            }
+
+            if (savedItem.commentId) {
+              const comment = savedCommentsById.get(savedItem.commentId)
+              if (!comment) return null
+
+              const post = postsById.get(comment.postId)
+              if (!post) return null
+
+              return {
+                id: `saved-${savedItem.id}`,
+                type: 'comment',
+                community: `r/${post.communitySlug}`,
+                author: `u/${comment.authorName}`,
+                postTitle:
+                  post.title || savedItem.postTitle || `Post #${post.id}`,
+                postId: post.id,
+                content: comment.body || savedItem.commentBody || '',
+                votes: comment.votes ?? 0,
+                time: formatDate(savedItem.createdAt),
+              }
+            }
+
+            return null
+          })
+          .filter(Boolean)
+
+        const mappedUpvoted = userPostVotes
+          .filter((vote) => vote.type === 1)
+          .map((vote) => mapPostToVotedItem(vote, postsById.get(vote.postId)))
+          .filter(Boolean)
+
+        const mappedDownvoted = userPostVotes
+          .filter((vote) => vote.type === -1)
+          .map((vote) => mapPostToVotedItem(vote, postsById.get(vote.postId)))
+          .filter(Boolean)
+
+        if (!cancelled) {
+          setSavedItems(mappedSavedItems)
+          setUpvotedPosts(mappedUpvoted)
+          setDownvotedPosts(mappedDownvoted)
+        }
+      } catch {
+        if (!cancelled) {
+          setSavedItems([])
+          setUpvotedPosts([])
+          setDownvotedPosts([])
+        }
+      } finally {
+        if (!cancelled) {
+          setIsProfileDataLoading(false)
+        }
+      }
+    }
+
+    loadOwnData()
+
+    return () => {
+      cancelled = true
+    }
+  }, [profileUser?.id])
+
+  const hasPosts = posts.length > 0
+  const hasComments = comments.length > 0
+  const hasSaved = savedItems.length > 0
+  const hasUpvoted = upvotedPosts.length > 0
+  const hasDownvoted = downvotedPosts.length > 0
+
+  const statCards = useMemo(
+    () => [
+      { label: 'Karma', value: `${profileUser?.karma ?? 0}` },
+      { label: 'Posts', value: `${posts.length}` },
+      { label: 'Comments', value: `${comments.length}` },
+      { label: 'Cake Day', value: formatCakeDay(profileUser?.createdAt) },
+    ],
+    [comments.length, posts.length, profileUser?.createdAt, profileUser?.karma],
+  )
 
   const handlePostMenu = (e, postId) => {
     if (openMorePostId === postId) {
@@ -320,45 +509,73 @@ export function UserProfile() {
     if (activeTab === 'Overview')
       return (
         <ProfileOverviewTab
-          displayName={displayName}
+          displayName={profileUser?.userName || displayName}
           statCards={statCards}
           isOwnProfile={isOwnProfile}
           bio={profileUser?.bio || (isOwnProfile ? authUser?.bio : null)}
         />
       )
+
     if (activeTab === 'Posts')
-      return (
+      return isActivityLoading ? (
+        <section className='tab-panel'>
+          <p style={{ textAlign: 'center', padding: '1.5rem 0' }}>
+            Loading posts...
+          </p>
+        </section>
+      ) : (
         <ProfilePostsTab
-          posts={USER_POSTS}
+          posts={posts}
           hasPosts={hasPosts}
           openMorePostId={openMorePostId}
           onMenuOpen={handlePostMenu}
           isOwnProfile={isOwnProfile}
         />
       )
+
     if (activeTab === 'Comments')
-      return (
+      return isActivityLoading ? (
+        <section className='tab-panel'>
+          <p style={{ textAlign: 'center', padding: '1.5rem 0' }}>
+            Loading comments...
+          </p>
+        </section>
+      ) : (
         <ProfileCommentsTab
-          comments={USER_COMMENTS}
+          comments={comments}
           hasComments={hasComments}
           openMoreCommentId={openMoreCommentId}
           onMenuOpen={handleCommentMenu}
           isOwnProfile={isOwnProfile}
         />
       )
+
     if (activeTab === 'Saved')
-      return (
+      return isProfileDataLoading ? (
+        <section className='tab-panel'>
+          <p style={{ textAlign: 'center', padding: '1.5rem 0' }}>
+            Loading saved items...
+          </p>
+        </section>
+      ) : (
         <ProfileSavedTab
-          items={SAVED_ITEMS}
+          items={savedItems}
           hasSaved={hasSaved}
           openMoreSavedId={openMoreSavedId}
           onMenuOpen={handleSavedMenu}
         />
       )
+
     if (activeTab === 'Upvoted')
-      return (
+      return isProfileDataLoading ? (
+        <section className='tab-panel'>
+          <p style={{ textAlign: 'center', padding: '1.5rem 0' }}>
+            Loading upvoted posts...
+          </p>
+        </section>
+      ) : (
         <ProfileVotedTab
-          items={UPVOTED_POSTS}
+          items={upvotedPosts}
           voteType='up'
           hasVoted={hasUpvoted}
           filterLabel='Upvoted posts'
@@ -366,10 +583,17 @@ export function UserProfile() {
           onMenuOpen={handleUpvotedMenu}
         />
       )
+
     if (activeTab === 'Downvoted')
-      return (
+      return isProfileDataLoading ? (
+        <section className='tab-panel'>
+          <p style={{ textAlign: 'center', padding: '1.5rem 0' }}>
+            Loading downvoted posts...
+          </p>
+        </section>
+      ) : (
         <ProfileVotedTab
-          items={DOWNVOTED_POSTS}
+          items={downvotedPosts}
           voteType='down'
           hasVoted={hasDownvoted}
           filterLabel='Downvoted posts'
@@ -377,6 +601,7 @@ export function UserProfile() {
           onMenuOpen={handleDownvotedMenu}
         />
       )
+
     return null
   }
 
@@ -384,6 +609,44 @@ export function UserProfile() {
     normalizeImageSrc(
       profileUser?.avatarUrl || (isOwnProfile ? authUser?.avatarUrl : null),
     ) || avatar
+
+  if (isProfileLoading) {
+    return (
+      <main className='user-profile-page'>
+        <section className='user-profile-shell'>
+          <div className='user-profile-main'>
+            <section className='user-feed-card'>
+              <p style={{ textAlign: 'center', padding: '2rem' }}>
+                Loading profile...
+              </p>
+            </section>
+          </div>
+        </section>
+      </main>
+    )
+  }
+
+  if (profileError || !profileUser) {
+    return (
+      <main className='user-profile-page'>
+        <section className='user-profile-shell'>
+          <div className='user-profile-main'>
+            <section className='user-feed-card'>
+              <p
+                style={{
+                  textAlign: 'center',
+                  padding: '2rem',
+                  color: '#c53030',
+                }}
+              >
+                {profileError || 'Profile not found'}
+              </p>
+            </section>
+          </div>
+        </section>
+      </main>
+    )
+  }
 
   return (
     <main className='user-profile-page'>
@@ -410,8 +673,8 @@ export function UserProfile() {
                 className='user-hero-avatar'
               />
               <div className='user-hero-meta'>
-                <h1>{displayName}</h1>
-                <p>u/{displayName}</p>
+                <h1>{profileUser.userName || displayName}</h1>
+                <p>u/{profileUser.userName || displayName}</p>
               </div>
               <div className='user-hero-actions'>
                 {isOwnProfile ? (
@@ -519,8 +782,10 @@ export function UserProfile() {
 
       {openMoreCommentId !== null &&
         (() => {
-          const c = USER_COMMENTS.find((x) => x.id === openMoreCommentId)
-          return c ? (
+          const comment = comments.find(
+            (entry) => entry.id === openMoreCommentId,
+          )
+          return comment ? (
             <div
               className='pp-more-menu pp-global-menu'
               role='menu'
@@ -531,7 +796,7 @@ export function UserProfile() {
               }}
             >
               <Link
-                to={getCommentPostRoute(c)}
+                to={getCommentPostRoute(comment)}
                 className='pp-more-item pc-more-link'
                 role='menuitem'
                 onClick={() => setOpenMoreCommentId(null)}
@@ -558,8 +823,10 @@ export function UserProfile() {
 
       {openMoreSavedId !== null &&
         (() => {
-          const s = SAVED_ITEMS.find((x) => x.id === openMoreSavedId)
-          return s ? (
+          const savedItem = savedItems.find(
+            (entry) => entry.id === openMoreSavedId,
+          )
+          return savedItem ? (
             <div
               className='pp-more-menu pp-global-menu'
               role='menu'

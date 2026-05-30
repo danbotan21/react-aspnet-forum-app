@@ -13,6 +13,11 @@ import {
   submitPostVote,
   voteValueFromDirection,
 } from './utils/voteApi'
+import {
+  fetchUserSavedPosts,
+  savePost,
+  unsaveItem,
+} from './utils/savedItemApi'
 
 import { useState, useEffect } from 'react'
 
@@ -30,6 +35,8 @@ export function PostPage() {
   const [commentVotesById, setCommentVotesById] = useState({})
   const [isPostVotePending, setIsPostVotePending] = useState(false)
   const [pendingCommentVotes, setPendingCommentVotes] = useState({})
+  const [savedPostEntry, setSavedPostEntry] = useState(null)
+  const [isPostSavePending, setIsPostSavePending] = useState(false)
 
   useEffect(() => {
     setIsLoading(true)
@@ -75,6 +82,25 @@ export function PostPage() {
     fetchUserPostVotes([post.id], user.id).then((votesMap) => {
       if (!cancelled) {
         setPostVote(votesMap[post.id] || { id: null, type: 0 })
+      }
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [post?.id, user?.id])
+
+  useEffect(() => {
+    if (!user?.id || !post?.id) {
+      setSavedPostEntry(null)
+      return
+    }
+
+    let cancelled = false
+
+    fetchUserSavedPosts([post.id], user.id).then((savedMap) => {
+      if (!cancelled) {
+        setSavedPostEntry(savedMap[post.id] ?? null)
       }
     })
 
@@ -286,6 +312,35 @@ export function PostPage() {
     }
   }
 
+  const handleToggleSavePost = async () => {
+    if (!user?.id || !post?.id) {
+      alert('Please login to save posts.')
+      return
+    }
+    if (isPostSavePending) return
+
+    const previousSavedEntry = savedPostEntry
+    setIsPostSavePending(true)
+
+    try {
+      if (previousSavedEntry?.id) {
+        setSavedPostEntry(null)
+        await unsaveItem({ savedItemId: previousSavedEntry.id, userId: user.id })
+      } else {
+        const createdSavedItem = await savePost({ postId: post.id, userId: user.id })
+        setSavedPostEntry({
+          id: createdSavedItem.id,
+          postId: createdSavedItem.postId,
+        })
+      }
+    } catch (error) {
+      setSavedPostEntry(previousSavedEntry)
+      alert(error.message)
+    } finally {
+      setIsPostSavePending(false)
+    }
+  }
+
   const handleCreateComment = async () => {
     if (!user?.id) {
       alert('Please login to comment.')
@@ -420,6 +475,14 @@ export function PostPage() {
               </button>
               <button type='button' className='post-chip'>
                 <FaComment /> {post.commentsCount}
+              </button>
+              <button
+                type='button'
+                className='post-chip'
+                onClick={handleToggleSavePost}
+                disabled={isPostSavePending}
+              >
+                {savedPostEntry?.id ? 'Unsave' : 'Save'}
               </button>
               <button type='button' className='post-chip'>
                 <FaShare /> Share
