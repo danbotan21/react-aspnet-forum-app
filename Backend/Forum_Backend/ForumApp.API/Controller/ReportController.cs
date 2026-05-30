@@ -1,3 +1,5 @@
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ForumApp.BusinessLayer.Interfaces;
 using ForumApp.Domain.Models.Report;
@@ -15,75 +17,75 @@ namespace ForumApp.API.Controller
             _reportService = reportService;
         }
 
-        /// <summary>
-        /// Create a new report
-        /// </summary>
-        /// <param name="reportData">Report creation data</param>
-        /// <returns>ActionResponse indicating success or failure</returns>
+        // POST api/report — authenticated user submits a report
+        [Authorize]
         [HttpPost]
-        [ProducesResponseType(StatusCodes.Status201Created)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> CreateReport([FromBody] ReportCreateDto reportData, CancellationToken ct = default)
+        public async Task<IActionResult> CreateReport([FromBody] ReportCreateDto reportData, CancellationToken ct)
         {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
+            if (!ModelState.IsValid) return BadRequest(ModelState);
 
-            // TODO: Get userId from authentication context when auth is implemented
-            // For now, using reporterId from the DTO
-            int reporterId = reportData.ReporterId;
-
+            var reporterId = GetCurrentUserId();
             var result = await _reportService.CreateReportAsync(reportData, reporterId, ct);
 
-            if (!result.IsSuccess)
-            {
-                return BadRequest(result);
-            }
-
-            return CreatedAtAction(nameof(GetAllReports), result);
+            if (!result.IsSuccess) return BadRequest(result.Message);
+            return Ok(result.Message);
         }
 
-        /// <summary>
-        /// Get all reports (Admin only - add authorization later)
-        /// </summary>
-        /// <returns>List of all reports</returns>
+        // GET api/report — admin only (all reports)
         [HttpGet]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> GetAllReports(CancellationToken ct = default)
+        public async Task<IActionResult> GetAllReports(CancellationToken ct)
         {
-            try
-            {
-                var reports = await _reportService.GetAllReportsAsync(ct);
-                return Ok(reports);
-            }
-            catch (Exception ex)
-            {
-                // Log error in production
-                return StatusCode(500, new { message = "Failed to retrieve reports." });
-            }
+            var reports = await _reportService.GetAllReportsAsync(ct);
+            return Ok(reports);
         }
 
-        /// <summary>
-        /// Delete a report by ID (Admin only - add authorization later)
-        /// </summary>
-        /// <param name="id">Report ID</param>
-        /// <returns>ActionResponse indicating success or failure</returns>
-        [HttpDelete("{id}")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> DeleteReport(int id, CancellationToken ct = default)
+        // GET api/report/community/{communityId} — mod panel: pending reports for a community
+        [Authorize]
+        [HttpGet("community/{communityId:int}")]
+        public async Task<IActionResult> GetCommunityReports(int communityId, CancellationToken ct)
+        {
+            var requestingUserId = GetCurrentUserId();
+            var reports = await _reportService.GetCommunityReportsAsync(communityId, requestingUserId, ct);
+            return Ok(reports);
+        }
+
+        // POST api/report/{id}/dismiss — mod dismisses a report
+        [Authorize]
+        [HttpPost("{id:int}/dismiss")]
+        public async Task<IActionResult> Dismiss(int id, CancellationToken ct)
+        {
+            var requestingUserId = GetCurrentUserId();
+            var result = await _reportService.DismissReportAsync(id, requestingUserId, ct);
+
+            if (!result.IsSuccess) return BadRequest(result.Message);
+            return Ok(result.Message);
+        }
+
+        // POST api/report/{id}/remove — mod removes reported content
+        [Authorize]
+        [HttpPost("{id:int}/remove")]
+        public async Task<IActionResult> RemoveContent(int id, CancellationToken ct)
+        {
+            var requestingUserId = GetCurrentUserId();
+            var result = await _reportService.RemoveReportedContentAsync(id, requestingUserId, ct);
+
+            if (!result.IsSuccess) return BadRequest(result.Message);
+            return Ok(result.Message);
+        }
+
+        // DELETE api/report/{id} — admin deletes a report
+        [HttpDelete("{id:int}")]
+        public async Task<IActionResult> DeleteReport(int id, CancellationToken ct)
         {
             var result = await _reportService.DeleteReportAsync(id, ct);
+            if (!result.IsSuccess) return NotFound(result.Message);
+            return Ok(result.Message);
+        }
 
-            if (!result.IsSuccess)
-            {
-                return NotFound(result);
-            }
-
-            return Ok(result);
+        private int GetCurrentUserId()
+        {
+            var claim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
+            return int.Parse(claim!.Value);
         }
     }
 }

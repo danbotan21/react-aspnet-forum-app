@@ -168,15 +168,19 @@ namespace ForumApp.BusinessLayer.Structure
 
         public async Task<PostResponseDto?> CreatePostAsync(PostCreateDto postData, int authorId, CancellationToken ct = default)
         {
-            var communityExists = await _context.Communities
-                .AnyAsync(c => c.Id == postData.CommunityId, ct);
+            var community = await _context.Communities
+                .Select(c => new { c.Id, c.Type })
+                .FirstOrDefaultAsync(c => c.Id == postData.CommunityId, ct);
 
-            if (!communityExists) return null;
+            if (community == null) return null;
 
-            var isAuthorCommunityMember = await _context.CommunityMembers
-                .AnyAsync(m => m.CommunityId == postData.CommunityId && m.UserId == authorId, ct);
+            var membership = await _context.CommunityMembers
+                .FirstOrDefaultAsync(m => m.CommunityId == postData.CommunityId && m.UserId == authorId, ct);
 
-            if (!isAuthorCommunityMember) return null;
+            if (membership == null || membership.IsBanned) return null;
+
+            if (community.Type == "restricted" && membership.Role != "owner" && membership.Role != "moderator")
+                return null;
 
             var post = new PostData
             {

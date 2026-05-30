@@ -4,6 +4,7 @@ using ForumApp.Domain.Models.Report;
 using ForumApp.Domain.Models.Responses;
 using ForumApp.BusinessLayer.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using ForumApp.Domain.Entities.Comment;
 
 namespace ForumApp.BusinessLayer.Structure
 {
@@ -22,12 +23,12 @@ namespace ForumApp.BusinessLayer.Structure
             try
             {
                 // Validari de bază
-                if (string.IsNullOrWhiteSpace(reportData.Reason) || reportData.Reason.Length < 10)
+                if (string.IsNullOrWhiteSpace(reportData.Reason) || reportData.Reason.Length < 3)
                 {
                     return new ActionResponse
                     {
                         IsSuccess = false,
-                        Message = "Report reason must be at least 10 characters long."
+                        Message = "Please provide a report reason."
                     };
                 }
 
@@ -69,13 +70,30 @@ namespace ForumApp.BusinessLayer.Structure
                     };
                 }
 
+                // Auto-resolve CommunityId from reported item
+                int? communityId = null;
+                if (reportData.Type == ReportType.Post)
+                {
+                    var post = await _context.Posts.FirstOrDefaultAsync(p => p.Id == reportData.ReportedItemId, ct);
+                    communityId = post?.CommunityId;
+                }
+                else if (reportData.Type == ReportType.Comment)
+                {
+                    var comment = await _context.Comments
+                        .Include(c => c.Post)
+                        .FirstOrDefaultAsync(c => c.ID == reportData.ReportedItemId, ct);
+                    communityId = comment?.Post?.CommunityId;
+                }
+
                 var report = new ReportData
                 {
                     ReporterId = reporterId,
                     Type = reportData.Type,
                     ReportedItemId = reportData.ReportedItemId,
                     Reason = reportData.Reason,
-                    CreatedAt = DateTime.UtcNow
+                    CreatedAt = DateTime.UtcNow,
+                    CommunityId = communityId,
+                    Status = "pending"
                 };
 
                 _context.Reports.Add(report);
@@ -150,14 +168,157 @@ namespace ForumApp.BusinessLayer.Structure
             }
             catch (Exception ex)
             {
-                // TODO: Logging la productie: log.Error(ex, "Failed to delete report {ReportId}", reportId);
-                // Variabila 'ex' va fi folosita pentru logging cand sistemul de logging va fi implementat
                 return new ActionResponse
                 {
                     IsSuccess = false,
                     Message = "Failed to delete report. Please try again later."
                 };
             }
+        }
+
+        public async Task<IReadOnlyList<CommunityReportResponseDto>> GetCommunityReportsAsync(int communityId, int requestingUserId, CancellationToken ct = default)
+        {
+            var canAct = await _context.CommunityMembers
+                .AnyAsync(m => m.CommunityId == communityId && m.UserId == requestingUserId
+                               && (m.Role == "owner" || m.Role == "moderator") && !m.IsBanned, ct);
+
+            if (!canAct) return new List<CommunityReportResponseDto>().AsReadOnly();
+
+            // Post reports
+            var postReports = await _context.Reports
+                .Where(r => r.CommunityId == communityId && r.Status == "pending" && r.Type == ReportType.Post)
+                .Include(r => r.Reporter)
+                .ToListAsync(ct);
+
+            var postIds = postReports.Select(r => r.ReportedItemId).Distinct().ToList();
+            var posts = await _context.Posts
+                .Where(p => postIds.Contains(p.Id))
+                .Include(p => p.Author)
+                .ToDictionaryAsync(p => p.Id, ct);
+
+            // Comment reports
+            var commentReports = await _context.Reports
+                .Where(r => r.CommunityId == communityId && r.Status == "pending" && r.Type == ReportType.Comment)
+                .Include(r => r.Reporter)
+                .ToListAsync(ct);
+
+            var commentIds = commentReports.Select(r => r.ReportedItemId).Distinct().ToList();
+            var comments = await _context.Comments
+                .Where(c => commentIds.Contains(c.ID))
+                .Include(c => c.Author)
+                .ToDictionaryAsync(c => c.ID, ct);
+
+            var result = new List<CommunityReportResponseDto>();
+
+            foreach (var report in postReports)
+            {
+                if (!posts.TryGetValue(report.ReportedItemId, out var post)) continue;
+                var preview = post.Body;
+                if (preview != null && preview.Length > 300) preview = preview.Substring(0, 300) + "...";
+                result.Add(new CommunityReportResponseDto
+                {
+                    Id = report.Id,
+                    TypeName = "Post",
+                    Reason = report.Reason,
+                    Status = report.Status,
+                    CreatedAt = report.CreatedAt,
+                    ReporterUserName = report.Reporter.UserName,
+                    PostTitle = post.Title,
+                    ContentPreview = preview,
+                    HasImage = post.ImageUrl != null,
+                    ContentAuthorUserName = post.Author.UserName,
+                    ReportedItemId = report.ReportedItemId,
+                    PostId = post.Id
+                });
+            }
+
+            foreach (var report in commentReports)
+            {
+                if (!comments.TryGetValue(report.ReportedItemId, out var comment)) continue;
+                var preview = comment.Body.Length > 300 ? comment.Body.Substring(0, 300) + "..." : comment.Body;
+                result.Add(new CommunityReportResponseDto
+                {
+                    Id = report.Id,
+                    TypeName = "Comment",
+                    Reason = report.Reason,
+                    Status = report.Status,
+                    CreatedAt = report.CreatedAt,
+                    ReporterUserName = report.Reporter.UserName,
+                    PostTitle = null,
+                    ContentPreview = preview,
+                    HasImage = false,
+                    ContentAuthorUserName = comment.Author.UserName,
+                    ReportedItemId = report.ReportedItemId,
+                    PostId = comment.PostId
+                });
+            }
+
+            return result.OrderByDescending(r => r.CreatedAt).ToList().AsReadOnly();
+        }
+
+        public async Task<ActionResponse> DismissReportAsync(int reportId, int requestingUserId, CancellationToken ct = default)
+        {
+            var report = await _context.Reports.FirstOrDefaultAsync(r => r.Id == reportId, ct);
+            if (report == null) return new ActionResponse { IsSuccess = false, Message = "Report not found." };
+
+            if (report.CommunityId.HasValue)
+            {
+                var canAct = await _context.CommunityMembers
+                    .AnyAsync(m => m.CommunityId == report.CommunityId.Value && m.UserId == requestingUserId
+                                   && (m.Role == "owner" || m.Role == "moderator") && !m.IsBanned, ct);
+                if (!canAct) return new ActionResponse { IsSuccess = false, Message = "You don't have permission to dismiss this report." };
+            }
+
+            report.Status = "dismissed";
+            report.ActionedByUserId = requestingUserId;
+            report.ActionedAt = DateTime.UtcNow;
+
+            try { await _context.SaveChangesAsync(ct); }
+            catch { return new ActionResponse { IsSuccess = false, Message = "Failed to dismiss report." }; }
+
+            return new ActionResponse { IsSuccess = true, Message = "Report dismissed." };
+        }
+
+        public async Task<ActionResponse> RemoveReportedContentAsync(int reportId, int requestingUserId, CancellationToken ct = default)
+        {
+            var report = await _context.Reports.FirstOrDefaultAsync(r => r.Id == reportId, ct);
+            if (report == null) return new ActionResponse { IsSuccess = false, Message = "Report not found." };
+
+            if (report.CommunityId.HasValue)
+            {
+                var canAct = await _context.CommunityMembers
+                    .AnyAsync(m => m.CommunityId == report.CommunityId.Value && m.UserId == requestingUserId
+                                   && (m.Role == "owner" || m.Role == "moderator") && !m.IsBanned, ct);
+                if (!canAct) return new ActionResponse { IsSuccess = false, Message = "You don't have permission to remove content." };
+            }
+
+            if (report.Type == ReportType.Post)
+            {
+                var post = await _context.Posts.FirstOrDefaultAsync(p => p.Id == report.ReportedItemId, ct);
+                if (post != null) _context.Posts.Remove(post);
+            }
+            else if (report.Type == ReportType.Comment)
+            {
+                var comment = await _context.Comments.FirstOrDefaultAsync(c => c.ID == report.ReportedItemId, ct);
+                if (comment != null) _context.Comments.Remove(comment);
+            }
+
+            // Mark all reports for the same item as actioned
+            var relatedReports = await _context.Reports
+                .Where(r => r.Type == report.Type && r.ReportedItemId == report.ReportedItemId && r.Status == "pending")
+                .ToListAsync(ct);
+
+            foreach (var r in relatedReports)
+            {
+                r.Status = "actioned";
+                r.ActionedByUserId = requestingUserId;
+                r.ActionedAt = DateTime.UtcNow;
+            }
+
+            try { await _context.SaveChangesAsync(ct); }
+            catch { return new ActionResponse { IsSuccess = false, Message = "Failed to remove content." }; }
+
+            return new ActionResponse { IsSuccess = true, Message = "Content removed and report actioned." };
         }
     }
 }

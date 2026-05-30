@@ -72,10 +72,10 @@ namespace ForumApp.BusinessLayer.Structure
 
             if (postInfo == null) return null;
 
-            var isCommunityMember = await _context.CommunityMembers
-                .AnyAsync(m => m.CommunityId == postInfo.CommunityId && m.UserId == authorId, ct);
+            var membership = await _context.CommunityMembers
+                .FirstOrDefaultAsync(m => m.CommunityId == postInfo.CommunityId && m.UserId == authorId, ct);
 
-            if (!isCommunityMember) return null;
+            if (membership == null || membership.IsBanned) return null;
 
             // Daca este reply, verifica ca comentariul parinte exista si apartine aceluiasi post
             if (commentData.ParentCommentId.HasValue)

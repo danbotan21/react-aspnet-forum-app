@@ -11,6 +11,7 @@ namespace ForumApp.Domain.Models.Community
         public int MembersCount { get; set; }
         public string Category { get; set; }
         public string Type { get; set; }
+        public string? Rules { get; set; }
         public DateTime CreatedAt { get; set; }
     }
 }

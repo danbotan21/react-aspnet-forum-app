@@ -30,5 +30,15 @@ namespace ForumApp.Domain.Entities.Report
         // Reported Item
         [Required]
         public int ReportedItemId { get; set; }
+
+        // Community context (null for user reports)
+        public int? CommunityId { get; set; }
+
+        // Moderation status
+        [StringLength(20)]
+        public string Status { get; set; } = "pending"; // "pending", "dismissed", "actioned"
+
+        public int? ActionedByUserId { get; set; }
+        public DateTime? ActionedAt { get; set; }
     }
 }

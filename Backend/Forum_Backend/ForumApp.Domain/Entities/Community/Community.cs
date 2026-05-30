@@ -37,6 +37,8 @@ namespace ForumApp.Domain.Entities.Community
     [StringLength(20)]
     public string Type { get; set; } = string.Empty;
 
+    public string? Rules { get; set; }
+
     public DateTime CreatedAt { get; set; }
 
     // Relatie cu Post

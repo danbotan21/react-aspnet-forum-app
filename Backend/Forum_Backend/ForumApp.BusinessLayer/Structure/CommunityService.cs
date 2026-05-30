@@ -45,6 +45,7 @@ namespace ForumApp.BusinessLayer.Structure
             MembersCount = community.MembersCount,
             Category = community.Category,
             Type = community.Type,
+            Rules = community.Rules,
             CreatedAt = community.CreatedAt
         };
 
@@ -175,10 +176,11 @@ namespace ForumApp.BusinessLayer.Structure
 
             if (communityData.Title != null) community.Title = communityData.Title;
             if (communityData.Description != null) community.Description = communityData.Description;
-            if (communityData.BannerUrl != null) community.BannerUrl = communityData.BannerUrl;
-            if (communityData.AvatarUrl != null) community.AvatarUrl = communityData.AvatarUrl;
+            community.BannerUrl = communityData.BannerUrl;
+            community.AvatarUrl = communityData.AvatarUrl;
             if (communityData.Category != null) community.Category = communityData.Category;
             if (communityData.Type != null) community.Type = communityData.Type;
+            community.Rules = communityData.Rules;
 
             try
             {
