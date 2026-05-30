@@ -6,6 +6,7 @@ import {
   FaBan,
   FaTrash,
   FaBell,
+  FaEnvelopeOpenText,
 } from 'react-icons/fa'
 import { useNotifications } from './NotificationContext'
 import './Styles/Notification.css'
@@ -52,6 +53,12 @@ const TYPE_CONFIG = {
     Icon: FaTrash,
     color: '#d97706',
     bg: 'rgba(217, 119, 6, 0.11)',
+  },
+  ContactReply: {
+    label: 'Reply from Admin',
+    Icon: FaEnvelopeOpenText,
+    color: '#0f43c7',
+    bg: 'rgba(15, 67, 199, 0.11)',
   },
 }
 

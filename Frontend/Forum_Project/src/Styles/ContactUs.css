@@ -153,6 +153,16 @@
   font: 600 0.9rem/1.4 'DM Sans', sans-serif;
 }
 
+.contact-error {
+  margin: 0.35rem 0 0;
+  color: #b3261e;
+  background: #fdecea;
+  border: 1px solid #f3c6c0;
+  border-radius: 10px;
+  padding: 0.72rem 0.8rem;
+  font: 600 0.9rem/1.4 'DM Sans', sans-serif;
+}
+
 .contact-info-list {
   list-style: none;
   padding: 0;

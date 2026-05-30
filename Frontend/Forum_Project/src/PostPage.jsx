@@ -101,6 +101,9 @@ export function PostPage() {
     post?.authorName &&
     user.userName.toLowerCase() === post.authorName.toLowerCase()
 
+  // Global admins can moderate any content directly from the app.
+  const isAdmin = user?.role === 'Admin'
+
   // Auto-enter edit mode when navigated with ?edit=true
   useEffect(() => {
     if (searchParams.get('edit') === 'true' && isAuthor && post && !isEditing) {
@@ -934,7 +937,7 @@ export function PostPage() {
               </button>
             )}
 
-            {(isOwnComment || isCommunityOwner || isCommunityModerator) &&
+            {(isOwnComment || isCommunityOwner || isCommunityModerator || isAdmin) &&
               (confirmDeleteCommentId === comment.id ? (
                 <span className='post-comment-delete-confirm'>
                   <span className='post-comment-delete-label'>Delete?</span>
@@ -1251,7 +1254,7 @@ export function PostPage() {
                   <FaEdit /> Edit
                 </button>
               )}
-              {(isAuthor || isCommunityOwner) && !isEditing && (
+              {(isAuthor || isCommunityOwner || isAdmin) && !isEditing && (
                 <button
                   type='button'
                   className='post-chip post-chip-delete'

@@ -9,6 +9,7 @@ import {
   FaUsers,
   FaCog,
   FaSignOutAlt,
+  FaShieldAlt,
 } from 'react-icons/fa'
 import { useAuth } from './AuthContext'
 import { useNotifications } from './NotificationContext'
@@ -271,6 +272,20 @@ export const Navbar = () => {
                   <FaCog className='profile-dropdown-item-icon' />
                   <span>Settings</span>
                 </Link>
+
+                {user?.role === 'Admin' && (
+                  <>
+                    <div className='profile-dropdown-divider' />
+                    <Link
+                      to='/admin'
+                      className='profile-dropdown-item profile-dropdown-admin'
+                      onClick={() => setIsOpen(false)}
+                    >
+                      <FaShieldAlt className='profile-dropdown-item-icon' />
+                      <span>Admin Panel</span>
+                    </Link>
+                  </>
+                )}
 
                 <div className='profile-dropdown-divider' />
 

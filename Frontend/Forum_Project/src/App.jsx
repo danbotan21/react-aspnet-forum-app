@@ -18,6 +18,7 @@ import { EditAvatar } from './EditAvatar'
 import { UserProfile } from './UserProfile'
 import { CommunityPage } from './CommunityPage'
 import { CommunityModPage } from './CommunityModPage'
+import { AdminPage } from './AdminPage'
 import { PostPage } from './PostPage'
 import { Settings } from './Settings'
 import { SearchResults } from './SearchResults'
@@ -151,6 +152,14 @@ function App() {
           element={
             <AppLayout>
               <SearchResults />
+            </AppLayout>
+          }
+        />
+        <Route
+          path='/admin'
+          element={
+            <AppLayout>
+              <AdminPage />
             </AppLayout>
           }
         />

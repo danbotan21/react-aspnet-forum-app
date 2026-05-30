@@ -225,6 +225,7 @@ export const Popular = () => {
 
   const canModeratePost = (post) => {
     if (!user || !token) return false
+    if (user.role === 'Admin') return true // global admins moderate anything
     if (post.authorName === user.userName) return true
     const role = userCommsBySlug[(post.communitySlug || '').toLowerCase()]
     return role === 'owner' || role === 'moderator'

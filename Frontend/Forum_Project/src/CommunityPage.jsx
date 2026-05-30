@@ -839,6 +839,7 @@ export function CommunityPage() {
                                   )}
                                 {(myRole === 'owner' ||
                                   myRole === 'moderator' ||
+                                  user?.role === 'Admin' ||
                                   post.authorName === user?.userName) && (
                                   <button
                                     className='more-menu-item more-menu-danger'
