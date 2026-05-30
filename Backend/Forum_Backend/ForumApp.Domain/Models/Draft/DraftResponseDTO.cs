@@ -1,6 +1,6 @@
-namespace ForumApp.Domain.Models.Draft
+﻿namespace ForumApp.Domain.Models.Draft
 {
-    public class DraftResponseDTO
+    public class DraftResponseDto
     {
         public int Id { get; set; }
         public int AuthorId { get; set; }

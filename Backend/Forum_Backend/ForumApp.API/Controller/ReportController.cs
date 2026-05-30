@@ -10,9 +10,9 @@ namespace ForumApp.API.Controller
     [Route("api/[controller]")]
     public class ReportController : ControllerBase
     {
-        private readonly IReportActions _reportService;
+        private readonly IReportAction _reportService;
 
-        public ReportController(IReportActions reportService)
+        public ReportController(IReportAction reportService)
         {
             _reportService = reportService;
         }
@@ -56,7 +56,7 @@ namespace ForumApp.API.Controller
         public async Task<IActionResult> Dismiss(int id, CancellationToken ct)
         {
             var requestingUserId = GetCurrentUserId();
-            var result = await _reportService.DismissReportAsync(id, requestingUserId, ct);
+            var result = await _reportService.DismissReportAsync(id, requestingUserId, ct: ct);
 
             if (!result.IsSuccess) return BadRequest(result.Message);
             return Ok(result.Message);
@@ -68,7 +68,7 @@ namespace ForumApp.API.Controller
         public async Task<IActionResult> RemoveContent(int id, CancellationToken ct)
         {
             var requestingUserId = GetCurrentUserId();
-            var result = await _reportService.RemoveReportedContentAsync(id, requestingUserId, ct);
+            var result = await _reportService.RemoveReportedContentAsync(id, requestingUserId, ct: ct);
 
             if (!result.IsSuccess) return BadRequest(result.Message);
             return Ok(result.Message);

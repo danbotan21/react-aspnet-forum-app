@@ -1,8 +1,8 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace ForumApp.Domain.Models.Draft
 {
-    public class UpdateDraftRequestDTO
+    public class UpdateDraftRequestDto
     {
         [Required]
         [MaxLength(300)]

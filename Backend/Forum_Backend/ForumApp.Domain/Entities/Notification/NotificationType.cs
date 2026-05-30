@@ -9,6 +9,7 @@ namespace ForumApp.Domain.Entities.Notification
         CommentUpvoted = 4,
         Banned = 5,
         PostDeletedByMod = 6,
-        CommentDeletedByMod = 7
+        CommentDeletedByMod = 7,
+        ContactReply = 8
     }
 }

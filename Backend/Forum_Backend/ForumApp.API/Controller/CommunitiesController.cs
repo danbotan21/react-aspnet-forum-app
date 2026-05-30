@@ -10,10 +10,10 @@ namespace ForumApp.API.Controller
     [Route("api/[controller]")]
     public class CommunitiesController : ControllerBase
     {
-        private readonly ICommunityActions _communityService;
-        private readonly IPostActions _postService;
+        private readonly ICommunityAction _communityService;
+        private readonly IPostAction _postService;
 
-        public CommunitiesController(ICommunityActions communityService, IPostActions postService)
+        public CommunitiesController(ICommunityAction communityService, IPostAction postService)
         {
             _communityService = communityService;
             _postService = postService;
@@ -144,7 +144,7 @@ namespace ForumApp.API.Controller
         public async Task<IActionResult> Delete(int id, CancellationToken ct)
         {
             var requestingUserId = GetCurrentUserId();
-            var result = await _communityService.DeleteCommunityAsync(id, requestingUserId, ct);
+            var result = await _communityService.DeleteCommunityAsync(id, requestingUserId, ct: ct);
 
             if (!result.IsSuccess)
                 return BadRequest(result.Message);

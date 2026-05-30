@@ -13,10 +13,12 @@ namespace ForumApp.API.Controller
     [Route("api/[controller]")]
     public class ImagesController : ControllerBase
     {
-        private readonly IImageStorageActions _imageStorageService;
+        private readonly IImageAction _imageValidator;
+        private readonly IImageStorageAction _imageStorageService;
 
-        public ImagesController(IImageStorageActions imageStorageService)
+        public ImagesController(IImageAction imageValidator, IImageStorageAction imageStorageService)
         {
+            _imageValidator = imageValidator;
             _imageStorageService = imageStorageService;
         }
 
@@ -31,7 +33,8 @@ namespace ForumApp.API.Controller
 
             try
             {
-                var imageUrl = await _imageStorageService.SaveImageAsync(file, request.Category, ct);
+                _imageValidator.ValidateImageFile(file.FileName, file.ContentType ?? "", file.Length);
+                var imageUrl = await _imageStorageService.SaveImageAsync(file.OpenReadStream(), file.FileName, request.Category, ct);
                 return Ok(new { imageUrl });
             }
             catch (InvalidOperationException ex)

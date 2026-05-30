@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ForumApp.BusinessLayer.Interfaces;
 using ForumApp.Domain.Models.Contact;
@@ -8,9 +9,9 @@ namespace ForumApp.API.Controller
     [Route("api/[controller]")]
     public class ContactController : ControllerBase
     {
-        private readonly IContactActions _contactService;
+        private readonly IContactAction _contactService;
 
-        public ContactController(IContactActions contactService)
+        public ContactController(IContactAction contactService)
         {
             _contactService = contactService;
         }
@@ -41,9 +42,10 @@ namespace ForumApp.API.Controller
         }
 
         /// <summary>
-        /// Get all contact messages (Admin only - add authorization later)
+        /// Get all contact messages (Admin only)
         /// </summary>
         /// <returns>List of all contact messages</returns>
+        [Authorize(Roles = "Admin")]
         [HttpGet]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]

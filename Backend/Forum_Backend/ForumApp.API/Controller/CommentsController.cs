@@ -10,9 +10,9 @@ namespace ForumApp.API.Controller
     [Route("api/[controller]")]
     public class CommentsController : ControllerBase
     {
-        private readonly ICommentActions _commentService;
+        private readonly ICommentAction _commentService;
 
-        public CommentsController(ICommentActions commentService)
+        public CommentsController(ICommentAction commentService)
         {
             _commentService = commentService;
         }
@@ -86,7 +86,7 @@ namespace ForumApp.API.Controller
         public async Task<IActionResult> Delete(int id, CancellationToken ct)
         {
             var requestingUserId = GetCurrentUserId();
-            var result = await _commentService.DeleteCommentAsync(id, requestingUserId, ct);
+            var result = await _commentService.DeleteCommentAsync(id, requestingUserId, ct: ct);
 
             if (!result.IsSuccess)
                 return BadRequest(result.Message);

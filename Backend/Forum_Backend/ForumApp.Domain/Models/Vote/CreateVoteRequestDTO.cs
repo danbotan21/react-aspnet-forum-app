@@ -1,9 +1,9 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using ForumApp.Domain.Entities.Vote;
 
 namespace ForumApp.Domain.Models.Vote
 {
-    public class CreateVoteRequestDTO
+    public class CreateVoteRequestDto
     {
         public VoteType Type { get; set; }
 

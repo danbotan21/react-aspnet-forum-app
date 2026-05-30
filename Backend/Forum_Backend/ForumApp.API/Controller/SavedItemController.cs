@@ -1,4 +1,4 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using ForumApp.BusinessLayer.Interfaces;
 using ForumApp.Domain.Models.SavedItem;
@@ -11,16 +11,16 @@ namespace ForumApp.API.Controller
     [Authorize]
     public class SavedItemController : ControllerBase
     {
-        private readonly ISavedItemActions _savedItemService;
+        private readonly ISavedItemAction _savedItemService;
 
-        public SavedItemController(ISavedItemActions savedItemService)
+        public SavedItemController(ISavedItemAction savedItemService)
         {
             _savedItemService = savedItemService;
         }
 
         // POST api/saveditem
         [HttpPost]
-        public async Task<IActionResult> SaveItem([FromBody] CreateSavedItemRequestDTO itemData)
+        public async Task<IActionResult> SaveItem([FromBody] CreateSavedItemRequestDto itemData)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);

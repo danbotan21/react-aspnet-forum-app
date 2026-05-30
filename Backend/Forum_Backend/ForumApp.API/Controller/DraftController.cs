@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ForumApp.BusinessLayer.Interfaces;
 using ForumApp.Domain.Models.Draft;
@@ -11,9 +11,9 @@ namespace ForumApp.API.Controller
     [Authorize]
     public class DraftController : ControllerBase
     {
-        private readonly IDraftActions _draftService;
+        private readonly IDraftAction _draftService;
 
-        public DraftController(IDraftActions draftService)
+        public DraftController(IDraftAction draftService)
         {
             _draftService = draftService;
         }
@@ -25,7 +25,7 @@ namespace ForumApp.API.Controller
         }
 
         [HttpPost]
-        public async Task<IActionResult> CreateDraft([FromBody] CreateDraftRequestDTO draftData)
+        public async Task<IActionResult> CreateDraft([FromBody] CreateDraftRequestDto draftData)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
@@ -45,7 +45,7 @@ namespace ForumApp.API.Controller
         }
 
         [HttpPut("{draftId}")]
-        public async Task<IActionResult> UpdateDraft(int draftId, [FromBody] UpdateDraftRequestDTO draftData)
+        public async Task<IActionResult> UpdateDraft(int draftId, [FromBody] UpdateDraftRequestDto draftData)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);

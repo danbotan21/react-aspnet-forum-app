@@ -1,9 +1,9 @@
-using ForumApp.BusinessLayer.Interfaces;
+﻿using ForumApp.BusinessLayer.Interfaces;
 using Microsoft.AspNetCore.SignalR;
 
 namespace ForumApp.API.Hubs
 {
-    public class SignalRHubNotifier : IHubNotifier
+    public class SignalRHubNotifier : IHubNotifierAction
     {
         private readonly IHubContext<NotificationHub> _hub;
 

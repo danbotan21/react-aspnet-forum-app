@@ -1,6 +1,6 @@
-namespace ForumApp.Domain.Models.SavedItem
+﻿namespace ForumApp.Domain.Models.SavedItem
 {
-    public class SavedItemResponseDTO
+    public class SavedItemResponseDto
     {
         public int Id { get; set; }
         public int AuthorId { get; set; }

@@ -7,9 +7,9 @@ namespace ForumApp.API.Controller
     [Route("api/[controller]")]
     public class UsersController : ControllerBase
     {
-        private readonly IUserActions _userService;
+        private readonly IUserAction _userService;
 
-        public UsersController(IUserActions userService)
+        public UsersController(IUserAction userService)
         {
             _userService = userService;
         }

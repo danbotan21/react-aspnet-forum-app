@@ -11,6 +11,7 @@ using ForumApp.Domain.Entities.Vote;
 using ForumApp.Domain.Entities.SavedItem;
 using ForumApp.Domain.Entities.CommunityMember;
 using ForumApp.Domain.Entities.ModLog;
+using ForumApp.Domain.Entities.AdminLog;
 
 
 
@@ -35,7 +36,8 @@ namespace ForumApp.DataAccess
         public DbSet<VoteData> Votes { get; set; }
         public DbSet<NotificationData> Notifications { get; set; }
         public DbSet<CommunityMemberData> CommunityMembers { get; set; }
-        public DbSet<ModLogEntry> ModLogs { get; set; }
+        public DbSet<ModLogEntryData> ModLogs { get; set; }
+        public DbSet<AdminLogData> AdminLogs { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -93,6 +95,13 @@ namespace ForumApp.DataAccess
             modelBuilder.Entity<CommunityMemberData>()
                 .HasIndex(m => new { m.CommunityId, m.UserId })
                 .IsUnique();
+
+            // Admin audit log — actor FK must not cascade-delete log rows.
+            modelBuilder.Entity<AdminLogData>()
+                .HasOne(l => l.Actor)
+                .WithMany()
+                .HasForeignKey(l => l.ActorId)
+                .OnDelete(DeleteBehavior.NoAction);
 
             modelBuilder.Entity<VoteData>()
                 .ToTable(t => t.HasCheckConstraint(

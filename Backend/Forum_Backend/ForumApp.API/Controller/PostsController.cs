@@ -10,9 +10,9 @@ namespace ForumApp.API.Controller
     [Route("api/[controller]")]
     public class PostsController : ControllerBase
     {
-        private readonly IPostActions _postService;
+        private readonly IPostAction _postService;
 
-        public PostsController(IPostActions postService)
+        public PostsController(IPostAction postService)
         {
             _postService = postService;
         }
@@ -108,7 +108,7 @@ namespace ForumApp.API.Controller
         public async Task<IActionResult> Delete(int id, CancellationToken ct)
         {
             var requestingUserId = GetCurrentUserId();
-            var result = await _postService.DeletePostAsync(id, requestingUserId, ct);
+            var result = await _postService.DeletePostAsync(id, requestingUserId, ct: ct);
 
             if (!result.IsSuccess)
                 return BadRequest(result.Message);

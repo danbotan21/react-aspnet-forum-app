@@ -1,8 +1,8 @@
-using ForumApp.Domain.Entities.Vote;
+﻿using ForumApp.Domain.Entities.Vote;
 
 namespace ForumApp.Domain.Models.Vote
 {
-    public class VoteResponseDTO
+    public class VoteResponseDto
     {
         public int Id { get; set; }
         public VoteType Type { get; set; }

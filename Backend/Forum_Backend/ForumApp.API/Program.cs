@@ -1,5 +1,6 @@
-using ForumApp.API.Hubs;
+﻿using ForumApp.API.Hubs;
 using ForumApp.BusinessLayer.Interfaces;
+using ForumApp.API.Infrastructure;
 using ForumApp.BusinessLayer.Structure;
 using ForumApp.DataAccess;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -67,21 +68,23 @@ builder.Services.AddDbContext<ForumDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 //  Business layer services
-builder.Services.AddScoped<IHubNotifier, SignalRHubNotifier>();
-builder.Services.AddScoped<INotificationActions, NotificationService>();
-builder.Services.AddScoped<IPostActions, PostService>();
-builder.Services.AddScoped<ICommunityActions, CommunityService>();
-builder.Services.AddScoped<ICommentActions, CommentService>();
-builder.Services.AddScoped<IVoteActions, VoteService>();
-builder.Services.AddScoped<IDraftActions, DraftService>();
-builder.Services.AddScoped<ISavedItemActions, SavedItemService>();
-builder.Services.AddScoped<IContactActions, ContactService>();
-builder.Services.AddScoped<IReportActions, ReportService>();
+builder.Services.AddScoped<IHubNotifierAction, SignalRHubNotifier>();
+builder.Services.AddScoped<INotificationAction, NotificationActionExecution>();
+builder.Services.AddScoped<IPostAction, PostActionExecution>();
+builder.Services.AddScoped<ICommunityAction, CommunityActionExecution>();
+builder.Services.AddScoped<ICommentAction, CommentActionExecution>();
+builder.Services.AddScoped<IVoteAction, VoteActionExecution>();
+builder.Services.AddScoped<IDraftAction, DraftActionExecution>();
+builder.Services.AddScoped<ISavedItemAction, SavedItemActionExecution>();
+builder.Services.AddScoped<IContactAction, ContactActionExecution>();
+builder.Services.AddScoped<IReportAction, ReportActionExecution>();
+builder.Services.AddScoped<IAdminAction, AdminActionExecution>();
 
 //  Auth services
-builder.Services.AddScoped<ITokenService, TokenService>();
-builder.Services.AddScoped<IUserActions, UserService>();
-builder.Services.AddScoped<IImageStorageActions, LocalImageStorageService>();
+builder.Services.AddScoped<ITokenAction, TokenActionExecution>();
+builder.Services.AddScoped<IUserAction, UserActionExecution>();
+builder.Services.AddScoped<IImageAction, ImageActionExecution>();
+builder.Services.AddScoped<IImageStorageAction, LocalImageStorageService>();
 
 //  JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");

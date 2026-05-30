@@ -1,4 +1,4 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using ForumApp.BusinessLayer.Interfaces;
 using ForumApp.Domain.Models.Vote;
@@ -10,9 +10,9 @@ namespace ForumApp.API.Controller
     [Route("api/[controller]")]
     public class VoteController : ControllerBase
     {
-        private readonly IVoteActions _voteService;
+        private readonly IVoteAction _voteService;
 
-        public VoteController(IVoteActions voteService)
+        public VoteController(IVoteAction voteService)
         {
             _voteService = voteService;
         }
@@ -20,7 +20,7 @@ namespace ForumApp.API.Controller
         // POST api/vote
         [Authorize]
         [HttpPost]
-        public async Task<IActionResult> Vote([FromBody] CreateVoteRequestDTO voteData)
+        public async Task<IActionResult> Vote([FromBody] CreateVoteRequestDto voteData)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
@@ -37,7 +37,7 @@ namespace ForumApp.API.Controller
         // PUT api/vote/{voteId}
         [Authorize]
         [HttpPut("{voteId}")]
-        public async Task<IActionResult> UpdateVote(int voteId, [FromBody] UpdateVoteRequestDTO voteData)
+        public async Task<IActionResult> UpdateVote(int voteId, [FromBody] UpdateVoteRequestDto voteData)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);

@@ -10,9 +10,9 @@ namespace ForumApp.API.Controller
     [Authorize]
     public class NotificationController : ControllerBase
     {
-        private readonly INotificationActions _notificationService;
+        private readonly INotificationAction _notificationService;
 
-        public NotificationController(INotificationActions notificationService)
+        public NotificationController(INotificationAction notificationService)
         {
             _notificationService = notificationService;
         }

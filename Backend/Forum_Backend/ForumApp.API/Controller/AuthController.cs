@@ -10,10 +10,10 @@ namespace ForumApp.API.Controller
     [Route("api/[controller]")]
     public class AuthController : ControllerBase
     {
-        private readonly IUserActions _userService;
+        private readonly IUserAction _userService;
         private readonly IConfiguration _configuration;
 
-        public AuthController(IUserActions userService, IConfiguration configuration)
+        public AuthController(IUserAction userService, IConfiguration configuration)
         {
             _userService = userService;
             _configuration = configuration;
@@ -38,7 +38,17 @@ namespace ForumApp.API.Controller
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var result = await _userService.LoginAsync(loginDto, ct);
+            LoginResponseDto? result;
+            try
+            {
+                result = await _userService.LoginAsync(loginDto, ct);
+            }
+            catch (InvalidOperationException ex)
+            {
+                // Account is globally banned.
+                return StatusCode(403, new { message = ex.Message });
+            }
+
             if (result == null)
                 return Unauthorized(new { message = "Invalid email or password." });
 
@@ -70,7 +80,16 @@ namespace ForumApp.API.Controller
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var result = await _userService.GoogleLoginAsync(dto.AccessToken, ct);
+            LoginResponseDto? result;
+            try
+            {
+                result = await _userService.GoogleLoginAsync(dto.AccessToken, ct);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return StatusCode(403, new { message = ex.Message });
+            }
+
             if (result == null)
                 return Unauthorized(new { message = "Invalid Google token." });
 

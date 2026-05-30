@@ -1,8 +1,8 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace ForumApp.Domain.Models.SavedItem
 {
-    public class CreateSavedItemRequestDTO
+    public class CreateSavedItemRequestDto
     {
         public int? PostId { get; set; }
 
