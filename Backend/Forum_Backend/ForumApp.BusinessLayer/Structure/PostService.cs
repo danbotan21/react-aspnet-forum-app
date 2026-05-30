@@ -10,6 +10,8 @@ namespace ForumApp.BusinessLayer.Structure
     public class PostService : IPostActions
     {
         private readonly ForumDbContext _context;
+        private const int DefaultPageSize = 15;
+        private const int MaxPageSize = 50;
 
         public PostService(ForumDbContext context)
         {
@@ -31,6 +33,24 @@ namespace ForumApp.BusinessLayer.Structure
             CommunitySlug = post.Community.Slug
         };
 
+        private static (int Page, int PageSize) NormalizePagination(int page, int pageSize)
+        {
+            var normalizedPage = page < 1 ? 1 : page;
+            var normalizedPageSize = pageSize < 1 ? DefaultPageSize : Math.Min(pageSize, MaxPageSize);
+            return (normalizedPage, normalizedPageSize);
+        }
+
+        private static IQueryable<PostData> ApplySort(IQueryable<PostData> query, string? sortBy)
+        {
+            return sortBy?.ToLower() switch
+            {
+                "new" => query.OrderByDescending(p => p.CreatedAt).ThenByDescending(p => p.Id),
+                "top" => query.OrderByDescending(p => p.Votes).ThenByDescending(p => p.CreatedAt).ThenByDescending(p => p.Id),
+                "mostcomments" => query.OrderByDescending(p => p.CommentsCount).ThenByDescending(p => p.CreatedAt).ThenByDescending(p => p.Id),
+                _ => query.OrderByDescending(p => p.Votes).ThenByDescending(p => p.CreatedAt).ThenByDescending(p => p.Id)
+            };
+        }
+
         public async Task<PostResponseDto?> GetPostByIdAsync(int postId, CancellationToken ct = default)
         {
             var post = await _context.Posts
@@ -43,58 +63,107 @@ namespace ForumApp.BusinessLayer.Structure
             return MapToDto(post);
         }
 
-        public async Task<IReadOnlyList<PostResponseDto>> GetAllPostsAsync(string? sortBy = null, CancellationToken ct = default)
+        public async Task<PostBatchResponseDto> GetAllPostsAsync(string? sortBy = null, int page = 1, int pageSize = 15, CancellationToken ct = default)
         {
+            var (normalizedPage, normalizedPageSize) = NormalizePagination(page, pageSize);
+            var skip = (normalizedPage - 1) * normalizedPageSize;
+
             var query = _context.Posts
+                .AsNoTracking()
                 .Include(p => p.Author)
                 .Include(p => p.Community)
                 .AsQueryable();
 
-            query = sortBy?.ToLower() switch
-            {
-                "new" => query.OrderByDescending(p => p.CreatedAt),
-                "top" => query.OrderByDescending(p => p.Votes),
-                _ => query.OrderByDescending(p => p.Votes).ThenByDescending(p => p.CreatedAt)
-            };
+            query = ApplySort(query, sortBy);
 
-            var posts = await query.ToListAsync(ct);
-            return posts.Select(MapToDto).ToList().AsReadOnly();
+            var batch = await query
+                .Skip(skip)
+                .Take(normalizedPageSize + 1)
+                .ToListAsync(ct);
+
+            var hasMore = batch.Count > normalizedPageSize;
+            var items = hasMore ? batch.Take(normalizedPageSize).ToList() : batch;
+
+            return new PostBatchResponseDto
+            {
+                Items = items.Select(MapToDto).ToList().AsReadOnly(),
+                Page = normalizedPage,
+                PageSize = normalizedPageSize,
+                HasMore = hasMore
+            };
         }
 
-        public async Task<IReadOnlyList<PostResponseDto>> GetPostsByCommunityAsync(int communityId, string? sortBy = null, CancellationToken ct = default)
+        public async Task<PostBatchResponseDto> GetPostsByCommunityAsync(int communityId, string? sortBy = null, int page = 1, int pageSize = 15, CancellationToken ct = default)
         {
             var communityExists = await _context.Communities
                 .AnyAsync(c => c.Id == communityId, ct);
 
-            if (!communityExists) return Array.Empty<PostResponseDto>();
+            if (!communityExists)
+            {
+                return new PostBatchResponseDto
+                {
+                    Items = Array.Empty<PostResponseDto>(),
+                    Page = page < 1 ? 1 : page,
+                    PageSize = pageSize < 1 ? DefaultPageSize : Math.Min(pageSize, MaxPageSize),
+                    HasMore = false
+                };
+            }
+
+            var (normalizedPage, normalizedPageSize) = NormalizePagination(page, pageSize);
+            var skip = (normalizedPage - 1) * normalizedPageSize;
 
             var query = _context.Posts
+                .AsNoTracking()
                 .Include(p => p.Author)
                 .Include(p => p.Community)
                 .Where(p => p.CommunityId == communityId)
                 .AsQueryable();
 
-            query = sortBy?.ToLower() switch
-            {
-                "new" => query.OrderByDescending(p => p.CreatedAt),
-                "top" => query.OrderByDescending(p => p.Votes),
-                _ => query.OrderByDescending(p => p.Votes).ThenByDescending(p => p.CreatedAt)
-            };
+            query = ApplySort(query, sortBy);
 
-            var posts = await query.ToListAsync(ct);
-            return posts.Select(MapToDto).ToList().AsReadOnly();
+            var batch = await query
+                .Skip(skip)
+                .Take(normalizedPageSize + 1)
+                .ToListAsync(ct);
+
+            var hasMore = batch.Count > normalizedPageSize;
+            var items = hasMore ? batch.Take(normalizedPageSize).ToList() : batch;
+
+            return new PostBatchResponseDto
+            {
+                Items = items.Select(MapToDto).ToList().AsReadOnly(),
+                Page = normalizedPage,
+                PageSize = normalizedPageSize,
+                HasMore = hasMore
+            };
         }
 
-        public async Task<IReadOnlyList<PostResponseDto>> GetPostsByUserAsync(int userId, CancellationToken ct = default)
+        public async Task<PostBatchResponseDto> GetPostsByUserAsync(int userId, int page = 1, int pageSize = 15, CancellationToken ct = default)
         {
-            var posts = await _context.Posts
+            var (normalizedPage, normalizedPageSize) = NormalizePagination(page, pageSize);
+            var skip = (normalizedPage - 1) * normalizedPageSize;
+
+            var batch = await _context.Posts
+                .AsNoTracking()
                 .Include(p => p.Author)
                 .Include(p => p.Community)
                 .Where(p => p.AuthorId == userId)
                 .OrderByDescending(p => p.CreatedAt)
+                .ThenByDescending(p => p.Id)
+                .Skip(skip)
+                .Take(normalizedPageSize + 1)
                 .ToListAsync(ct);
 
-            return posts.Select(MapToDto).ToList().AsReadOnly();
+            var hasMore = batch.Count > normalizedPageSize;
+            var items = hasMore ? batch.Take(normalizedPageSize).ToList() : batch;
+
+            return new PostBatchResponseDto
+            {
+                Items = items.Select(MapToDto).ToList().AsReadOnly(),
+                Page = normalizedPage,
+                PageSize = normalizedPageSize,
+                HasMore = hasMore
+            };
         }
 
         public async Task<PostResponseDto?> CreatePostAsync(PostCreateDto postData, int authorId, CancellationToken ct = default)

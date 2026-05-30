@@ -98,7 +98,6 @@ namespace ForumApp.BusinessLayer.Structure
 
             _context.Comments.Add(comment);
 
-            // Incrementeaza CommentsCount pe post
             var post = await _context.Posts.FindAsync(new object[] { commentData.PostId }, ct);
             if (post != null) post.CommentsCount++;
 

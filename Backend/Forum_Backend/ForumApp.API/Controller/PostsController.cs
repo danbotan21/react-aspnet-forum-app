@@ -15,11 +15,11 @@ namespace ForumApp.API.Controller
             _postService = postService;
         }
 
-        // GET api/posts?sortBy=new
+        // GET api/posts?sortBy=new&page=1&pageSize=15
         [HttpGet]
-        public async Task<IActionResult> GetAll([FromQuery] string? sortBy, CancellationToken ct)
+        public async Task<IActionResult> GetAll([FromQuery] string? sortBy, [FromQuery] int page = 1, [FromQuery] int pageSize = 15, CancellationToken ct = default)
         {
-            var posts = await _postService.GetAllPostsAsync(sortBy, ct);
+            var posts = await _postService.GetAllPostsAsync(sortBy, page, pageSize, ct);
             return Ok(posts);
         }
 
@@ -39,17 +39,17 @@ namespace ForumApp.API.Controller
 
 
         [HttpGet("community/{communityId:int}")]
-        public async Task<IActionResult> GetByCommunity(int communityId, [FromQuery] string? sortBy, CancellationToken ct)
+        public async Task<IActionResult> GetByCommunity(int communityId, [FromQuery] string? sortBy, [FromQuery] int page = 1, [FromQuery] int pageSize = 15, CancellationToken ct = default)
         {
-            var posts = await _postService.GetPostsByCommunityAsync(communityId, sortBy, ct);
+            var posts = await _postService.GetPostsByCommunityAsync(communityId, sortBy, page, pageSize, ct);
             return Ok(posts);
         }
 
-        // GET api/posts/user/{userId}cd f  
+        // GET api/posts/user/{userId}?page=1&pageSize=15
         [HttpGet("user/{userId:int}")]
-        public async Task<IActionResult> GetByUser(int userId, CancellationToken ct)
+        public async Task<IActionResult> GetByUser(int userId, [FromQuery] int page = 1, [FromQuery] int pageSize = 15, CancellationToken ct = default)
         {
-            var posts = await _postService.GetPostsByUserAsync(userId, ct);
+            var posts = await _postService.GetPostsByUserAsync(userId, page, pageSize, ct);
             return Ok(posts);
         }
 
