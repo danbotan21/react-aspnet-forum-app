@@ -13,23 +13,32 @@ namespace ForumApp.Domain.Entities.Notification
         public int Id { get; set; }
 
         [Required]
-        [StringLength(200)]
+        [StringLength(300)]
         public string Message { get; set; } = string.Empty;
+
+        public NotificationType Type { get; set; } = NotificationType.Unknown;
 
         public bool IsRead { get; set; } = false;
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-        // User
         [ForeignKey("Recipient")]
         public int RecipientId { get; set; }
         public UserData Recipient { get; set; } = null!;
 
-        // Optional
+        public int? ActorId { get; set; }
+        public UserData? Actor { get; set; }
+
         [ForeignKey("Post")]
         public int? PostId { get; set; }
         public PostData? Post { get; set; }
 
         public int? CommentId { get; set; }
         public CommentData? Comment { get; set; }
+
+        [StringLength(100)]
+        public string? CommunitySlug { get; set; }
+
+        [StringLength(300)]
+        public string? PostTitle { get; set; }
     }
 }

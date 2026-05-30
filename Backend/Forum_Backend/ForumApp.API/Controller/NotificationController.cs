@@ -1,10 +1,13 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ForumApp.BusinessLayer.Interfaces;
+using System.Security.Claims;
 
 namespace ForumApp.API.Controller
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/notification")]
+    [Authorize]
     public class NotificationController : ControllerBase
     {
         private readonly INotificationActions _notificationService;
@@ -14,78 +17,51 @@ namespace ForumApp.API.Controller
             _notificationService = notificationService;
         }
 
-        /// <summary>
-        /// Get all notifications for a specific user
-        /// </summary>
-        /// <param name="userId">User ID</param>
-        /// <returns>List of user notifications</returns>
-        [HttpGet("user/{userId}")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> GetUserNotifications(int userId, CancellationToken ct = default)
+        private int GetCurrentUserId()
         {
-            // TODO: Add authorization to ensure user can only see their own notifications
-            // if (userId != GetCurrentUserId()) return Forbid();
-
-            try
-            {
-                var notifications = await _notificationService.GetUserNotificationsAsync(userId, ct);
-                return Ok(notifications);
-            }
-            catch (Exception ex)
-            {
-                // Log error in production
-                return StatusCode(500, new { message = "Failed to retrieve notifications." });
-            }
+            var claim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
+            return int.Parse(claim!.Value);
         }
 
-        /// <summary>
-        /// Mark a notification as read
-        /// </summary>
-        /// <param name="id">Notification ID</param>
-        /// <param name="userId">User ID (for authorization)</param>
-        /// <returns>ActionResponse indicating success or failure</returns>
-        [HttpPut("{id}/mark-as-read")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status403Forbidden)]
-        public async Task<IActionResult> MarkAsRead(int id, [FromQuery] int userId, CancellationToken ct = default)
+        [HttpGet]
+        public async Task<IActionResult> GetMyNotifications(CancellationToken ct)
         {
-            // TODO: Get userId from authentication context when auth is implemented
-            // int userId = GetCurrentUserId();
+            var userId = GetCurrentUserId();
+            var notifications = await _notificationService.GetUserNotificationsAsync(userId, ct);
+            return Ok(notifications);
+        }
 
+        [HttpGet("unread-count")]
+        public async Task<IActionResult> GetUnreadCount(CancellationToken ct)
+        {
+            var userId = GetCurrentUserId();
+            var count = await _notificationService.GetUnreadCountAsync(userId, ct);
+            return Ok(new { count });
+        }
+
+        [HttpPut("{id}/mark-as-read")]
+        public async Task<IActionResult> MarkAsRead(int id, CancellationToken ct)
+        {
+            var userId = GetCurrentUserId();
             var result = await _notificationService.MarkAsReadAsync(id, userId, ct);
-
-            if (!result.IsSuccess)
-            {
-                return NotFound(result);
-            }
-
+            if (!result.IsSuccess) return NotFound(result);
             return Ok(result);
         }
 
-        /// <summary>
-        /// Delete a notification
-        /// </summary>
-        /// <param name="id">Notification ID</param>
-        /// <param name="userId">User ID (for authorization)</param>
-        /// <returns>ActionResponse indicating success or failure</returns>
-        [HttpDelete("{id}")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status403Forbidden)]
-        public async Task<IActionResult> DeleteNotification(int id, [FromQuery] int userId, CancellationToken ct = default)
+        [HttpPut("mark-all-as-read")]
+        public async Task<IActionResult> MarkAllAsRead(CancellationToken ct)
         {
-            // TODO: Get userId from authentication context when auth is implemented
-            // int userId = GetCurrentUserId();
+            var userId = GetCurrentUserId();
+            var result = await _notificationService.MarkAllAsReadAsync(userId, ct);
+            return Ok(result);
+        }
 
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteNotification(int id, CancellationToken ct)
+        {
+            var userId = GetCurrentUserId();
             var result = await _notificationService.DeleteNotificationAsync(id, userId, ct);
-
-            if (!result.IsSuccess)
-            {
-                return NotFound(result);
-            }
-
+            if (!result.IsSuccess) return NotFound(result);
             return Ok(result);
         }
     }

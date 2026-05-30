@@ -3,6 +3,7 @@ using ForumApp.DataAccess;
 using ForumApp.Domain.Entities.Community;
 using ForumApp.Domain.Entities.CommunityMember;
 using ForumApp.Domain.Entities.ModLog;
+using ForumApp.Domain.Entities.Notification;
 using ForumApp.Domain.Models.Community;
 using ForumApp.Domain.Models.ModLog;
 using ForumApp.Domain.Models.Responses;
@@ -14,10 +15,12 @@ namespace ForumApp.BusinessLayer.Structure
     public class CommunityService : ICommunityActions
     {
         private readonly ForumDbContext _context;
+        private readonly INotificationActions _notificationActions;
 
-        public CommunityService(ForumDbContext context)
+        public CommunityService(ForumDbContext context, INotificationActions notificationActions)
         {
             _context = context;
+            _notificationActions = notificationActions;
         }
 
         private async Task<int?> GetOwnerUserIdAsync(int communityId, CancellationToken ct = default)
@@ -549,6 +552,30 @@ namespace ForumApp.BusinessLayer.Structure
 
             try { await _context.SaveChangesAsync(ct); }
             catch (DbUpdateException) { return new ActionResponse { IsSuccess = false, Message = "Failed to ban member." }; }
+
+            try
+            {
+                var communitySlug = (await _context.Communities
+                    .Where(c => c.Id == communityId)
+                    .Select(c => c.Slug)
+                    .FirstOrDefaultAsync(ct)) ?? string.Empty;
+
+                var banMessage = string.IsNullOrWhiteSpace(reason)
+                    ? $"You have been banned from c/{communitySlug}."
+                    : $"You have been banned from c/{communitySlug}. Reason: {reason}";
+
+                await _notificationActions.CreateAndSendAsync(
+                    targetUserId,
+                    NotificationType.Banned,
+                    banMessage,
+                    requestingUserId,
+                    null,
+                    null,
+                    communitySlug,
+                    null,
+                    ct);
+            }
+            catch { }
 
             return new ActionResponse { IsSuccess = true, Message = "Member banned from community." };
         }

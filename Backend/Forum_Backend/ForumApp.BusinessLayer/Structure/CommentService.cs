@@ -1,6 +1,7 @@
 using ForumApp.BusinessLayer.Interfaces;
 using ForumApp.DataAccess;
 using ForumApp.Domain.Entities.Comment;
+using ForumApp.Domain.Entities.Notification;
 using ForumApp.Domain.Models.Comment;
 using ForumApp.Domain.Models.Responses;
 using Microsoft.EntityFrameworkCore;
@@ -10,10 +11,12 @@ namespace ForumApp.BusinessLayer.Structure
     public class CommentService : ICommentActions
     {
         private readonly ForumDbContext _context;
+        private readonly INotificationActions _notificationActions;
 
-        public CommentService(ForumDbContext context)
+        public CommentService(ForumDbContext context, INotificationActions notificationActions)
         {
             _context = context;
+            _notificationActions = notificationActions;
         }
 
         private static CommentResponseDto MapToDto(CommentData comment) => new CommentResponseDto
@@ -84,7 +87,7 @@ namespace ForumApp.BusinessLayer.Structure
 
             var postInfo = await _context.Posts
                 .Where(p => p.Id == commentData.PostId)
-                .Select(p => new { p.Id, p.CommunityId })
+                .Select(p => new { p.Id, p.CommunityId, p.AuthorId, p.Title, CommunitySlug = p.Community.Slug })
                 .FirstOrDefaultAsync(ct);
 
             if (postInfo == null) return null;
@@ -94,13 +97,16 @@ namespace ForumApp.BusinessLayer.Structure
 
             if (membership == null || membership.IsBanned) return null;
 
-            // Daca este reply, verifica ca comentariul parinte exista si apartine aceluiasi post
+            int? parentCommentAuthorId = null;
             if (commentData.ParentCommentId.HasValue)
             {
-                var parentExists = await _context.Comments
-                    .AnyAsync(c => c.ID == commentData.ParentCommentId.Value && c.PostId == commentData.PostId, ct);
+                var parentInfo = await _context.Comments
+                    .Where(c => c.ID == commentData.ParentCommentId.Value && c.PostId == commentData.PostId)
+                    .Select(c => new { c.AuthorId })
+                    .FirstOrDefaultAsync(ct);
 
-                if (!parentExists) return null;
+                if (parentInfo == null) return null;
+                parentCommentAuthorId = parentInfo.AuthorId;
             }
 
             var comment = new CommentData
@@ -128,6 +134,48 @@ namespace ForumApp.BusinessLayer.Structure
             }
 
             await _context.Entry(comment).Reference(c => c.Author).LoadAsync(ct);
+
+            // Send notifications (non-critical — failures don't affect the comment creation)
+            if (commentData.ParentCommentId.HasValue)
+            {
+                if (parentCommentAuthorId.HasValue && parentCommentAuthorId.Value != authorId)
+                {
+                    try
+                    {
+                        await _notificationActions.CreateAndSendAsync(
+                            parentCommentAuthorId.Value,
+                            NotificationType.NewReply,
+                            "Someone replied to your comment.",
+                            authorId,
+                            commentData.PostId,
+                            comment.ID,
+                            postInfo.CommunitySlug,
+                            postInfo.Title,
+                            ct);
+                    }
+                    catch { }
+                }
+            }
+            else
+            {
+                if (postInfo.AuthorId != authorId)
+                {
+                    try
+                    {
+                        await _notificationActions.CreateAndSendAsync(
+                            postInfo.AuthorId,
+                            NotificationType.NewComment,
+                            "Someone commented on your post.",
+                            authorId,
+                            commentData.PostId,
+                            comment.ID,
+                            postInfo.CommunitySlug,
+                            postInfo.Title,
+                            ct);
+                    }
+                    catch { }
+                }
+            }
 
             return MapToDto(comment);
         }
@@ -162,17 +210,40 @@ namespace ForumApp.BusinessLayer.Structure
         public async Task<ActionResponse> DeleteCommentAsync(int commentId, int requestingUserId, CancellationToken ct = default)
         {
             var comment = await _context.Comments
+                .Include(c => c.Post).ThenInclude(p => p!.Community)
                 .FirstOrDefaultAsync(c => c.ID == commentId, ct);
 
             if (comment == null)
                 return new ActionResponse { IsSuccess = false, Message = "Comment not found." };
 
-            if (comment.AuthorId != requestingUserId)
-                return new ActionResponse { IsSuccess = false, Message = "You are not the author of this comment." };
+            bool isModDelete = false;
+            string? communitySlug = null;
+            int commentAuthorId = comment.AuthorId;
 
-            // Decrementeaza CommentsCount pe post
-            var post = await _context.Posts.FindAsync(new object[] { comment.PostId }, ct);
-            if (post != null && post.CommentsCount > 0) post.CommentsCount--;
+            if (comment.AuthorId != requestingUserId)
+            {
+                var communityId = comment.Post.CommunityId;
+                var isModOrOwner = await _context.CommunityMembers
+                    .AnyAsync(m => m.CommunityId == communityId
+                                && m.UserId == requestingUserId
+                                && (m.Role == "owner" || m.Role == "moderator")
+                                && !m.IsBanned, ct);
+
+                if (!isModOrOwner)
+                    return new ActionResponse { IsSuccess = false, Message = "You are not the author of this comment." };
+
+                isModDelete = true;
+                communitySlug = comment.Post.Community?.Slug;
+            }
+
+            // Remove notifications linked to this comment before deleting it
+            var commentNotifications = await _context.Notifications
+                .Where(n => n.CommentId == commentId)
+                .ToListAsync(ct);
+            _context.Notifications.RemoveRange(commentNotifications);
+
+            if (comment.Post != null && comment.Post.CommentsCount > 0)
+                comment.Post.CommentsCount--;
 
             _context.Comments.Remove(comment);
 
@@ -183,6 +254,24 @@ namespace ForumApp.BusinessLayer.Structure
             catch (DbUpdateException)
             {
                 return new ActionResponse { IsSuccess = false, Message = "Failed to delete comment." };
+            }
+
+            if (isModDelete)
+            {
+                try
+                {
+                    await _notificationActions.CreateAndSendAsync(
+                        commentAuthorId,
+                        NotificationType.CommentDeletedByMod,
+                        "Your comment was removed by a moderator.",
+                        requestingUserId,
+                        null,
+                        null,
+                        communitySlug,
+                        null,
+                        ct);
+                }
+                catch { }
             }
 
             return new ActionResponse { IsSuccess = true, Message = "Comment deleted successfully." };

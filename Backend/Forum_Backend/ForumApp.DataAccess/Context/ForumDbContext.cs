@@ -41,6 +41,31 @@ namespace ForumApp.DataAccess
         {
             base.OnModelCreating(modelBuilder);
 
+            // Notification relationships — explicit to avoid multiple cascade paths
+            modelBuilder.Entity<NotificationData>()
+                .HasOne(n => n.Recipient)
+                .WithMany(u => u.Notifications)
+                .HasForeignKey(n => n.RecipientId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<NotificationData>()
+                .HasOne(n => n.Actor)
+                .WithMany()
+                .HasForeignKey(n => n.ActorId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            modelBuilder.Entity<NotificationData>()
+                .HasOne(n => n.Post)
+                .WithMany(p => p.Notifications)
+                .HasForeignKey(n => n.PostId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            modelBuilder.Entity<NotificationData>()
+                .HasOne(n => n.Comment)
+                .WithMany(c => c.Notifications)
+                .HasForeignKey(n => n.CommentId)
+                .OnDelete(DeleteBehavior.NoAction);
+
             modelBuilder.Entity<PostData>()
                 .HasOne(p => p.Author)
                 .WithMany(u => u.Posts)
@@ -57,7 +82,7 @@ namespace ForumApp.DataAccess
                 .HasOne(d => d.Community)
                 .WithMany()
                 .HasForeignKey(d => d.CommunityId)
-                .OnDelete(DeleteBehavior.SetNull);
+                .OnDelete(DeleteBehavior.NoAction);
 
             modelBuilder.Entity<CommentData>()
                 .HasOne(c => c.Author)

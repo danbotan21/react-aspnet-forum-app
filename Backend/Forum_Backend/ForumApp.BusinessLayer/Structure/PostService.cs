@@ -1,6 +1,7 @@
 using ForumApp.BusinessLayer.Interfaces;
 using ForumApp.DataAccess;
 using ForumApp.Domain.Entities.ModLog;
+using ForumApp.Domain.Entities.Notification;
 using ForumApp.Domain.Entities.Post;
 using ForumApp.Domain.Models.Post;
 using ForumApp.Domain.Models.Responses;
@@ -11,12 +12,14 @@ namespace ForumApp.BusinessLayer.Structure
     public class PostService : IPostActions
     {
         private readonly ForumDbContext _context;
+        private readonly INotificationActions _notificationActions;
         private const int DefaultPageSize = 15;
         private const int MaxPageSize = 50;
 
-        public PostService(ForumDbContext context)
+        public PostService(ForumDbContext context, INotificationActions notificationActions)
         {
             _context = context;
+            _notificationActions = notificationActions;
         }
 
         private static PostResponseDto MapToDto(PostData post) => new PostResponseDto
@@ -355,10 +358,16 @@ namespace ForumApp.BusinessLayer.Structure
         public async Task<ActionResponse> DeletePostAsync(int postId, int requestingUserId, CancellationToken ct = default)
         {
             var post = await _context.Posts
+                .Include(p => p.Community)
                 .FirstOrDefaultAsync(p => p.Id == postId, ct);
 
             if (post == null)
                 return new ActionResponse { IsSuccess = false, Message = "Post not found." };
+
+            bool isModDelete = false;
+            int postAuthorId = post.AuthorId;
+            string postTitle = post.Title;
+            string? communitySlug = null;
 
             if (post.AuthorId != requestingUserId)
             {
@@ -370,6 +379,9 @@ namespace ForumApp.BusinessLayer.Structure
 
                 if (!isModOrOwner)
                     return new ActionResponse { IsSuccess = false, Message = "You do not have permission to delete this post." };
+
+                isModDelete = true;
+                communitySlug = post.Community?.Slug;
             }
 
             // Remove all dependent records before deleting the post
@@ -379,8 +391,21 @@ namespace ForumApp.BusinessLayer.Structure
             var votes = await _context.Votes.Where(v => v.PostId == postId).ToListAsync(ct);
             _context.Votes.RemoveRange(votes);
 
-            var comments = await _context.Comments.Where(c => c.PostId == postId).ToListAsync(ct);
-            _context.Comments.RemoveRange(comments);
+            var commentIds = await _context.Comments
+                .Where(c => c.PostId == postId)
+                .Select(c => c.ID)
+                .ToListAsync(ct);
+
+            if (commentIds.Count > 0)
+            {
+                var commentNotifications = await _context.Notifications
+                    .Where(n => n.CommentId != null && commentIds.Contains(n.CommentId!.Value))
+                    .ToListAsync(ct);
+                _context.Notifications.RemoveRange(commentNotifications);
+
+                var comments = await _context.Comments.Where(c => c.PostId == postId).ToListAsync(ct);
+                _context.Comments.RemoveRange(comments);
+            }
 
             var reports = await _context.Reports
                 .Where(r => r.ReportedItemId == postId && r.Type == Domain.Entities.Report.ReportType.Post)
@@ -399,6 +424,24 @@ namespace ForumApp.BusinessLayer.Structure
             catch (DbUpdateException)
             {
                 return new ActionResponse { IsSuccess = false, Message = "Failed to delete post." };
+            }
+
+            if (isModDelete)
+            {
+                try
+                {
+                    await _notificationActions.CreateAndSendAsync(
+                        postAuthorId,
+                        NotificationType.PostDeletedByMod,
+                        "Your post was removed by a moderator.",
+                        requestingUserId,
+                        null,
+                        null,
+                        communitySlug,
+                        postTitle,
+                        ct);
+                }
+                catch { }
             }
 
             return new ActionResponse { IsSuccess = true, Message = "Post deleted successfully." };

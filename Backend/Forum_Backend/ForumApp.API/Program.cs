@@ -1,3 +1,4 @@
+using ForumApp.API.Hubs;
 using ForumApp.BusinessLayer.Interfaces;
 using ForumApp.BusinessLayer.Structure;
 using ForumApp.DataAccess;
@@ -12,6 +13,7 @@ var builder = WebApplication.CreateBuilder(args);
 //  Add services
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSignalR();
 
 //  Swagger cu suport Bearer JWT
 builder.Services.AddSwaggerGen(c =>
@@ -65,6 +67,8 @@ builder.Services.AddDbContext<ForumDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 //  Business layer services
+builder.Services.AddScoped<IHubNotifier, SignalRHubNotifier>();
+builder.Services.AddScoped<INotificationActions, NotificationService>();
 builder.Services.AddScoped<IPostActions, PostService>();
 builder.Services.AddScoped<ICommunityActions, CommunityService>();
 builder.Services.AddScoped<ICommentActions, CommentService>();
@@ -73,7 +77,6 @@ builder.Services.AddScoped<IDraftActions, DraftService>();
 builder.Services.AddScoped<ISavedItemActions, SavedItemService>();
 builder.Services.AddScoped<IContactActions, ContactService>();
 builder.Services.AddScoped<IReportActions, ReportService>();
-builder.Services.AddScoped<INotificationActions, NotificationService>();
 
 //  Auth services
 builder.Services.AddScoped<ITokenService, TokenService>();
@@ -96,6 +99,21 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             IssuerSigningKey = new SymmetricSecurityKey(
                 Encoding.UTF8.GetBytes(jwtSettings["Secret"]!))
         };
+
+        // SignalR passes the JWT as a query param for WebSocket connections
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Query["access_token"];
+                var path = context.HttpContext.Request.Path;
+                if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
+                {
+                    context.Token = accessToken;
+                }
+                return Task.CompletedTask;
+            }
+        };
     });
 
 var app = builder.Build();
@@ -117,5 +135,8 @@ app.UseAuthorization();
 
 //  Map controllers
 app.MapControllers();
+
+//  Map SignalR hub
+app.MapHub<NotificationHub>("/hubs/notifications");
 
 app.Run();

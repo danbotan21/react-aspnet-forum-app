@@ -1,5 +1,6 @@
 using ForumApp.BusinessLayer.Interfaces;
 using ForumApp.DataAccess;
+using ForumApp.Domain.Entities.Notification;
 using ForumApp.Domain.Entities.Vote;
 using ForumApp.Domain.Models.Responses;
 using ForumApp.Domain.Models.Vote;
@@ -10,10 +11,12 @@ namespace ForumApp.BusinessLayer.Structure
     public class VoteService : IVoteActions
     {
         private readonly ForumDbContext _context;
+        private readonly INotificationActions _notificationActions;
 
-        public VoteService(ForumDbContext context)
+        public VoteService(ForumDbContext context, INotificationActions notificationActions)
         {
             _context = context;
+            _notificationActions = notificationActions;
         }
 
         public async Task<VoteResponseDTO?> VoteAsync(CreateVoteRequestDTO voteData, int userId, CancellationToken ct = default)
@@ -89,6 +92,30 @@ namespace ForumApp.BusinessLayer.Structure
 
             await _context.SaveChangesAsync(ct);
             await _context.Entry(newVote).Reference(v => v.Author).LoadAsync(ct);
+
+            // Notify author on upvote (not self-votes)
+            if (newVote.Type == VoteType.UpVote && targetAuthorId.Value != userId)
+            {
+                try
+                {
+                    var notifType = voteData.PostId.HasValue
+                        ? NotificationType.PostUpvoted
+                        : NotificationType.CommentUpvoted;
+                    var communitySlug = await GetCommunitySlugAsync(voteData.PostId, voteData.CommentId, ct);
+                    var postTitle = await GetPostTitleAsync(voteData.PostId, voteData.CommentId, ct);
+                    await _notificationActions.CreateAndSendAsync(
+                        targetAuthorId.Value,
+                        notifType,
+                        voteData.PostId.HasValue ? "Your post received an upvote." : "Your comment received an upvote.",
+                        userId,
+                        voteData.PostId,
+                        voteData.CommentId,
+                        communitySlug,
+                        postTitle,
+                        ct);
+                }
+                catch { }
+            }
 
             return MapToResponseDTO(newVote);
         }
@@ -294,6 +321,40 @@ namespace ForumApp.BusinessLayer.Structure
                     author.Karma += voteChange;
                 }
             }
+        }
+
+        private async Task<string?> GetCommunitySlugAsync(int? postId, int? commentId, CancellationToken ct)
+        {
+            if (postId.HasValue)
+                return await _context.Posts
+                    .Where(p => p.Id == postId.Value)
+                    .Select(p => p.Community.Slug)
+                    .FirstOrDefaultAsync(ct);
+
+            if (commentId.HasValue)
+                return await _context.Comments
+                    .Where(c => c.ID == commentId.Value)
+                    .Select(c => c.Post.Community.Slug)
+                    .FirstOrDefaultAsync(ct);
+
+            return null;
+        }
+
+        private async Task<string?> GetPostTitleAsync(int? postId, int? commentId, CancellationToken ct)
+        {
+            if (postId.HasValue)
+                return await _context.Posts
+                    .Where(p => p.Id == postId.Value)
+                    .Select(p => p.Title)
+                    .FirstOrDefaultAsync(ct);
+
+            if (commentId.HasValue)
+                return await _context.Comments
+                    .Where(c => c.ID == commentId.Value)
+                    .Select(c => c.Post.Title)
+                    .FirstOrDefaultAsync(ct);
+
+            return null;
         }
 
         private static VoteResponseDTO MapToResponseDTO(VoteData vote)
