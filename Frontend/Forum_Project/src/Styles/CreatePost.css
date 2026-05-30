@@ -521,6 +521,10 @@
   border-top: 1px solid #d7e1ef;
 }
 
+.drafts-item--active {
+  background: #eef3fb;
+}
+
 .drafts-item-main {
   flex: 1;
   min-width: 0;

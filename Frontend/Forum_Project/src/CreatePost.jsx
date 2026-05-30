@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { FaTimes, FaPen, FaTrash, FaCloudUploadAlt } from 'react-icons/fa'
 import { useAuth } from './AuthContext'
 import { uploadImage } from './utils/imageUpload'
+import { normalizeImageSrc } from './utils/media'
 import './Styles/CreatePost.css'
 
 export const CreatePost = () => {
@@ -26,9 +27,19 @@ export const CreatePost = () => {
   const [drafts, setDrafts] = useState([])
   const [isLoadingDrafts, setIsLoadingDrafts] = useState(false)
   const [draftsError, setDraftsError] = useState('')
+  const [currentDraftId, setCurrentDraftId] = useState(null)
+  const [isSavingDraft, setIsSavingDraft] = useState(false)
 
   const dragCounterRef = useRef(0)
   const fileInputRef = useRef(null)
+  const blobUrlRef = useRef(null)
+
+  const revokeBlobUrl = useCallback(() => {
+    if (blobUrlRef.current) {
+      URL.revokeObjectURL(blobUrlRef.current)
+      blobUrlRef.current = null
+    }
+  }, [])
 
   const handleFile = useCallback(
     (file) => {
@@ -38,13 +49,15 @@ export const CreatePost = () => {
         return
       }
 
-      if (previewUrl) URL.revokeObjectURL(previewUrl)
+      revokeBlobUrl()
+      const objectUrl = URL.createObjectURL(file)
+      blobUrlRef.current = objectUrl
       setUploadError('')
       setSelectedImageName(file.name)
       setSelectedImageFile(file)
-      setPreviewUrl(URL.createObjectURL(file))
+      setPreviewUrl(objectUrl)
     },
-    [previewUrl],
+    [revokeBlobUrl],
   )
 
   const handleDragEnter = useCallback((e) => {
@@ -99,10 +112,8 @@ export const CreatePost = () => {
   }, [])
 
   useEffect(() => {
-    return () => {
-      if (previewUrl) URL.revokeObjectURL(previewUrl)
-    }
-  }, [previewUrl])
+    return () => revokeBlobUrl()
+  }, [revokeBlobUrl])
 
   useEffect(() => {
     if (!isDraftsOpen) return undefined
@@ -120,6 +131,15 @@ export const CreatePost = () => {
       document.body.style.overflow = previousOverflow
     }
   }, [isDraftsOpen])
+
+  // Fetch drafts on mount so the counter is correct immediately
+  useEffect(() => {
+    if (!user?.id || !token) return
+    fetch('/api/draft/user', { headers: { Authorization: `Bearer ${token}` } })
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data) => setDrafts(Array.isArray(data) ? data : []))
+      .catch(() => {})
+  }, [user?.id, token])
 
   useEffect(() => {
     if (!isDraftsOpen || !user?.id) return
@@ -168,65 +188,69 @@ export const CreatePost = () => {
       alert('Please login to save drafts.')
       return
     }
-
     if (!postTitle.trim()) {
-      alert('Add a title first so we can map a post to this draft.')
+      alert('Add a title before saving a draft.')
       return
     }
+    if (isSavingDraft) return
 
+    setIsSavingDraft(true)
     try {
-      const postsResponse = await fetch(
-        `/api/posts/user/${user.id}?page=1&pageSize=200`,
-      )
-      if (!postsResponse.ok) {
-        throw new Error('Could not read your posts for draft mapping.')
+      // Resolve imageUrl: upload new file, or keep already-uploaded URL from loaded draft
+      let imageUrl = null
+      if (selectedImageFile) {
+        imageUrl = await uploadImage(selectedImageFile, 'posts')
+        // Swap the local blob for the permanent Cloudinary URL
+        revokeBlobUrl()
+        setSelectedImageFile(null)
+        setPreviewUrl(imageUrl ?? '')
+      } else if (previewUrl && !previewUrl.startsWith('blob:')) {
+        imageUrl = previewUrl
       }
 
-      const postsPayload = await postsResponse.json()
-      const userPosts = Array.isArray(postsPayload?.items)
-        ? postsPayload.items
-        : Array.isArray(postsPayload)
-          ? postsPayload
-          : []
-      const matchingPost = userPosts.find(
-        (post) =>
-          (post.title || '').trim().toLowerCase() ===
-          postTitle.trim().toLowerCase(),
-      )
+      // Always persist all content fields so nothing is lost when switching tabs
+      const draftPayload = {
+        title: postTitle.trim(),
+        body: postBody.trim() || null,
+        linkUrl: postUrl.trim() || null,
+        imageUrl,
+        communityId: communityId ? parseInt(communityId, 10) : null,
+      }
 
-      if (!matchingPost) {
-        alert(
-          'Current Draft API stores references to existing posts only. Create a post first (same title), then save draft.',
+      if (currentDraftId) {
+        const res = await fetch(`/api/draft/${currentDraftId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(draftPayload),
+        })
+        if (!res.ok) throw new Error('Failed to update draft')
+        const updated = await res.json()
+        setDrafts((prev) =>
+          prev.map((d) => ((d.id ?? d.Id) === currentDraftId ? updated : d)),
         )
-        return
+      } else {
+        const res = await fetch('/api/draft', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(draftPayload),
+        })
+        if (!res.ok) throw new Error('Failed to save draft')
+        const created = await res.json()
+        setCurrentDraftId(created.id ?? created.Id)
+        setDrafts((prev) => [created, ...prev])
       }
 
-      const createDraftResponse = await fetch('/api/draft', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          postId: matchingPost.id,
-        }),
-      })
-
-      if (!createDraftResponse.ok) {
-        throw new Error('Failed to save draft')
-      }
-
-      const createdDraft = await createDraftResponse.json()
-      setDrafts((currentDrafts) => {
-        const createdDraftId = createdDraft.id ?? createdDraft.Id
-        const alreadyExists = currentDrafts.some(
-          (draft) => (draft.id ?? draft.Id) === createdDraftId,
-        )
-        return alreadyExists ? currentDrafts : [createdDraft, ...currentDrafts]
-      })
       setIsDraftsOpen(true)
     } catch (err) {
       alert(err.message)
+    } finally {
+      setIsSavingDraft(false)
     }
   }
 
@@ -246,23 +270,38 @@ export const CreatePost = () => {
       setDrafts((currentDrafts) =>
         currentDrafts.filter((draft) => (draft.id ?? draft.Id) !== draftId),
       )
+      if (draftId === currentDraftId) setCurrentDraftId(null)
     } catch (err) {
       alert(err.message)
     }
   }
 
-  const handleOpenDraft = async (draftPostId) => {
-    try {
-      const response = await fetch(`/api/posts/${draftPostId}`)
-      if (!response.ok) {
-        throw new Error('Failed to open draft post')
-      }
+  const handleOpenDraft = (draft) => {
+    const draftId = draft.id ?? draft.Id
+    const imgUrl = draft.imageUrl ?? draft.ImageUrl ?? null
+    const linkUrl = draft.linkUrl ?? draft.LinkUrl ?? ''
+    const body = draft.body ?? draft.Body ?? ''
+    const commId = draft.communityId ?? draft.CommunityId ?? null
 
-      const post = await response.json()
-      navigate(`/community/${post.communitySlug}/post/${post.id}`)
-    } catch (err) {
-      alert(err.message)
+    setCurrentDraftId(draftId)
+    setPostTitle(draft.title ?? draft.Title ?? '')
+    setPostBody(body)
+    setPostUrl(linkUrl)
+    setCommunityId(commId ? String(commId) : '')
+
+    if (imgUrl) {
+      revokeBlobUrl()
+      setSelectedImageFile(null)
+      setPreviewUrl(imgUrl)
+      setSelectedImageName('Saved image')
+      setActiveTab('Images')
+    } else if (linkUrl) {
+      setActiveTab('Link')
+    } else {
+      setActiveTab('Text')
     }
+
+    setIsDraftsOpen(false)
   }
 
   const handleSubmit = async () => {
@@ -284,6 +323,8 @@ export const CreatePost = () => {
     let imageUrl = null
     if (selectedImageFile) {
       imageUrl = await uploadImage(selectedImageFile, 'posts')
+    } else if (previewUrl && !previewUrl.startsWith('blob:')) {
+      imageUrl = previewUrl
     }
 
     const normalizedBody = postBody.trim()
@@ -325,7 +366,15 @@ export const CreatePost = () => {
       }
 
       const createdPost = await response.json()
-      // Use community slug from communities array for the route
+
+      if (currentDraftId) {
+        await fetch(`/api/draft/${currentDraftId}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${token}` },
+        }).catch(() => {})
+        setCurrentDraftId(null)
+      }
+
       const selectedComm = communities.find(
         (c) => c.id === parseInt(communityId, 10),
       )
@@ -489,7 +538,7 @@ export const CreatePost = () => {
                 {previewUrl && (
                   <div className='create-post-preview-wrap'>
                     <img
-                      src={previewUrl}
+                      src={normalizeImageSrc(previewUrl) ?? previewUrl}
                       alt='Selected upload preview'
                       className='create-post-preview'
                     />
@@ -517,8 +566,9 @@ export const CreatePost = () => {
               type='button'
               className='create-post-btn create-post-btn-secondary'
               onClick={handleSaveDraft}
+              disabled={isSavingDraft}
             >
-              Save Draft
+              {isSavingDraft ? 'Saving...' : currentDraftId ? 'Update Draft' : 'Save Draft'}
             </button>
             <button
               type='button'
@@ -592,22 +642,31 @@ export const CreatePost = () => {
               ) : (
                 drafts.map((draft) => {
                   const draftId = draft.id ?? draft.Id
-                  const draftPostId = draft.postId ?? draft.PostId
-                  const draftPostTitle = draft.postTitle ?? draft.PostTitle
+                  const draftTitle = draft.title ?? draft.Title ?? 'Untitled'
+                  const draftCommunitySlug =
+                    draft.communitySlug ?? draft.CommunitySlug
                   const draftLastModifiedAt =
                     draft.lastModifiedAt ?? draft.LastModifiedAt
+                  const isActive = draftId === currentDraftId
 
                   return (
-                    <li className='drafts-item' key={draftId}>
+                    <li
+                      className={`drafts-item${isActive ? ' drafts-item--active' : ''}`}
+                      key={draftId}
+                    >
                       <div className='drafts-item-main'>
-                        <div className='drafts-item-title'>
-                          {draftPostTitle}
-                        </div>
+                        <div className='drafts-item-title'>{draftTitle}</div>
                         <div className='drafts-item-sub'>
-                          <span className='drafts-item-community'>
-                            Post #{draftPostId}
-                          </span>
-                          <span className='drafts-dot'>*</span>
+                          {draftCommunitySlug ? (
+                            <span className='drafts-item-community'>
+                              r/{draftCommunitySlug}
+                            </span>
+                          ) : (
+                            <span className='drafts-item-community'>
+                              No community
+                            </span>
+                          )}
+                          <span className='drafts-dot'>·</span>
                           <span className='drafts-item-edited'>
                             Edited{' '}
                             {new Date(draftLastModifiedAt).toLocaleString()}
@@ -618,8 +677,8 @@ export const CreatePost = () => {
                         <button
                           type='button'
                           className='drafts-icon-btn'
-                          aria-label='Open draft'
-                          onClick={() => handleOpenDraft(draftPostId)}
+                          aria-label='Load draft'
+                          onClick={() => handleOpenDraft(draft)}
                         >
                           <FaPen />
                         </button>
