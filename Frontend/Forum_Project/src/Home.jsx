@@ -215,6 +215,25 @@ export const Home = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
+  useEffect(() => {
+    const handler = (e) => {
+      const { postId, type } = e.detail
+      if (type === 'Comment') {
+        setPosts((prev) =>
+          prev.map((p) =>
+            p.id === postId
+              ? { ...p, commentsCount: Math.max(0, (p.commentsCount ?? 0) - 1) }
+              : p,
+          ),
+        )
+      } else if (type === 'Post') {
+        setPosts((prev) => prev.filter((p) => p.id !== postId))
+      }
+    }
+    window.addEventListener('post-content-removed', handler)
+    return () => window.removeEventListener('post-content-removed', handler)
+  }, [])
+
   const currentSortLabel =
     SORT_OPTIONS.find((option) => option.id === sortBy)?.label ?? 'Popular'
 
@@ -473,6 +492,14 @@ export const Home = () => {
                       </button>
                       {openMorePostId === post.id && (
                         <div className='more-menu' role='menu'>
+                          <Link
+                            to={`/community/${encodeURIComponent(post.communitySlug)}/post/${post.id}`}
+                            className='more-menu-item more-menu-link'
+                            role='menuitem'
+                            onClick={() => setOpenMorePostId(null)}
+                          >
+                            Open post
+                          </Link>
                           <button
                             className='more-menu-item'
                             role='menuitem'

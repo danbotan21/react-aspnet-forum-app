@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { FaCaretUp, FaCaretDown, FaComment, FaShare, FaShieldAlt, FaLock, FaGlobe, FaUserShield, FaThumbtack } from 'react-icons/fa'
+import { FaCaretUp, FaCaretDown, FaComment, FaShare, FaShieldAlt, FaLock, FaGlobe, FaUserShield, FaThumbtack, FaBan, FaTrash } from 'react-icons/fa'
 import { useAuth } from './AuthContext'
 import './Styles/CommunityPage.css'
 import avatar from './img/avatar.webp'
@@ -14,7 +14,7 @@ import {
 } from './utils/voteApi'
 import { fetchUserSavedPosts, savePost, unsaveItem } from './utils/savedItemApi'
 import { fetchCommunityPostsPage } from './utils/postFeedApi'
-import { fetchMyRole } from './utils/modApi'
+import { fetchMyRole, fetchMyBannedStatus, deletePost } from './utils/modApi'
 import { ReportModal } from './ReportModal'
 
 const SORT_OPTIONS = ['Popular', 'New', 'Top']
@@ -43,7 +43,10 @@ export function CommunityPage() {
   const [error, setError] = useState(null)
   const [isMember, setIsMember] = useState(false)
   const [myRole, setMyRole] = useState(null)
+  const [isBanned, setIsBanned] = useState(false)
+  const [banReason, setBanReason] = useState(null)
   const [reportingPost, setReportingPost] = useState(null)
+  const [pendingDeletePosts, setPendingDeletePosts] = useState({})
 
   const [posts, setPosts] = useState([])
   const [isLoadingPosts, setIsLoadingPosts] = useState(true)
@@ -83,10 +86,15 @@ export function CommunityPage() {
           if (token) {
             const role = await fetchMyRole(data.id, token)
             setMyRole(role)
+            const banStatus = await fetchMyBannedStatus(data.id, token)
+            setIsBanned(banStatus.isBanned)
+            setBanReason(banStatus.banReason)
           }
         } else {
           setIsMember(false)
           setMyRole(null)
+          setIsBanned(false)
+          setBanReason(null)
         }
       } catch (err) {
         setError(err.message)
@@ -279,6 +287,25 @@ export function CommunityPage() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
+  useEffect(() => {
+    const handler = (e) => {
+      const { postId, type } = e.detail
+      if (type === 'Comment') {
+        setPosts((prev) =>
+          prev.map((p) =>
+            p.id === postId
+              ? { ...p, commentsCount: Math.max(0, (p.commentsCount ?? 0) - 1) }
+              : p,
+          ),
+        )
+      } else if (type === 'Post') {
+        setPosts((prev) => prev.filter((p) => p.id !== postId))
+      }
+    }
+    window.addEventListener('post-content-removed', handler)
+    return () => window.removeEventListener('post-content-removed', handler)
+  }, [])
+
   const handleToggleMembership = async () => {
     if (!token || !community?.id) {
       alert(
@@ -328,6 +355,21 @@ export function CommunityPage() {
     } catch (err) {
       alert('Membership toggle failed.')
       console.error('Membership toggle failed:', err)
+    }
+  }
+
+  const handleDeletePost = async (postId) => {
+    if (!token) return
+    if (!window.confirm('Delete this post permanently?')) return
+    setPendingDeletePosts((prev) => ({ ...prev, [postId]: true }))
+    try {
+      await deletePost(postId, token)
+      setPosts((prev) => prev.filter((p) => p.id !== postId))
+      setOpenMorePostId(null)
+    } catch (err) {
+      alert(err.message)
+    } finally {
+      setPendingDeletePosts((prev) => ({ ...prev, [postId]: false }))
     }
   }
 
@@ -539,8 +581,11 @@ export function CommunityPage() {
                 <p>c/{community.slug}</p>
                 <span>{community.membersCount} members</span>
               </div>
-              {/* Private communities: hide Join button for non-members (they can't join freely) */}
-              {community.type?.toLowerCase() !== 'private' || isMember ? (
+              {isBanned ? (
+                <div className='community-banned-badge'>
+                  <FaBan className='community-banned-icon' /> You are banned
+                </div>
+              ) : community.type?.toLowerCase() !== 'private' || isMember ? (
                 <button
                   type='button'
                   className={`community-join-btn ${isMember ? 'community-leave-btn' : ''}`}
@@ -564,6 +609,16 @@ export function CommunityPage() {
               )}
             </div>
           </header>
+
+          {isBanned && (
+            <div className='community-banned-banner'>
+              <FaBan className='community-banned-banner-icon' />
+              <div>
+                <strong>You are banned from this community.</strong>
+                {banReason && <span className='community-banned-reason'> Reason: {banReason}</span>}
+              </div>
+            </div>
+          )}
 
           <section className='community-sort-bar'>
             <div className='community-sort-options'>
@@ -703,6 +758,16 @@ export function CommunityPage() {
                                   }}
                                 >
                                   Report
+                                </button>
+                              )}
+                              {(myRole === 'owner' || myRole === 'moderator' || post.authorName === user?.userName) && (
+                                <button
+                                  className='more-menu-item more-menu-danger'
+                                  role='menuitem'
+                                  onClick={() => handleDeletePost(post.id)}
+                                  disabled={pendingDeletePosts[post.id]}
+                                >
+                                  <FaTrash style={{ marginRight: 4 }} /> Delete post
                                 </button>
                               )}
                             </div>

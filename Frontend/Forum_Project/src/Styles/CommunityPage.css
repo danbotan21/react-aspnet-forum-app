@@ -625,3 +625,46 @@
   border: 1px solid #d7e1ef;
   border-radius: 999px;
 }
+
+/* ─── BANNED BADGE & BANNER ──────────────────────────────────────── */
+
+.community-banned-badge {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #b91c1c;
+  background: linear-gradient(135deg, #fff1f1, #ffe4e4);
+  border: 1px solid #fca5a5;
+  border-radius: 999px;
+}
+
+.community-banned-icon {
+  font-size: 14px;
+}
+
+.community-banned-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 18px;
+  background: linear-gradient(135deg, #fff1f1, #ffe4e4);
+  border: 1px solid #fca5a5;
+  border-radius: 12px;
+  color: #7f1d1d;
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.community-banned-banner-icon {
+  font-size: 18px;
+  color: #dc2626;
+  flex-shrink: 0;
+}
+
+.community-banned-reason {
+  color: #991b1b;
+}

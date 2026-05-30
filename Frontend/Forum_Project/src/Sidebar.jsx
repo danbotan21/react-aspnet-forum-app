@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from './AuthContext'
 import './Styles/SideBar.css'
 import { normalizeImageSrc } from './utils/media'
+import { fetchMyCommunities } from './utils/modApi'
 import {
   FaRegStar,
   FaHome,
@@ -13,48 +14,36 @@ import {
   FaChevronRight,
   FaQuestion,
   FaPhone,
+  FaBan,
 } from 'react-icons/fa'
 import { RiTeamLine } from 'react-icons/ri'
 import { LuScrollText } from 'react-icons/lu'
 
 export const SideBar = () => {
   const navigate = useNavigate()
-  const { user } = useAuth()
+  const { user, token } = useAuth()
   const [showCommunities, setShowCommunities] = useState(false)
   const [userCommunities, setUserCommunities] = useState([])
 
   useEffect(() => {
-    const fetchUserCommunities = async () => {
-      if (!user?.id) {
+    const load = async () => {
+      if (!user?.id || !token) {
         setUserCommunities([])
         return
       }
-
       try {
-        const res = await fetch(`/api/Communities/user/${user.id}`)
-        if (res.ok) {
-          const data = await res.json()
-          setUserCommunities(data || [])
-        }
+        const data = await fetchMyCommunities(token)
+        setUserCommunities(data || [])
       } catch (err) {
         console.error('Failed to load user communities', err)
       }
     }
 
-    fetchUserCommunities()
+    load()
 
-    const handleMembershipUpdated = () => {
-      fetchUserCommunities()
-    }
-
-    window.addEventListener('communities-membership-updated', handleMembershipUpdated)
-    return () => {
-      window.removeEventListener(
-        'communities-membership-updated',
-        handleMembershipUpdated,
-      )
-    }
-  }, [user?.id])
+    window.addEventListener('communities-membership-updated', load)
+    return () => window.removeEventListener('communities-membership-updated', load)
+  }, [user?.id, token])
 
   const toggleCommunities = () => {
     setShowCommunities(!showCommunities)
@@ -106,8 +95,9 @@ export const SideBar = () => {
                   return (
                     <div
                       key={c.id}
-                      className='community'
+                      className={`community${c.isBanned ? ' community--banned' : ''}`}
                       onClick={() => navigate(`/community/${c.slug}`)}
+                      title={c.isBanned ? `Banned: ${c.banReason || 'No reason given'}` : c.title}
                     >
                       {communityAvatarSrc ? (
                         <img
@@ -125,7 +115,10 @@ export const SideBar = () => {
                         ></div>
                       )}
                       <p className='name_community'>{c.title}</p>
-                      <FaRegStar className='star-icon' />
+                      {c.isBanned
+                        ? <FaBan className='star-icon' style={{ color: '#dc2626' }} />
+                        : <FaRegStar className='star-icon' />
+                      }
                     </div>
                   )
                 })

@@ -334,12 +334,20 @@ function ReportsTab({ communityId, token, communityname, onCountChange }) {
   }
 
   const handleDismiss = (id) => withPending(id, () => dismissReport(id, token))
-  const handleRemove = (id) => {
+  const handleRemove = (report) => {
     if (
       !window.confirm('Remove this content permanently? This cannot be undone.')
     )
       return
-    withPending(id, () => removeReportedContent(id, token))
+    withPending(report.id, async () => {
+      await removeReportedContent(report.id, token)
+      const postId = report.postId ?? report.reportedItemId
+      window.dispatchEvent(
+        new CustomEvent('post-content-removed', {
+          detail: { postId, type: report.typeName },
+        }),
+      )
+    })
   }
 
   const handleBanAuthor = async (report) => {
@@ -349,14 +357,8 @@ function ReportsTab({ communityId, token, communityname, onCountChange }) {
     }
     const key = `ban-${report.id}`
     if (pending[key]) return
-    // We need the userId — not directly in report DTO.
-    // We use the username to find it from members list; backend also handles unknown users gracefully.
-    // The cleanest approach: ban + remove content in sequence.
     setPending((p) => ({ ...p, [key]: true }))
     try {
-      // First remove content, then ban — backend resolves userId by checking members
-      // We call our combined action: removeReportedContent closes the report, then banMember by username lookup
-      // Since backend BanMember needs userId, we search members
       const members = await fetchMembers(communityId, token)
       const target = members.find(
         (m) => m.userName === report.contentAuthorUserName,
@@ -367,8 +369,18 @@ function ReportsTab({ communityId, token, communityname, onCountChange }) {
         )
         return
       }
+      if (target.role === 'owner') {
+        alert('Cannot ban the community owner.')
+        return
+      }
       await banMember(communityId, target.userId, banReason, token)
       await removeReportedContent(report.id, token)
+      const postId = report.postId ?? report.reportedItemId
+      window.dispatchEvent(
+        new CustomEvent('post-content-removed', {
+          detail: { postId, type: report.typeName },
+        }),
+      )
       setBanningReport(null)
       setBanReason('')
       await load()
@@ -486,7 +498,7 @@ function ReportsTab({ communityId, token, communityname, onCountChange }) {
                     </button>
                     <button
                       className='mod-btn mod-btn-danger'
-                      onClick={() => handleRemove(report.id)}
+                      onClick={() => handleRemove(report)}
                       disabled={pending[report.id]}
                     >
                       <FaTrash /> Remove Content
@@ -1080,7 +1092,7 @@ function CommunitySettingsTab({
   const [savedMsg, setSavedMsg] = useState('')
   const [showTransfer, setShowTransfer] = useState(false)
   const [transferTarget, setTransferTarget] = useState('')
-  const [moderators, setModerators] = useState([])
+  const [transferCandidates, setTransferCandidates] = useState([])
   const [transferring, setTransferring] = useState(false)
   const [deleting, setDeleting] = useState(false)
 
@@ -1121,7 +1133,7 @@ function CommunitySettingsTab({
     if (!communityId || !token || myRole !== 'owner') return
     fetchMembers(communityId, token)
       .then((members) =>
-        setModerators(members.filter((m) => m.role === 'moderator')),
+        setTransferCandidates(members.filter((m) => m.role !== 'owner')),
       )
       .catch(() => {})
   }, [communityId, token, myRole])
@@ -1567,9 +1579,9 @@ function CommunitySettingsTab({
                     <FaExclamationTriangle /> This action is permanent. The new
                     owner will have full control over the community.
                   </p>
-                  {moderators.length === 0 ? (
+                  {transferCandidates.length === 0 ? (
                     <p style={{ color: '#566a89', fontSize: '14px' }}>
-                      No moderators available. Promote a member first.
+                      No other members available to transfer ownership to.
                     </p>
                   ) : (
                     <div className='mod-transfer-row'>
@@ -1578,10 +1590,11 @@ function CommunitySettingsTab({
                         value={transferTarget}
                         onChange={(e) => setTransferTarget(e.target.value)}
                       >
-                        <option value=''>Select a moderator...</option>
-                        {moderators.map((m) => (
+                        <option value=''>Select a member...</option>
+                        {transferCandidates.map((m) => (
                           <option key={m.userId} value={m.userId}>
                             u/{m.userName}
+                            {m.role === 'moderator' ? ' (Moderator)' : ''}
                           </option>
                         ))}
                       </select>

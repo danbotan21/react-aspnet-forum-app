@@ -177,3 +177,37 @@ export const fetchCommunityPostsForMod = async (communityId, token) => {
   if (!res.ok) throw new Error('Failed to fetch community posts')
   return res.json()
 }
+
+// Delete a post (author, moderator, or owner)
+export const deletePost = async (postId, token) => {
+  const res = await fetch(`/api/Posts/${postId}`, {
+    method: 'DELETE',
+    headers: authHeaders(token),
+  })
+  const text = await safeText(res)
+  if (!res.ok) throw new Error(text || 'Failed to delete post')
+  return text
+}
+
+// Returns { isBanned, banReason } for the authenticated user in a community
+export const fetchMyBannedStatus = async (communityId, token) => {
+  if (!token) return { isBanned: false, banReason: null }
+  try {
+    const res = await fetch(`/api/Communities/${communityId}/mybannedstatus`, {
+      headers: authHeaders(token),
+    })
+    if (!res.ok) return { isBanned: false, banReason: null }
+    return res.json()
+  } catch {
+    return { isBanned: false, banReason: null }
+  }
+}
+
+// Returns communities the authenticated user belongs to, each with their role
+export const fetchMyCommunities = async (token) => {
+  const res = await fetch('/api/communities/my', {
+    headers: authHeaders(token),
+  })
+  if (!res.ok) throw new Error('Failed to fetch your communities')
+  return res.json()
+}
