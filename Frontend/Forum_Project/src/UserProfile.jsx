@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import {
+  FaShieldAlt,
+  FaChevronRight,
+  FaUsers,
+  FaBan,
+} from 'react-icons/fa'
 import './Styles/UserProfile.css'
 import avatar from './img/avatar.webp'
 import nature from './img/nature.jpg'
@@ -13,6 +19,7 @@ import { normalizeImageSrc } from './utils/media'
 import { fetchUserPostsPage } from './utils/postFeedApi'
 import { fetchMySavedItems, unsaveItem, savePost } from './utils/savedItemApi'
 import { fetchMyVotes } from './utils/voteApi'
+import { fetchMyCommunities } from './utils/modApi'
 
 const PROFILE_TABS = [
   'Overview',
@@ -79,7 +86,11 @@ export function UserProfile() {
     loggedUser.length > 0 &&
     displayName.toLowerCase() === loggedUser.toLowerCase()
 
-  const tabs = PROFILE_TABS
+  const tabs = useMemo(() => {
+    const base = [...PROFILE_TABS]
+    if (isOwnProfile) base.push('Communities')
+    return base
+  }, [isOwnProfile])
 
   const [activeTab, setActiveTab] = useState('Overview')
   const [profileUser, setProfileUser] = useState(null)
@@ -115,6 +126,10 @@ export function UserProfile() {
   const [isDeletingPost, setIsDeletingPost] = useState(false)
   const [deletePostError, setDeletePostError] = useState('')
   const [profilePostSavedMap, setProfilePostSavedMap] = useState({})
+
+  const [myCommunities, setMyCommunities] = useState([])
+  const [communitiesLoading, setCommunitiesLoading] = useState(false)
+  const [communitiesError, setCommunitiesError] = useState('')
 
   const postsLoadMoreRef = useRef(null)
 
@@ -550,6 +565,18 @@ export function UserProfile() {
     }
   }, [profileUser?.id, isOwnProfile, token])
 
+  useEffect(() => {
+    if (activeTab !== 'Communities' || !token || !isOwnProfile) return
+    let cancelled = false
+    setCommunitiesLoading(true)
+    setCommunitiesError('')
+    fetchMyCommunities(token)
+      .then((data) => { if (!cancelled) setMyCommunities(data) })
+      .catch((e) => { if (!cancelled) setCommunitiesError(e.message) })
+      .finally(() => { if (!cancelled) setCommunitiesLoading(false) })
+    return () => { cancelled = true }
+  }, [activeTab, token, isOwnProfile])
+
   const hasPosts = totalPostsCount > 0
   const hasComments = comments.length > 0
   const hasSaved = savedItems.length > 0
@@ -886,6 +913,62 @@ export function UserProfile() {
           openId={openMoreDownvotedId}
           onMenuOpen={handleDownvotedMenu}
         />
+      )
+
+    if (activeTab === 'Communities')
+      return (
+        <section className='tab-panel up-communities-panel'>
+          <div className='up-communities-header'>
+            <h3>Your Communities</h3>
+            <p>Communities you are a member of. Jump to Mod Tools if you manage one.</p>
+          </div>
+          {communitiesLoading && (
+            <p className='up-communities-loading'>Loading communities...</p>
+          )}
+          {communitiesError && (
+            <p className='up-communities-error'>{communitiesError}</p>
+          )}
+          {!communitiesLoading && !communitiesError && myCommunities.length === 0 && (
+            <p className='up-communities-empty'>You haven't joined any communities yet.</p>
+          )}
+          {!communitiesLoading && myCommunities.length > 0 && (
+            <div className='up-communities-list'>
+              {myCommunities.map((c) => (
+                <div key={c.id} className={`up-community-card${c.isBanned ? ' up-community-banned' : ''}`}>
+                  <div className='up-community-avatar'>
+                    {c.avatarUrl
+                      ? <img src={normalizeImageSrc(c.avatarUrl)} alt={c.title} />
+                      : <span className='up-community-avatar-letter'>{c.title[0].toUpperCase()}</span>
+                    }
+                  </div>
+                  <div className='up-community-info'>
+                    <Link to={`/community/${c.slug}`} className='up-community-name'>
+                      c/{c.slug}
+                    </Link>
+                    <span className='up-community-title'>{c.title}</span>
+                    <div className='up-community-meta'>
+                      <span className={`up-community-role up-community-role-${c.isBanned ? 'banned' : c.role}`}>
+                        {c.isBanned ? <><FaBan style={{ marginRight: 4 }} />Banned</> : c.role === 'owner' ? <>👑 Owner</> : c.role === 'moderator' ? <>🛡 Moderator</> : 'Member'}
+                      </span>
+                      <span className='up-community-members'>{(c.membersCount ?? 0).toLocaleString()} members</span>
+                    </div>
+                    {c.isBanned && c.banReason && (
+                      <p className='up-community-ban-reason'>Ban reason: {c.banReason}</p>
+                    )}
+                  </div>
+                  {(c.role === 'owner' || c.role === 'moderator') && !c.isBanned && (
+                    <Link
+                      to={`/community/${c.slug}/mod`}
+                      className='up-community-mod-btn'
+                    >
+                      <FaShieldAlt /> Mod Tools <FaChevronRight />
+                    </Link>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
       )
 
     return null

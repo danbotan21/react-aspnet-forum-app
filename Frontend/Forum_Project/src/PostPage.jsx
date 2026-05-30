@@ -75,6 +75,8 @@ export function PostPage() {
   const [isMembershipResolved, setIsMembershipResolved] = useState(false)
   const [reportTarget, setReportTarget] = useState(null) // { type: 0|1, id, label }
   const [isCommunityOwner, setIsCommunityOwner] = useState(false)
+  const [isCommunityModerator, setIsCommunityModerator] = useState(false)
+  const [isBanned, setIsBanned] = useState(false)
 
   const [showDeletePostModal, setShowDeletePostModal] = useState(false)
   const [isDeletingPost, setIsDeletingPost] = useState(false)
@@ -222,62 +224,95 @@ export function PostPage() {
   useEffect(() => {
     if (!post?.communitySlug) return
 
-    if (!user?.id) {
-      setIsCommunityMember(false)
-      setIsMembershipResolved(true)
-      return
-    }
-
-    let cancelled = false
-    setIsMembershipResolved(false)
-
-    const resolveMembership = async () => {
-      try {
-        const communityResponse = await fetch(
-          `/api/communities/${encodeURIComponent(post.communitySlug)}`,
-        )
-        if (!communityResponse.ok) {
-          if (!cancelled) {
-            setIsCommunityMember(false)
-            setIsCommunityOwner(false)
-            setIsMembershipResolved(true)
-          }
-          return
-        }
-
-        const community = await communityResponse.json()
-        const [memberResponse, ownerResponse] = await Promise.all([
-          fetch(`/api/communities/${community.id}/ismember?userId=${user.id}`),
-          fetch(`/api/communities/${community.id}/isowner?userId=${user.id}`),
-        ])
-
-        if (!memberResponse.ok || !ownerResponse.ok) {
-          if (!cancelled) {
-            setIsCommunityMember(false)
-            setIsCommunityOwner(false)
-            setIsMembershipResolved(true)
-          }
-          return
-        }
-
-        const [membershipValue, ownerValue] = await Promise.all([
-          memberResponse.json(),
-          ownerResponse.json(),
-        ])
-
-        if (!cancelled) {
-          setIsCommunityMember(membershipValue === true)
-          setIsCommunityOwner(ownerValue === true)
-          setIsMembershipResolved(true)
-        }
-      } catch {
-        if (!cancelled) {
+        if (!user?.id) {
           setIsCommunityMember(false)
           setIsCommunityOwner(false)
+          setIsCommunityModerator(false)
+          setIsBanned(false)
           setIsMembershipResolved(true)
+          return
         }
-      }
-    }
+
+        let cancelled = false
+        setIsMembershipResolved(false)
+
+        const resolveMembership = async () => {
+          try {
+            const communityResponse = await fetch(
+              `/api/communities/${encodeURIComponent(post.communitySlug)}`,
+            )
+            if (!communityResponse.ok) {
+              if (!cancelled) {
+                setIsCommunityMember(false)
+                setIsCommunityOwner(false)
+                setIsCommunityModerator(false)
+                setIsBanned(false)
+                setIsMembershipResolved(true)
+              }
+              return
+            }
+
+            const community = await communityResponse.json()
+            const [memberResponse, ownerResponse, roleResponse, banResponse] = await Promise.all([
+              fetch(`/api/communities/${community.id}/ismember?userId=${user.id}`),
+              fetch(`/api/communities/${community.id}/isowner?userId=${user.id}`),
+              token
+                ? fetch(`/api/communities/${community.id}/myrole`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                  })
+                : Promise.resolve({ ok: false }),
+              token
+                ? fetch(`/api/communities/${community.id}/mybannedstatus`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                  })
+                : Promise.resolve({ ok: false }),
+            ])
+
+            if (!memberResponse.ok || !ownerResponse.ok) {
+              if (!cancelled) {
+                setIsCommunityMember(false)
+                setIsCommunityOwner(false)
+                setIsCommunityModerator(false)
+                setIsBanned(false)
+                setIsMembershipResolved(true)
+              }
+              return
+            }
+
+            const [membershipValue, ownerValue] = await Promise.all([
+              memberResponse.json(),
+              ownerResponse.json(),
+            ])
+
+            let moderatorValue = false
+            if (roleResponse.ok) {
+              const roleData = await roleResponse.json()
+              moderatorValue = roleData?.role === 'moderator' || roleData?.role === 'owner'
+            }
+
+            let bannedValue = false
+            if (banResponse.ok) {
+              const banData = await banResponse.json()
+              bannedValue = banData?.isBanned === true
+            }
+
+            if (!cancelled) {
+              setIsCommunityMember(membershipValue === true)
+              setIsCommunityOwner(ownerValue === true)
+              setIsCommunityModerator(moderatorValue)
+              setIsBanned(bannedValue)
+              setIsMembershipResolved(true)
+            }
+          } catch {
+            if (!cancelled) {
+              setIsCommunityMember(false)
+              setIsCommunityOwner(false)
+              setIsCommunityModerator(false)
+              setIsBanned(false)
+              setIsMembershipResolved(true)
+            }
+          }
+        }
 
     resolveMembership()
 
@@ -326,6 +361,10 @@ export function PostPage() {
   const handlePostVote = async (direction) => {
     if (!token || !post?.id) {
       alert('Please login to vote.')
+      return
+    }
+    if (isBanned) {
+      alert('You are banned from this community and cannot interact.')
       return
     }
     if (isPostVotePending) return
@@ -400,6 +439,10 @@ export function PostPage() {
   const handleCommentVote = async (commentId, direction) => {
     if (!token) {
       alert('Please login to vote.')
+      return
+    }
+    if (isBanned) {
+      alert('You are banned from this community and cannot interact.')
       return
     }
     if (pendingCommentVotes[commentId]) return
@@ -503,6 +546,10 @@ export function PostPage() {
   const handleToggleSavePost = async () => {
     if (!token || !post?.id) {
       alert('Please login to save posts.')
+      return
+    }
+    if (isBanned) {
+      alert('You are banned from this community.')
       return
     }
     if (isPostSavePending) return
@@ -648,6 +695,11 @@ export function PostPage() {
   const handleCreateComment = async (parentCommentId = null) => {
     if (!token) {
       alert('Please login to comment.')
+      return
+    }
+
+    if (isBanned) {
+      alert('You are banned from this community and cannot comment.')
       return
     }
 
@@ -870,7 +922,7 @@ export function PostPage() {
               </button>
             )}
 
-            {user && !isOwnComment && (
+            {user && !isOwnComment && !isBanned && (
               <button
                 type='button'
                 className='post-chip post-comment-inline-btn post-chip-danger'
@@ -882,7 +934,7 @@ export function PostPage() {
               </button>
             )}
 
-            {isOwnComment &&
+            {(isOwnComment || isCommunityOwner || isCommunityModerator) &&
               (confirmDeleteCommentId === comment.id ? (
                 <span className='post-comment-delete-confirm'>
                   <span className='post-comment-delete-label'>Delete?</span>
@@ -1214,7 +1266,7 @@ export function PostPage() {
               <button type='button' className='post-chip'>
                 <FaShare /> Share
               </button>
-              {user && post?.authorName !== user?.userName && (
+              {user && post?.authorName !== user?.userName && !isBanned && (
                 <button
                   type='button'
                   className='post-chip post-chip-danger'
@@ -1235,14 +1287,16 @@ export function PostPage() {
                   placeholder={
                     !user?.id
                       ? 'Login to comment...'
-                      : isMembershipResolved && !isCommunityMember
-                        ? 'Join community to comment...'
-                        : 'Write a comment...'
+                      : isBanned
+                        ? 'You are banned from this community.'
+                        : isMembershipResolved && !isCommunityMember
+                          ? 'Join community to comment...'
+                          : 'Write a comment...'
                   }
                   value={newCommentText}
                   onChange={(event) => setNewCommentText(event.target.value)}
                   disabled={
-                    !user?.id || (isMembershipResolved && !isCommunityMember)
+                    !user?.id || isBanned || (isMembershipResolved && !isCommunityMember)
                   }
                   style={{
                     width: '100%',

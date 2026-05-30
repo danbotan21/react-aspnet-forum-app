@@ -4,6 +4,7 @@ import { FaTimes, FaPen, FaTrash, FaCloudUploadAlt, FaUserShield } from 'react-i
 import { useAuth } from './AuthContext'
 import { uploadImage } from './utils/imageUpload'
 import { normalizeImageSrc } from './utils/media'
+import { fetchMyBannedStatus } from './utils/modApi'
 import './Styles/CreatePost.css'
 
 export const CreatePost = () => {
@@ -31,6 +32,7 @@ export const CreatePost = () => {
   const [isSavingDraft, setIsSavingDraft] = useState(false)
   const [submitError, setSubmitError] = useState('')
   const [myRoleInSelected, setMyRoleInSelected] = useState(null)
+  const [isBannedInSelected, setIsBannedInSelected] = useState(false)
 
   const dragCounterRef = useRef(0)
   const fileInputRef = useRef(null)
@@ -187,11 +189,16 @@ export const CreatePost = () => {
       .catch((err) => console.error(err))
   }, [user?.id, token])
 
-  // When a restricted community is selected, fetch the user's role to decide if posting is allowed
+  // When a community is selected, fetch role and banned status
   useEffect(() => {
     setMyRoleInSelected(null)
+    setIsBannedInSelected(false)
     setSubmitError('')
     if (!communityId || !token) return
+
+    fetchMyBannedStatus(communityId, token)
+      .then((s) => setIsBannedInSelected(s.isBanned))
+      .catch(() => setIsBannedInSelected(false))
 
     const selected = communities.find((c) => String(c.id) === String(communityId))
     if (selected?.type?.toLowerCase() !== 'restricted') return
@@ -335,6 +342,10 @@ export const CreatePost = () => {
 
     if (!communityId) {
       setSubmitError('Please select a community.')
+      return
+    }
+    if (isBannedInSelected) {
+      setSubmitError('You are banned from this community and cannot post.')
       return
     }
     if (!postTitle.trim()) {

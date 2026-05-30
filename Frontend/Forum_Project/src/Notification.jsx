@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import './Styles/Notification.css'
 import avatar from './img/avatar.webp'
 
@@ -77,6 +78,7 @@ const MOCK_NOTIFICATIONS = [
 ]
 
 export const Notification = () => {
+  const navigate = useNavigate()
   const [hasNotifications, setHasNotifications] = useState(1) // 1 = are notificări, 0 = nu are
 
   return (
@@ -135,6 +137,7 @@ export const Notification = () => {
                         <button
                           type='button'
                           className='notification-view-button'
+                          onClick={() => navigate('/home')}
                         >
                           View thread
                         </button>
@@ -162,7 +165,7 @@ export const Notification = () => {
                   That&apos;s okay, explore communities and start posting to see
                   notifications here.
                 </p>
-                <button type='button' className='notifications-empty-button'>
+                <button type='button' className='notifications-empty-button' onClick={() => navigate('/explore')}>
                   Discover communities
                 </button>
               </div>

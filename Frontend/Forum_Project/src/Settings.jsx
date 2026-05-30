@@ -167,7 +167,8 @@ export const Settings = () => {
       return
     }
 
-    const emailChanged = formData.email.trim().toLowerCase() !== originalEmail.toLowerCase()
+    const emailChanged =
+      formData.email.trim().toLowerCase() !== originalEmail.toLowerCase()
     if (emailChanged && user?.hasPassword && !confirmEmailPassword) {
       setAccountError('Enter your current password to change email.')
       return
@@ -179,7 +180,10 @@ export const Settings = () => {
       const body = {
         userName: trimmedUsername,
         bio: formData.bio,
-        ...(emailChanged && { email: formData.email.trim(), currentPassword: confirmEmailPassword }),
+        ...(emailChanged && {
+          email: formData.email.trim(),
+          currentPassword: confirmEmailPassword,
+        }),
       }
 
       const response = await executeWithAuth((accessToken) =>
@@ -301,10 +305,18 @@ export const Settings = () => {
     setCommunitiesLoading(true)
     setCommunitiesError('')
     fetchMyCommunities(token)
-      .then((data) => { if (!cancelled) setMyCommunities(data) })
-      .catch((e) => { if (!cancelled) setCommunitiesError(e.message) })
-      .finally(() => { if (!cancelled) setCommunitiesLoading(false) })
-    return () => { cancelled = true }
+      .then((data) => {
+        if (!cancelled) setMyCommunities(data)
+      })
+      .catch((e) => {
+        if (!cancelled) setCommunitiesError(e.message)
+      })
+      .finally(() => {
+        if (!cancelled) setCommunitiesLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
   }, [activeSection, token])
 
   const handleSavePreferences = (e) => {
@@ -420,13 +432,6 @@ export const Settings = () => {
             <span>Notifications</span>
           </button>
           <button
-            className={`settings-nav-item ${activeSection === 'communities' ? 'active' : ''}`}
-            onClick={() => setActiveSection('communities')}
-          >
-            <FaUsers className='settings-nav-icon' />
-            <span>Communities</span>
-          </button>
-          <button
             className={`settings-nav-item ${activeSection === 'danger' ? 'active' : ''}`}
             onClick={() => setActiveSection('danger')}
           >
@@ -487,27 +492,38 @@ export const Settings = () => {
                     onChange={handleInputChange}
                     placeholder='Email address'
                     disabled={isSavingAccount || !user?.hasPassword}
-                    title={!user?.hasPassword ? 'Google accounts cannot change email here.' : undefined}
+                    title={
+                      !user?.hasPassword
+                        ? 'Google accounts cannot change email here.'
+                        : undefined
+                    }
                   />
                 </div>
 
-                {user?.hasPassword && formData.email.trim().toLowerCase() !== originalEmail.toLowerCase() && (
-                  <div className='settings-form-group'>
-                    <label htmlFor='confirmEmailPassword' className='settings-label'>
-                      <FaLock className='settings-label-icon' />
-                      Confirm with current password
-                    </label>
-                    <input
-                      type='password'
-                      id='confirmEmailPassword'
-                      className='settings-input'
-                      value={confirmEmailPassword}
-                      onChange={(e) => setConfirmEmailPassword(e.target.value)}
-                      placeholder='Enter your current password'
-                      disabled={isSavingAccount}
-                    />
-                  </div>
-                )}
+                {user?.hasPassword &&
+                  formData.email.trim().toLowerCase() !==
+                    originalEmail.toLowerCase() && (
+                    <div className='settings-form-group'>
+                      <label
+                        htmlFor='confirmEmailPassword'
+                        className='settings-label'
+                      >
+                        <FaLock className='settings-label-icon' />
+                        Confirm with current password
+                      </label>
+                      <input
+                        type='password'
+                        id='confirmEmailPassword'
+                        className='settings-input'
+                        value={confirmEmailPassword}
+                        onChange={(e) =>
+                          setConfirmEmailPassword(e.target.value)
+                        }
+                        placeholder='Enter your current password'
+                        disabled={isSavingAccount}
+                      />
+                    </div>
+                  )}
 
                 <div className='settings-form-group'>
                   <label htmlFor='bio' className='settings-label'>
@@ -801,63 +817,6 @@ export const Settings = () => {
                   Save Notification Settings
                 </button>
               </form>
-            </div>
-          )}
-
-          {/* Communities */}
-          {activeSection === 'communities' && (
-            <div className='settings-section'>
-              <h2 className='settings-section-title'>Your Communities</h2>
-              <p className='settings-section-subtitle'>
-                Communities you are a member of. Jump to Mod Tools if you manage one.
-              </p>
-
-              {communitiesLoading && (
-                <p className='settings-communities-loading'>Loading communities...</p>
-              )}
-              {communitiesError && (
-                <p className='settings-status settings-status-error'>{communitiesError}</p>
-              )}
-              {!communitiesLoading && !communitiesError && myCommunities.length === 0 && (
-                <p className='settings-communities-empty'>You haven&apos;t joined any communities yet.</p>
-              )}
-              {!communitiesLoading && myCommunities.length > 0 && (
-                <div className='settings-communities-list'>
-                  {myCommunities.map((c) => (
-                    <div key={c.id} className={`settings-community-card${c.isBanned ? ' settings-community-banned' : ''}`}>
-                      <div className='settings-community-avatar'>
-                        {c.avatarUrl
-                          ? <img src={c.avatarUrl} alt={c.title} className='settings-community-avatar-img' />
-                          : <span className='settings-community-avatar-letter'>{c.title[0].toUpperCase()}</span>
-                        }
-                      </div>
-                      <div className='settings-community-info'>
-                        <Link to={`/community/${c.slug}`} className='settings-community-name'>
-                          c/{c.slug}
-                        </Link>
-                        <span className='settings-community-title'>{c.title}</span>
-                        <div className='settings-community-meta'>
-                          <span className={`settings-community-role settings-community-role-${c.isBanned ? 'banned' : c.role}`}>
-                            {c.isBanned ? 'Banned' : c.role === 'owner' ? '👑 Owner' : c.role === 'moderator' ? '🛡 Moderator' : 'Member'}
-                          </span>
-                          <span className='settings-community-members'>{c.membersCount.toLocaleString()} members</span>
-                        </div>
-                        {c.isBanned && c.banReason && (
-                          <p className='settings-community-ban-reason'>Ban reason: {c.banReason}</p>
-                        )}
-                      </div>
-                      {(c.role === 'owner' || c.role === 'moderator') && !c.isBanned && (
-                        <Link
-                          to={`/community/${c.slug}/mod`}
-                          className='settings-community-mod-btn'
-                        >
-                          <FaShieldAlt /> Mod Tools <FaChevronRight className='settings-community-chevron' />
-                        </Link>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
           )}
 

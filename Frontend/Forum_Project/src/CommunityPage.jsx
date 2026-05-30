@@ -323,6 +323,8 @@ export function CommunityPage() {
         if (response.ok) {
           const text = await response.text()
           setIsMember(false)
+          setIsBanned(false)
+          setBanReason(null)
           setCommunity((prev) => ({
             ...prev,
             membersCount: Math.max(0, prev.membersCount - 1),
@@ -394,6 +396,10 @@ export function CommunityPage() {
   const handlePostVote = async (postId, direction) => {
     if (!token) {
       alert('Please login to vote.')
+      return
+    }
+    if (isBanned) {
+      alert('You are banned from this community and cannot interact.')
       return
     }
     if (pendingPostVotes[postId]) return
@@ -497,6 +503,10 @@ export function CommunityPage() {
       alert('Please login to save posts.')
       return
     }
+    if (isBanned) {
+      alert('You are banned from this community.')
+      return
+    }
     if (pendingSavedPosts[postId]) return
 
     const previousSavedItem = savedPostsById[postId] ?? null
@@ -582,9 +592,14 @@ export function CommunityPage() {
                 <span>{community.membersCount} members</span>
               </div>
               {isBanned ? (
-                <div className='community-banned-badge'>
-                  <FaBan className='community-banned-icon' /> You are banned
-                </div>
+                <button
+                  type='button'
+                  className='community-join-btn community-leave-btn'
+                  onClick={handleToggleMembership}
+                  style={{ background: '#dc2626', borderColor: '#dc2626' }}
+                >
+                  Leave
+                </button>
               ) : community.type?.toLowerCase() !== 'private' || isMember ? (
                 <button
                   type='button'
@@ -620,6 +635,7 @@ export function CommunityPage() {
             </div>
           )}
 
+          {!isBanned && (
           <section className='community-sort-bar'>
             <div className='community-sort-options'>
               {SORT_OPTIONS.map((option) => (
@@ -634,10 +650,22 @@ export function CommunityPage() {
               ))}
             </div>
           </section>
+          )}
 
           <section className='community-feed' ref={postsWrapRef}>
+            {/* Banned wall: banned users cannot view posts */}
+            {isBanned && (
+              <div className='community-banned-wall'>
+                <FaBan className='community-banned-wall-icon' />
+                <h2>You are banned</h2>
+                <p>You cannot view posts or interact with this community while banned.{banReason && <> Reason: {banReason}</>}</p>
+                <p style={{ fontSize: 13, color: '#6b7a93', marginTop: 8 }}>
+                  You can still leave this community at any time.
+                </p>
+              </div>
+            )}
             {/* Restricted banner: anyone can see posts, but only mods can create */}
-            {community.type?.toLowerCase() === 'restricted' && myRole !== 'owner' && myRole !== 'moderator' && (
+            {!isBanned && community.type?.toLowerCase() === 'restricted' && myRole !== 'owner' && myRole !== 'moderator' && (
               <div className='community-restricted-banner'>
                 <FaUserShield className='community-restricted-banner-icon' />
                 <span>
@@ -646,7 +674,7 @@ export function CommunityPage() {
               </div>
             )}
             {/* Private wall: only members can view posts */}
-            {community.type?.toLowerCase() === 'private' && !isMember ? (
+            {!isBanned && (community.type?.toLowerCase() === 'private' && !isMember ? (
               <div className='community-private-wall'>
                 <FaLock className='community-private-wall-icon' />
                 <h2>Private Community</h2>
@@ -747,7 +775,7 @@ export function CommunityPage() {
                                   ? 'Unsave'
                                   : 'Save'}
                               </button>
-                              {post.authorName !== user?.userName && (
+                              {post.authorName !== user?.userName && !isBanned && (
                                 <button
                                   className='more-menu-item more-menu-danger'
                                   role='menuitem'
@@ -818,15 +846,16 @@ export function CommunityPage() {
                       </div>
 
                       <footer className='post-footer'>
-                        <div className='action-chip vote-chip'>
+                        <div className={`action-chip vote-chip${isBanned ? ' vote-disabled' : ''}`}
+                             title={isBanned ? 'You are banned from this community' : ''}>
                           <FaCaretUp
                             className={`vote-icon upvote ${postVotesById[post.id]?.type === 1 ? 'active' : ''}`}
                             onClick={() => handlePostVote(post.id, 'up')}
                             style={{
-                              pointerEvents: pendingPostVotes[post.id]
+                              pointerEvents: pendingPostVotes[post.id] || isBanned
                                 ? 'none'
                                 : 'auto',
-                              opacity: pendingPostVotes[post.id] ? 0.6 : 1,
+                              opacity: pendingPostVotes[post.id] || isBanned ? 0.4 : 1,
                             }}
                           />
                           <span className='vote-count'>{post.votes}</span>
@@ -834,10 +863,10 @@ export function CommunityPage() {
                             className={`vote-icon downvote ${postVotesById[post.id]?.type === -1 ? 'active' : ''}`}
                             onClick={() => handlePostVote(post.id, 'down')}
                             style={{
-                              pointerEvents: pendingPostVotes[post.id]
+                              pointerEvents: pendingPostVotes[post.id] || isBanned
                                 ? 'none'
                                 : 'auto',
-                              opacity: pendingPostVotes[post.id] ? 0.6 : 1,
+                              opacity: pendingPostVotes[post.id] || isBanned ? 0.4 : 1,
                             }}
                           />
                         </div>
@@ -857,7 +886,7 @@ export function CommunityPage() {
                   </article>
                 )
               })
-            )}
+            ))}
             {!isLoadingPosts && !postsError && posts.length > 0 && (
               <>
                 <div ref={loadMoreTriggerRef} style={{ height: '1px' }} />

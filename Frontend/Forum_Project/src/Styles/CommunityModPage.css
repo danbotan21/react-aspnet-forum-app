@@ -1005,7 +1005,41 @@
 .mod-form-actions {
   display: flex;
   gap: 10px;
-  padding-top: 4px;
+  padding-top: 24px;
+  padding-bottom: 12px;
+  border-top: 1px solid #e2e8f0;
+  margin-top: 16px;
+}
+
+/* ─── TRANSFER OWNERSHIP (standalone section) ─────────────────── */
+
+.mod-transfer-section {
+  margin-top: 32px;
+  margin-bottom: 36px;
+  padding: 22px 24px;
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+  border-radius: 14px;
+}
+
+.mod-transfer-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #92400e;
+  margin: 0 0 6px;
+}
+
+.mod-transfer-section-desc {
+  font-size: 13px;
+  color: #78716c;
+  margin: 0 0 16px;
+}
+
+.mod-transfer-section .mod-btn-warning {
+  width: fit-content;
 }
 
 /* Danger zone */

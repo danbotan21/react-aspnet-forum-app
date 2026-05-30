@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { FaCaretUp, FaCaretDown, FaComment, FaUsers } from 'react-icons/fa'
+import { FaCaretUp, FaCaretDown, FaComment, FaUsers, FaEdit, FaTrash } from 'react-icons/fa'
 import { normalizeImageSrc } from './utils/media'
 import { useAuth } from './AuthContext'
 import {
@@ -10,6 +10,8 @@ import {
   voteValueFromDirection,
 } from './utils/voteApi'
 import { fetchUserSavedPosts, savePost, unsaveItem } from './utils/savedItemApi'
+import { ReportModal } from './ReportModal'
+import { deletePost, fetchMyCommunities } from './utils/modApi'
 import avatar from './img/avatar.webp'
 import './Styles/Home.css'
 import './Styles/SearchResults.css'
@@ -30,6 +32,9 @@ export const SearchResults = () => {
   const [savedPostsById, setSavedPostsById] = useState({})
   const [pendingSavedPosts, setPendingSavedPosts] = useState({})
   const [openMorePostId, setOpenMorePostId] = useState(null)
+  const [reportingPost, setReportingPost] = useState(null)
+  const [deletingPostId, setDeletingPostId] = useState(null)
+  const [userCommsBySlug, setUserCommsBySlug] = useState({})
   const postsWrapRef = useRef(null)
 
   useEffect(() => {
@@ -95,6 +100,44 @@ export const SearchResults = () => {
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
+
+  useEffect(() => {
+    if (!token) {
+      setUserCommsBySlug({})
+      return
+    }
+    fetchMyCommunities(token)
+      .then((comms) => {
+        const map = {}
+        for (const c of comms) {
+          const slug = (c.slug || '').toLowerCase()
+          if (slug) map[slug] = c.role
+        }
+        setUserCommsBySlug(map)
+      })
+      .catch(() => {})
+  }, [token])
+
+  const canModeratePost = (post) => {
+    if (!user || !token) return false
+    if (post.authorName === user.userName) return true
+    const role = userCommsBySlug[(post.communitySlug || '').toLowerCase()]
+    return role === 'owner' || role === 'moderator'
+  }
+
+  const handleDeletePost = async (postId) => {
+    if (!token || !window.confirm('Delete this post permanently?')) return
+    setDeletingPostId(postId)
+    try {
+      await deletePost(postId, token)
+      setPosts((prev) => prev.filter((p) => p.id !== postId))
+      setOpenMorePostId(null)
+    } catch (err) {
+      alert(err.message)
+    } finally {
+      setDeletingPostId(null)
+    }
+  }
 
   const handlePostVote = async (postId, direction) => {
     if (!token) { alert('Please login to vote.'); return }
@@ -251,9 +294,41 @@ export const SearchResults = () => {
                           >
                             {savedPostsById[post.id]?.id ? 'Unsave' : 'Save'}
                           </button>
-                          <button className='more-menu-item more-menu-danger' role='menuitem'>
-                            Report
-                          </button>
+                          {token && post.authorName === user?.userName && (
+                            <Link
+                              to={`/community/${encodeURIComponent(post.communitySlug)}/post/${post.id}?edit=true`}
+                              className='more-menu-item more-menu-link'
+                              role='menuitem'
+                              onClick={() => setOpenMorePostId(null)}
+                            >
+                              <FaEdit style={{ marginRight: 6 }} />
+                              Edit
+                            </Link>
+                          )}
+                          {token && canModeratePost(post) && (
+                            <button
+                              className='more-menu-item more-menu-danger'
+                              role='menuitem'
+                              onClick={() => handleDeletePost(post.id)}
+                              disabled={deletingPostId === post.id}
+                            >
+                              <FaTrash style={{ marginRight: 6 }} />
+                              {deletingPostId === post.id ? 'Deleting...' : 'Delete'}
+                            </button>
+                          )}
+                          {post.authorName !== user?.userName && (
+                            <button
+                              className='more-menu-item more-menu-danger'
+                              role='menuitem'
+                              onClick={() => {
+                                setOpenMorePostId(null)
+                                if (!token) { alert('Please log in to report.'); return }
+                                setReportingPost({ id: post.id })
+                              }}
+                            >
+                              Report
+                            </button>
+                          )}
                         </div>
                       )}
                     </div>
@@ -361,6 +436,16 @@ export const SearchResults = () => {
             )
           })}
         </div>
+      )}
+
+      {reportingPost && (
+        <ReportModal
+          type={0}
+          reportedItemId={reportingPost.id}
+          label='Post'
+          token={token}
+          onClose={() => setReportingPost(null)}
+        />
       )}
     </div>
   )

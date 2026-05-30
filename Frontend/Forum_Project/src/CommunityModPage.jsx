@@ -293,7 +293,14 @@ function OverviewTab({ communityId, token, onNavigate, pendingReportsCount }) {
 
 // ─── REPORTS TAB ─────────────────────────────────────────────────────────────
 
-function ReportsTab({ communityId, token, communityname, onCountChange }) {
+function ReportsTab({
+  communityId,
+  token,
+  communityname,
+  onCountChange,
+  userId,
+  myRole,
+}) {
   const [reports, setReports] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -371,6 +378,14 @@ function ReportsTab({ communityId, token, communityname, onCountChange }) {
       }
       if (target.role === 'owner') {
         alert('Cannot ban the community owner.')
+        return
+      }
+      if (target.role === 'moderator' && myRole !== 'owner') {
+        alert('Only the community owner can ban moderators.')
+        return
+      }
+      if (target.userId === userId) {
+        alert('You cannot ban yourself.')
         return
       }
       await banMember(communityId, target.userId, banReason, token)
@@ -1547,37 +1562,28 @@ function CommunitySettingsTab({
             </div>
           </form>
 
-          {/* Danger Zone — owner only */}
+          {/* Transfer Ownership — owner only, separate from Danger Zone */}
           {myRole === 'owner' && (
-            <div className='mod-danger-zone'>
-              <h3 className='mod-danger-title'>
-                <FaExclamationTriangle /> Danger Zone
+            <section className='mod-transfer-section'>
+              <h3 className='mod-transfer-section-title'>
+                <FaCrown /> Transfer Ownership
               </h3>
+              <p className='mod-transfer-section-desc'>
+                Hand over this community to another member. You will become a regular moderator after the transfer.
+              </p>
 
-              <div className='mod-danger-item'>
-                <div className='mod-danger-info'>
-                  <strong>Transfer Ownership</strong>
-                  <p>
-                    Hand over this community to one of your moderators. You will
-                    become a regular moderator.
-                  </p>
-                </div>
-                {!showTransfer && (
-                  <button
-                    type='button'
-                    className='mod-btn mod-btn-warning'
-                    onClick={() => setShowTransfer(true)}
-                  >
-                    Transfer Ownership
-                  </button>
-                )}
-              </div>
-
-              {showTransfer && (
+              {!showTransfer ? (
+                <button
+                  type='button'
+                  className='mod-btn mod-btn-warning'
+                  onClick={() => setShowTransfer(true)}
+                >
+                  Transfer Ownership
+                </button>
+              ) : (
                 <div className='mod-transfer-form'>
                   <p className='mod-transfer-warning'>
-                    <FaExclamationTriangle /> This action is permanent. The new
-                    owner will have full control over the community.
+                    <FaExclamationTriangle /> This action is permanent. The new owner will have full control over the community.
                   </p>
                   {transferCandidates.length === 0 ? (
                     <p style={{ color: '#566a89', fontSize: '14px' }}>
@@ -1620,8 +1626,15 @@ function CommunitySettingsTab({
                   </button>
                 </div>
               )}
+            </section>
+          )}
 
-              <div className='mod-danger-divider' />
+          {/* Danger Zone — owner only */}
+          {myRole === 'owner' && (
+            <div className='mod-danger-zone'>
+              <h3 className='mod-danger-title'>
+                <FaExclamationTriangle /> Danger Zone
+              </h3>
 
               <div className='mod-danger-item'>
                 <div className='mod-danger-info'>
@@ -1822,6 +1835,8 @@ export function CommunityModPage() {
             token={token}
             communityname={communityname}
             onCountChange={setPendingReportsCount}
+            userId={user?.id}
+            myRole={myRole}
           />
         )
       case 'members':

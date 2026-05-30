@@ -42,7 +42,8 @@ export const SideBar = () => {
     load()
 
     window.addEventListener('communities-membership-updated', load)
-    return () => window.removeEventListener('communities-membership-updated', load)
+    return () =>
+      window.removeEventListener('communities-membership-updated', load)
   }, [user?.id, token])
 
   const toggleCommunities = () => {
@@ -115,10 +116,14 @@ export const SideBar = () => {
                         ></div>
                       )}
                       <p className='name_community'>{c.title}</p>
-                      {c.isBanned
-                        ? <FaBan className='star-icon' style={{ color: '#dc2626' }} />
-                        : <FaRegStar className='star-icon' />
-                      }
+                      {c.isBanned ? (
+                        <FaBan
+                          className='star-icon'
+                          style={{ color: '#dc2626' }}
+                        />
+                      ) : (
+                        <FaRegStar className='star-icon' />
+                      )}
                     </div>
                   )
                 })

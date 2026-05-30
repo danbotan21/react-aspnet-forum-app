@@ -25,6 +25,7 @@ export const Navbar = () => {
   const [searchCommunities, setSearchCommunities] = useState([])
   const [searchPosts, setSearchPosts] = useState([])
   const [showSearchDropdown, setShowSearchDropdown] = useState(false)
+  const searchRequestId = useRef(0)
 
   // Folosim username-ul real din context, sau fallback
   const loggedUser = user?.userName || 'username'
@@ -47,18 +48,21 @@ export const Navbar = () => {
   useEffect(() => {
     const delayDebounceFn = setTimeout(async () => {
       const term = searchTerm.trim()
+      const currentId = ++searchRequestId.current
       if (term !== '') {
         try {
           const [commRes, postRes] = await Promise.all([
             fetch(`/api/Communities/search?term=${encodeURIComponent(term)}`),
             fetch(`/api/Posts/search?term=${encodeURIComponent(term)}&limit=3`),
           ])
+          if (currentId !== searchRequestId.current) return
           const communities = commRes.ok ? await commRes.json() : []
           const posts = postRes.ok ? await postRes.json() : []
           setSearchCommunities(communities.slice(0, 3))
           setSearchPosts(posts)
           setShowSearchDropdown(communities.length > 0 || posts.length > 0)
         } catch (err) {
+          if (currentId !== searchRequestId.current) return
           console.error('Search error:', err)
         }
       } else {

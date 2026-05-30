@@ -1,8 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import './Styles/Home.css'
 import avatar from './img/avatar.webp'
-import { FaCaretUp, FaCaretDown, FaComment } from 'react-icons/fa'
+import {
+  FaCaretUp,
+  FaCaretDown,
+  FaComment,
+  FaEdit,
+  FaTrash,
+} from 'react-icons/fa'
 import { normalizeImageSrc } from './utils/media'
 import { useAuth } from './AuthContext'
 import {
@@ -14,6 +20,7 @@ import {
 import { fetchUserSavedPosts, savePost, unsaveItem } from './utils/savedItemApi'
 import { fetchPostsPage } from './utils/postFeedApi'
 import { ReportModal } from './ReportModal'
+import { deletePost, fetchMyCommunities } from './utils/modApi'
 
 const SORT_OPTIONS = [
   { id: 'popular', label: 'Popular' },
@@ -24,10 +31,12 @@ const SORT_OPTIONS = [
 export const Home = () => {
   const PAGE_SIZE = 15
   const { user, token } = useAuth()
+  const navigate = useNavigate()
   const [openMorePostId, setOpenMorePostId] = useState(null)
   const [sortBy, setSortBy] = useState('popular')
   const [isSortOpen, setIsSortOpen] = useState(false)
   const [reportingPost, setReportingPost] = useState(null) // { id } of post being reported
+  const [deletingPostId, setDeletingPostId] = useState(null)
 
   const sortRef = useRef(null)
   const postsWrapRef = useRef(null)
@@ -43,6 +52,7 @@ export const Home = () => {
   const [pendingPostVotes, setPendingPostVotes] = useState({})
   const [savedPostsById, setSavedPostsById] = useState({})
   const [pendingSavedPosts, setPendingSavedPosts] = useState({})
+  const [userCommsByCommunityId, setUserCommsByCommunityId] = useState({})
 
   useEffect(() => {
     setPosts([])
@@ -234,6 +244,23 @@ export const Home = () => {
     return () => window.removeEventListener('post-content-removed', handler)
   }, [])
 
+  useEffect(() => {
+    if (!token) {
+      setUserCommsByCommunityId({})
+      return
+    }
+    fetchMyCommunities(token)
+      .then((comms) => {
+        const map = {}
+        for (const c of comms) {
+          const slug = (c.slug || '').toLowerCase()
+          if (slug) map[slug] = c.role
+        }
+        setUserCommsByCommunityId(map)
+      })
+      .catch(() => {})
+  }, [token])
+
   const currentSortLabel =
     SORT_OPTIONS.find((option) => option.id === sortBy)?.label ?? 'Popular'
 
@@ -384,6 +411,32 @@ export const Home = () => {
     }
   }
 
+  const canModeratePost = (post) => {
+    if (!user || !token) return false
+    if (post.authorName === user.userName) return true
+    const role =
+      userCommsByCommunityId[(post.communitySlug || '').toLowerCase()]
+    return role === 'owner' || role === 'moderator'
+  }
+
+  const handleDeletePost = async (postId) => {
+    if (
+      !token ||
+      !window.confirm('Delete this post permanently? This cannot be undone.')
+    )
+      return
+    setDeletingPostId(postId)
+    try {
+      await deletePost(postId, token)
+      setPosts((prev) => prev.filter((p) => p.id !== postId))
+      setOpenMorePostId(null)
+    } catch (err) {
+      alert(err.message)
+    } finally {
+      setDeletingPostId(null)
+    }
+  }
+
   return (
     <div className='home'>
       <div className='home-sort-bar' ref={sortRef}>
@@ -508,13 +561,40 @@ export const Home = () => {
                           >
                             {savedPostsById[post.id]?.id ? 'Unsave' : 'Save'}
                           </button>
+                          {token && post.authorName === user?.userName && (
+                            <Link
+                              to={`/community/${encodeURIComponent(post.communitySlug)}/post/${post.id}?edit=true`}
+                              className='more-menu-item more-menu-link'
+                              role='menuitem'
+                              onClick={() => setOpenMorePostId(null)}
+                            >
+                              <FaEdit style={{ marginRight: 6 }} />
+                              Edit
+                            </Link>
+                          )}
+                          {token && canModeratePost(post) && (
+                            <button
+                              className='more-menu-item more-menu-danger'
+                              role='menuitem'
+                              onClick={() => handleDeletePost(post.id)}
+                              disabled={deletingPostId === post.id}
+                            >
+                              <FaTrash style={{ marginRight: 6 }} />
+                              {deletingPostId === post.id
+                                ? 'Deleting...'
+                                : 'Delete'}
+                            </button>
+                          )}
                           {post.authorName !== user?.userName && (
                             <button
                               className='more-menu-item more-menu-danger'
                               role='menuitem'
                               onClick={() => {
                                 setOpenMorePostId(null)
-                                if (!token) { alert('Please log in to report.'); return }
+                                if (!token) {
+                                  alert('Please log in to report.')
+                                  return
+                                }
                                 setReportingPost({ id: post.id })
                               }}
                             >

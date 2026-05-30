@@ -668,3 +668,29 @@
 .community-banned-reason {
   color: #991b1b;
 }
+
+.community-banned-wall {
+  text-align: center;
+  padding: 48px 24px;
+  background: #fff5f5;
+  border: 1px solid #fecaca;
+  border-radius: 14px;
+  margin-bottom: 16px;
+}
+.community-banned-wall-icon {
+  font-size: 40px;
+  color: #dc2626;
+  margin-bottom: 12px;
+}
+.community-banned-wall h2 {
+  font-size: 20px;
+  color: #991b1b;
+  margin: 0 0 8px;
+}
+.community-banned-wall p {
+  font-size: 14px;
+  color: #7f1d1d;
+  margin: 0;
+  max-width: 420px;
+  margin-inline: auto;
+}
