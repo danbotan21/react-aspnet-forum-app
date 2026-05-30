@@ -21,7 +21,8 @@ namespace ForumApp.API.Controller
         [HttpGet]
         public async Task<IActionResult> GetAll([FromQuery] string? sortBy, [FromQuery] int page = 1, [FromQuery] int pageSize = 15, CancellationToken ct = default)
         {
-            var posts = await _postService.GetAllPostsAsync(sortBy, page, pageSize, ct);
+            int? requestingUserId = TryGetCurrentUserId();
+            var posts = await _postService.GetAllPostsAsync(sortBy, page, pageSize, excludePrivateCommunities: true, requestingUserId, ct);
             return Ok(posts);
         }
 
@@ -29,7 +30,8 @@ namespace ForumApp.API.Controller
         [HttpGet("{id:int}")]
         public async Task<IActionResult> GetById(int id, CancellationToken ct)
         {
-            var post = await _postService.GetPostByIdAsync(id, ct);
+            int? requestingUserId = TryGetCurrentUserId();
+            var post = await _postService.GetPostByIdAsync(id, requestingUserId, ct);
 
             if (post == null)
                 return NotFound($"Post with id {id} was not found.");
@@ -41,7 +43,9 @@ namespace ForumApp.API.Controller
         [HttpGet("community/{communityId:int}")]
         public async Task<IActionResult> GetByCommunity(int communityId, [FromQuery] string? sortBy, [FromQuery] int page = 1, [FromQuery] int pageSize = 15, CancellationToken ct = default)
         {
-            var posts = await _postService.GetPostsByCommunityAsync(communityId, sortBy, page, pageSize, ct);
+            // Pass userId if present so restricted/private communities can verify membership
+            int? requestingUserId = TryGetCurrentUserId();
+            var posts = await _postService.GetPostsByCommunityAsync(communityId, sortBy, page, pageSize, requestingUserId, ct);
             return Ok(posts);
         }
 
@@ -117,6 +121,15 @@ namespace ForumApp.API.Controller
             var claim = User.FindFirst(ClaimTypes.NameIdentifier)
                         ?? User.FindFirst("sub");
             return int.Parse(claim!.Value);
+        }
+
+        private int? TryGetCurrentUserId()
+        {
+            var claim = User.FindFirst(ClaimTypes.NameIdentifier)
+                        ?? User.FindFirst("sub");
+            if (claim == null) return null;
+            if (int.TryParse(claim.Value, out var id)) return id;
+            return null;
         }
     }
 }

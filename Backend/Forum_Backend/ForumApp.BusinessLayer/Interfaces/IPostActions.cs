@@ -6,9 +6,9 @@ namespace ForumApp.BusinessLayer.Interfaces
     public interface IPostActions
     {
         Task<PostResponseDto?> CreatePostAsync(PostCreateDto postData, int authorId, CancellationToken ct = default);
-        Task<PostResponseDto?> GetPostByIdAsync(int postId, CancellationToken ct = default);
-        Task<PostBatchResponseDto> GetAllPostsAsync(string? sortBy = null, int page = 1, int pageSize = 15, CancellationToken ct = default);
-        Task<PostBatchResponseDto> GetPostsByCommunityAsync(int communityId, string? sortBy = null, int page = 1, int pageSize = 15, CancellationToken ct = default);
+        Task<PostResponseDto?> GetPostByIdAsync(int postId, int? requestingUserId = null, CancellationToken ct = default);
+        Task<PostBatchResponseDto> GetAllPostsAsync(string? sortBy = null, int page = 1, int pageSize = 15, bool excludePrivateCommunities = false, int? requestingUserId = null, CancellationToken ct = default);
+        Task<PostBatchResponseDto> GetPostsByCommunityAsync(int communityId, string? sortBy = null, int page = 1, int pageSize = 15, int? requestingUserId = null, CancellationToken ct = default);
         Task<PostBatchResponseDto> GetPostsByUserAsync(int userId, int page = 1, int pageSize = 15, CancellationToken ct = default);
         Task<PostResponseDto?> UpdatePostAsync(int postId, PostUpdateDto postData, int requestingUserId, CancellationToken ct = default);
         Task<ActionResponse> DeletePostAsync(int postId, int requestingUserId, CancellationToken ct = default);

@@ -33,7 +33,8 @@ namespace ForumApp.API.Controller
         [HttpGet("post/{postId:int}")]
         public async Task<IActionResult> GetByPost(int postId, CancellationToken ct)
         {
-            var comments = await _commentService.GetCommentsByPostAsync(postId, ct);
+            int? requestingUserId = TryGetCurrentUserId();
+            var comments = await _commentService.GetCommentsByPostAsync(postId, requestingUserId, ct);
             return Ok(comments);
         }
 
@@ -98,6 +99,15 @@ namespace ForumApp.API.Controller
             var claim = User.FindFirst(ClaimTypes.NameIdentifier)
                         ?? User.FindFirst("sub");
             return int.Parse(claim!.Value);
+        }
+
+        private int? TryGetCurrentUserId()
+        {
+            var claim = User.FindFirst(ClaimTypes.NameIdentifier)
+                        ?? User.FindFirst("sub");
+            if (claim == null) return null;
+            if (int.TryParse(claim.Value, out var id)) return id;
+            return null;
         }
     }
 }

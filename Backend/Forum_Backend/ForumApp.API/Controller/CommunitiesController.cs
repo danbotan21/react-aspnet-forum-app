@@ -58,7 +58,9 @@ namespace ForumApp.API.Controller
         [HttpGet("{slug}")]
         public async Task<IActionResult> GetBySlug(string slug, CancellationToken ct)
         {
-            var community = await _communityService.GetCommunityAsync(slug, ct);
+            // Pass userId if authenticated so private communities can verify membership
+            int? requestingUserId = TryGetCurrentUserId();
+            var community = await _communityService.GetCommunityAsync(slug, requestingUserId, ct);
 
             if (community == null)
                 return NotFound($"Community '{slug}' was not found.");
@@ -287,6 +289,16 @@ namespace ForumApp.API.Controller
             return Ok(result.Message);
         }
 
+        // GET api/communities/{id}/modlog?actionType=all
+        [Authorize]
+        [HttpGet("{id:int}/modlog")]
+        public async Task<IActionResult> GetModLog(int id, [FromQuery] string? actionType, CancellationToken ct)
+        {
+            var userId = GetCurrentUserId();
+            var entries = await _communityService.GetModLogAsync(id, userId, actionType, ct);
+            return Ok(entries);
+        }
+
         // GET api/communities/{communityId}/posts/pinned — list pinned posts
         [HttpGet("{communityId:int}/posts/pinned")]
         public async Task<IActionResult> GetPinnedPosts(int communityId, CancellationToken ct)
@@ -324,6 +336,16 @@ namespace ForumApp.API.Controller
             var claim = User.FindFirst(ClaimTypes.NameIdentifier)
                         ?? User.FindFirst("sub");
             return int.Parse(claim!.Value);
+        }
+
+        // Returns null if user is not authenticated (used for optional auth endpoints)
+        private int? TryGetCurrentUserId()
+        {
+            var claim = User.FindFirst(ClaimTypes.NameIdentifier)
+                        ?? User.FindFirst("sub");
+            if (claim == null) return null;
+            if (int.TryParse(claim.Value, out var id)) return id;
+            return null;
         }
     }
 }

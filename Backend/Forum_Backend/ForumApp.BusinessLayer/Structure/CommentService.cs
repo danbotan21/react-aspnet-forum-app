@@ -38,8 +38,25 @@ namespace ForumApp.BusinessLayer.Structure
             return MapToDto(comment);
         }
 
-        public async Task<IReadOnlyList<CommentResponseDto>> GetCommentsByPostAsync(int postId, CancellationToken ct = default)
+        public async Task<IReadOnlyList<CommentResponseDto>> GetCommentsByPostAsync(int postId, int? requestingUserId = null, CancellationToken ct = default)
         {
+            var postInfo = await _context.Posts
+                .AsNoTracking()
+                .Select(p => new { p.Id, p.CommunityId, CommunityType = p.Community.Type })
+                .FirstOrDefaultAsync(p => p.Id == postId, ct);
+
+            if (postInfo == null) return Array.Empty<CommentResponseDto>();
+
+            if (postInfo.CommunityType.ToLower() == "private")
+            {
+                if (!requestingUserId.HasValue) return Array.Empty<CommentResponseDto>();
+                var isMember = await _context.CommunityMembers
+                    .AnyAsync(m => m.CommunityId == postInfo.CommunityId
+                                && m.UserId == requestingUserId.Value
+                                && !m.IsBanned, ct);
+                if (!isMember) return Array.Empty<CommentResponseDto>();
+            }
+
             var comments = await _context.Comments
                 .Include(c => c.Author)
                 .Where(c => c.PostId == postId)
@@ -53,7 +70,7 @@ namespace ForumApp.BusinessLayer.Structure
         {
             var comments = await _context.Comments
                 .Include(c => c.Author)
-                .Where(c => c.AuthorId == userId)
+                .Where(c => c.AuthorId == userId && c.Post.Community.Type.ToLower() != "private")
                 .OrderByDescending(c => c.CreatedAt)
                 .ToListAsync(ct);
 

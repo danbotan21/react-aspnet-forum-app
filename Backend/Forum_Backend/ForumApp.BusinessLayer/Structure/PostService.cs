@@ -64,7 +64,7 @@ namespace ForumApp.BusinessLayer.Structure
             };
         }
 
-        public async Task<PostResponseDto?> GetPostByIdAsync(int postId, CancellationToken ct = default)
+        public async Task<PostResponseDto?> GetPostByIdAsync(int postId, int? requestingUserId = null, CancellationToken ct = default)
         {
             var post = await _context.Posts
                 .Include(p => p.Author)
@@ -73,10 +73,20 @@ namespace ForumApp.BusinessLayer.Structure
 
             if (post == null) return null;
 
+            if (post.Community.Type.ToLower() == "private")
+            {
+                if (!requestingUserId.HasValue) return null;
+                var isMember = await _context.CommunityMembers
+                    .AnyAsync(m => m.CommunityId == post.CommunityId
+                                && m.UserId == requestingUserId.Value
+                                && !m.IsBanned, ct);
+                if (!isMember) return null;
+            }
+
             return MapToDto(post);
         }
 
-        public async Task<PostBatchResponseDto> GetAllPostsAsync(string? sortBy = null, int page = 1, int pageSize = 15, CancellationToken ct = default)
+        public async Task<PostBatchResponseDto> GetAllPostsAsync(string? sortBy = null, int page = 1, int pageSize = 15, bool excludePrivateCommunities = false, int? requestingUserId = null, CancellationToken ct = default)
         {
             var (normalizedPage, normalizedPageSize) = NormalizePagination(page, pageSize);
             var skip = (normalizedPage - 1) * normalizedPageSize;
@@ -86,6 +96,25 @@ namespace ForumApp.BusinessLayer.Structure
                 .Include(p => p.Author)
                 .Include(p => p.Community)
                 .AsQueryable();
+
+            if (excludePrivateCommunities)
+            {
+                if (requestingUserId.HasValue)
+                {
+                    // Show private community posts only if the user is a non-banned member
+                    var uid = requestingUserId.Value;
+                    query = query.Where(p =>
+                        p.Community.Type.ToLower() != "private" ||
+                        _context.CommunityMembers.Any(m =>
+                            m.CommunityId == p.CommunityId &&
+                            m.UserId == uid &&
+                            !m.IsBanned));
+                }
+                else
+                {
+                    query = query.Where(p => p.Community.Type.ToLower() != "private");
+                }
+            }
 
             query = ApplySort(query, sortBy);
 
@@ -106,12 +135,13 @@ namespace ForumApp.BusinessLayer.Structure
             };
         }
 
-        public async Task<PostBatchResponseDto> GetPostsByCommunityAsync(int communityId, string? sortBy = null, int page = 1, int pageSize = 15, CancellationToken ct = default)
+        public async Task<PostBatchResponseDto> GetPostsByCommunityAsync(int communityId, string? sortBy = null, int page = 1, int pageSize = 15, int? requestingUserId = null, CancellationToken ct = default)
         {
-            var communityExists = await _context.Communities
-                .AnyAsync(c => c.Id == communityId, ct);
+            var community = await _context.Communities
+                .AsNoTracking()
+                .FirstOrDefaultAsync(c => c.Id == communityId, ct);
 
-            if (!communityExists)
+            if (community == null)
             {
                 return new PostBatchResponseDto
                 {
@@ -120,6 +150,31 @@ namespace ForumApp.BusinessLayer.Structure
                     PageSize = pageSize < 1 ? DefaultPageSize : Math.Min(pageSize, MaxPageSize),
                     HasMore = false
                 };
+            }
+
+            // Restricted: anyone can VIEW posts, only mods can POST (enforced in CreatePostAsync)
+            // Private: only members can view posts
+            if (community.Type.ToLower() == "private")
+            {
+                bool canAccess = false;
+                if (requestingUserId.HasValue)
+                {
+                    canAccess = await _context.CommunityMembers
+                        .AnyAsync(m => m.CommunityId == communityId
+                                    && m.UserId == requestingUserId.Value
+                                    && !m.IsBanned, ct);
+                }
+
+                if (!canAccess)
+                {
+                    return new PostBatchResponseDto
+                    {
+                        Items = Array.Empty<PostResponseDto>(),
+                        Page = 1,
+                        PageSize = 0,
+                        HasMore = false
+                    };
+                }
             }
 
             var (normalizedPage, normalizedPageSize) = NormalizePagination(page, pageSize);
@@ -160,7 +215,7 @@ namespace ForumApp.BusinessLayer.Structure
                 .AsNoTracking()
                 .Include(p => p.Author)
                 .Include(p => p.Community)
-                .Where(p => p.AuthorId == userId)
+                .Where(p => p.AuthorId == userId && p.Community.Type.ToLower() != "private")
                 .OrderByDescending(p => p.CreatedAt)
                 .ThenByDescending(p => p.Id)
                 .Skip(skip)
@@ -261,7 +316,8 @@ namespace ForumApp.BusinessLayer.Structure
                 .AsNoTracking()
                 .Include(p => p.Author)
                 .Include(p => p.Community)
-                .Where(p => p.Title.ToLower().Contains(lowerTerm))
+                .Where(p => p.Title.ToLower().Contains(lowerTerm)
+                         && p.Community.Type.ToLower() != "private")
                 .OrderByDescending(p => p.Votes)
                 .ThenByDescending(p => p.CreatedAt)
                 .Take(limit)

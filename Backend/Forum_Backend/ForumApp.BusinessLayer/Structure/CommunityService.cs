@@ -49,10 +49,11 @@ namespace ForumApp.BusinessLayer.Structure
             CreatedAt = community.CreatedAt
         };
 
-        // GET toate comunitatile
+        // GET toate comunitatile — exclude private (nu sunt vizibile public)
         public async Task<IReadOnlyList<CommunityResponseDto>> GetAllCommunitiesAsync(CancellationToken ct = default)
         {
             var communities = await _context.Communities
+                .Where(c => c.Type.ToLower() != "private")
                 .OrderByDescending(c => c.MembersCount)
                 .ToListAsync(ct);
 
@@ -63,6 +64,9 @@ namespace ForumApp.BusinessLayer.Structure
 
         public async Task<IReadOnlyList<CommunityResponseDto>> GetAllCommunitiesByTypeAsync(string type, CancellationToken ct = default)
         {
+            if (type.ToLower() == "private")
+                return Array.Empty<CommunityResponseDto>();
+
             var communities = await _context.Communities
                 .Where(c => c.Type.ToLower() == type.ToLower())
                 .OrderByDescending(c => c.MembersCount)
@@ -90,8 +94,10 @@ namespace ForumApp.BusinessLayer.Structure
         {
             var term = searchTerm.ToLower();
 
+            // Exclude private communities from search results
             var communities = await _context.Communities
-                .Where(c => c.Title.ToLower().Contains(term) || c.Slug.ToLower().Contains(term))
+                .Where(c => c.Type.ToLower() != "private"
+                         && (c.Title.ToLower().Contains(term) || c.Slug.ToLower().Contains(term)))
                 .OrderByDescending(c => c.MembersCount)
                 .ToListAsync(ct);
 
@@ -100,12 +106,25 @@ namespace ForumApp.BusinessLayer.Structure
 
 
 
-        public async Task<CommunityResponseDto?> GetCommunityAsync(string slug, CancellationToken ct = default)
+        public async Task<CommunityResponseDto?> GetCommunityAsync(string slug, int? requestingUserId = null, CancellationToken ct = default)
         {
             var community = await _context.Communities
                 .FirstOrDefaultAsync(c => c.Slug == slug, ct);
 
             if (community == null) return null;
+
+            // Private communities: only visible to existing members
+            if (community.Type.ToLower() == "private")
+            {
+                if (requestingUserId == null) return null;
+
+                var isMember = await _context.CommunityMembers
+                    .AnyAsync(m => m.CommunityId == community.Id
+                                && m.UserId == requestingUserId.Value
+                                && !m.IsBanned, ct);
+
+                if (!isMember) return null;
+            }
 
             return MapToDto(community);
         }
@@ -230,6 +249,10 @@ namespace ForumApp.BusinessLayer.Structure
 
             if (community == null)
                 return new ActionResponse { IsSuccess = false, Message = "Community not found." };
+
+            // Private communities cannot be joined freely
+            if (community.Type.ToLower() == "private")
+                return new ActionResponse { IsSuccess = false, Message = "This is a private community. You can only be added by the owner or a moderator." };
 
             var alreadyMember = await _context.CommunityMembers
                 .AnyAsync(m => m.CommunityId == communityId && m.UserId == userId, ct);
