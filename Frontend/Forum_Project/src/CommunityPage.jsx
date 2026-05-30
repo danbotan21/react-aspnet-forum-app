@@ -14,6 +14,7 @@ import {
 } from './utils/voteApi'
 import { fetchUserSavedPosts, savePost, unsaveItem } from './utils/savedItemApi'
 import { fetchCommunityPostsPage } from './utils/postFeedApi'
+import { fetchMyRole } from './utils/modApi'
 
 const SORT_OPTIONS = ['Popular', 'New', 'Top']
 
@@ -31,6 +32,7 @@ export function CommunityPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [isMember, setIsMember] = useState(false)
+  const [myRole, setMyRole] = useState(null)
 
   const [posts, setPosts] = useState([])
   const [isLoadingPosts, setIsLoadingPosts] = useState(true)
@@ -65,8 +67,14 @@ export function CommunityPage() {
             const memberStatus = await membershipRes.json()
             setIsMember(memberStatus === true)
           }
+
+          if (token) {
+            const role = await fetchMyRole(data.id, token)
+            setMyRole(role)
+          }
         } else {
           setIsMember(false)
+          setMyRole(null)
         }
       } catch (err) {
         setError(err.message)
@@ -75,7 +83,7 @@ export function CommunityPage() {
       }
     }
     fetchCommunityAndMembership()
-  }, [communityname, user])
+  }, [communityname, user, token])
 
   useEffect(() => {
     setPosts([])
@@ -751,8 +759,7 @@ export function CommunityPage() {
         </div>
 
         <aside className='community-side'>
-          {/* TODO: replace `true` with real role check once backend roles are implemented */}
-          {true && (
+          {(myRole === 'owner' || myRole === 'moderator') && (
             <Link
               to={`/community/${community.slug}/mod`}
               className='community-mod-tools-btn'

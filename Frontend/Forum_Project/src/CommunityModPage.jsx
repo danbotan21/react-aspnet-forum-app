@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
   FaChartBar,
   FaFlag,
@@ -19,34 +19,25 @@ import {
   FaUserShield,
   FaEdit,
   FaFileAlt,
+  FaSpinner,
 } from 'react-icons/fa'
+import { useAuth } from './AuthContext'
+import {
+  fetchCommunityBySlug,
+  fetchMyRole,
+  fetchMembers,
+  fetchBannedMembers,
+  fetchCommunityStats,
+  promoteModerator,
+  demoteModerator,
+  kickMember,
+  banMember,
+  unbanMember,
+  transferOwnership,
+} from './utils/modApi'
 import './Styles/CommunityModPage.css'
 
-// ─── MOCK DATA ──────────────────────────────────────────────────────────────
-
-const MOCK_COMMUNITY = {
-  title: 'Programming',
-  slug: 'programming',
-  description:
-    'A community for programmers to share knowledge, projects and help each other grow.',
-  category: 'Technology',
-  type: 'public',
-  membersCount: 1247,
-  createdAt: '2024-01-15',
-  rules: [
-    'Be respectful to everyone.',
-    'Posts must be relevant to programming.',
-    'No spam or unsolicited self-promotion.',
-    'Use descriptive, clear titles.',
-  ],
-}
-
-const MOCK_STATS = {
-  pendingReports: 5,
-  totalMembers: 1247,
-  totalPosts: 342,
-  activeModerators: 3,
-}
+// ─── MOCK DATA (Reports, Pinned, ModLog — backend pending) ───────────────────
 
 const MOCK_REPORTS = [
   {
@@ -55,6 +46,8 @@ const MOCK_REPORTS = [
     title: 'Make $10k in one week with this trick!',
     contentPreview:
       'This post promotes a fraudulent scheme and includes misleading affiliate links to external sites...',
+    hasImage: true,
+    viewUrl: '#',
     reporter: 'user_alice',
     reportedUser: 'spammer99',
     reason: 'Spam / Misleading content',
@@ -66,6 +59,8 @@ const MOCK_REPORTS = [
     title: null,
     contentPreview:
       '"You are a complete idiot and should stop coding permanently. This advice is garbage."',
+    hasImage: false,
+    viewUrl: '#',
     reporter: 'coder_bob',
     reportedUser: 'angry_user',
     reason: 'Hate speech / Personal attack',
@@ -77,70 +72,48 @@ const MOCK_REPORTS = [
     title: 'Learn Python in 2 days (my affiliate link inside)',
     contentPreview:
       'Check out my new course for free, just click this link to get started and buy the premium tier...',
+    hasImage: false,
+    viewUrl: '#',
     reporter: 'dev_charlie',
     reportedUser: 'promo_account',
     reason: 'Unsolicited promotion / Affiliate spam',
     createdAt: '2026-05-19',
   },
-  {
-    id: 4,
-    type: 'Comment',
-    title: null,
-    contentPreview:
-      '"This is terrible advice. Whoever wrote this is completely incompetent and should not be giving help."',
-    reporter: 'helpful_user',
-    reportedUser: 'rude_commenter',
-    reason: 'Disrespectful / Toxic behavior',
-    createdAt: '2026-05-18',
-  },
-  {
-    id: 5,
-    type: 'Post',
-    title: 'Download cracked JetBrains tools here for free',
-    contentPreview:
-      'Get all JetBrains IDE tools for free with this crack. No license needed, works on all versions...',
-    reporter: 'honest_dev',
-    reportedUser: 'pirate_user',
-    reason: 'Illegal content / Piracy',
-    createdAt: '2026-05-17',
-  },
-]
-
-const MOCK_MEMBERS = [
-  { id: 1, username: 'dan_botan', role: 'owner', joinedAt: '2024-01-15', karma: 4520 },
-  { id: 2, username: 'mod_alice', role: 'moderator', joinedAt: '2024-02-01', karma: 1230 },
-  { id: 3, username: 'mod_bob', role: 'moderator', joinedAt: '2024-03-10', karma: 890 },
-  { id: 4, username: 'regular_user1', role: 'member', joinedAt: '2024-04-05', karma: 234 },
-  { id: 5, username: 'regular_user2', role: 'member', joinedAt: '2024-05-12', karma: 67 },
-  { id: 6, username: 'new_member', role: 'member', joinedAt: '2026-05-20', karma: 5 },
-  { id: 7, username: 'coder_bob', role: 'member', joinedAt: '2025-01-08', karma: 412 },
-  { id: 8, username: 'dev_charlie', role: 'member', joinedAt: '2025-03-22', karma: 178 },
 ]
 
 const MOCK_POSTS = [
-  { id: 101, title: 'Community Rules & Guidelines', author: 'dan_botan', votes: 892, pinned: true, createdAt: '2024-01-16' },
-  { id: 102, title: 'Weekly Discussion Thread — May 2026', author: 'mod_alice', votes: 234, pinned: true, createdAt: '2026-05-01' },
-  { id: 103, title: 'How to ask a good programming question', author: 'dan_botan', votes: 567, pinned: false, createdAt: '2024-02-10' },
-  { id: 104, title: 'Resource megathread: learn programming in 2026', author: 'mod_bob', votes: 445, pinned: false, createdAt: '2025-11-15' },
-  { id: 105, title: "What's your favorite IDE and why?", author: 'regular_user1', votes: 312, pinned: false, createdAt: '2026-05-18' },
+  { id: 101, title: 'Community Rules & Guidelines', author: 'mod', votes: 892, pinned: true, createdAt: '2024-01-16' },
+  { id: 102, title: 'Weekly Discussion Thread — May 2026', author: 'mod', votes: 234, pinned: true, createdAt: '2026-05-01' },
+  { id: 103, title: 'How to ask a good question', author: 'mod', votes: 567, pinned: false, createdAt: '2024-02-10' },
 ]
 
 const MOCK_MOD_LOG = [
   { id: 1, action: 'Removed Post', actionType: 'remove', target: '"Make $10k in one week"', targetUser: 'spammer99', moderator: 'mod_alice', date: '2026-05-21 14:32' },
-  { id: 2, action: 'Kicked Member', actionType: 'kick', target: 'toxic_user99', targetUser: 'toxic_user99', moderator: 'dan_botan', date: '2026-05-20 09:15' },
+  { id: 2, action: 'Kicked Member', actionType: 'kick', target: 'toxic_user99', targetUser: 'toxic_user99', moderator: 'owner', date: '2026-05-20 09:15' },
   { id: 3, action: 'Dismissed Report', actionType: 'dismiss', target: 'Comment by user_xyz', targetUser: 'user_xyz', moderator: 'mod_alice', date: '2026-05-19 16:40' },
-  { id: 4, action: 'Promoted Moderator', actionType: 'promote', target: 'mod_bob', targetUser: 'mod_bob', moderator: 'dan_botan', date: '2024-03-10 16:00' },
-  { id: 5, action: 'Pinned Post', actionType: 'pin', target: '"Community Rules & Guidelines"', targetUser: null, moderator: 'dan_botan', date: '2024-01-16 10:00' },
-  { id: 6, action: 'Promoted Moderator', actionType: 'promote', target: 'mod_alice', targetUser: 'mod_alice', moderator: 'dan_botan', date: '2024-02-01 12:00' },
+  { id: 4, action: 'Promoted Moderator', actionType: 'promote', target: 'mod_bob', targetUser: 'mod_bob', moderator: 'owner', date: '2024-03-10 16:00' },
+  { id: 5, action: 'Pinned Post', actionType: 'pin', target: '"Community Rules & Guidelines"', targetUser: null, moderator: 'owner', date: '2024-01-16 10:00' },
 ]
 
+const LOG_FILTERS = [
+  { label: 'All',       value: 'all' },
+  { label: 'Removed',   value: 'remove' },
+  { label: 'Kicked',    value: 'kick' },
+  { label: 'Promoted',  value: 'promote' },
+  { label: 'Pinned',    value: 'pin' },
+  { label: 'Dismissed', value: 'dismiss' },
+]
+
+const MAX_PINS = 3
+
 const NAV_ITEMS = [
-  { id: 'overview', label: 'Overview', icon: FaChartBar },
-  { id: 'reports', label: 'Reports', icon: FaFlag, badge: 5 },
-  { id: 'members', label: 'Members', icon: FaUsers },
-  { id: 'pinned', label: 'Pinned Posts', icon: FaThumbtack },
-  { id: 'settings', label: 'Community Settings', icon: FaCog },
-  { id: 'modlog', label: 'Mod Log', icon: FaList },
+  { id: 'overview',  label: 'Overview',           icon: FaChartBar },
+  { id: 'reports',   label: 'Reports',             icon: FaFlag, badge: MOCK_REPORTS.length },
+  { id: 'members',   label: 'Members',             icon: FaUsers },
+  { id: 'banned',    label: 'Banned Members',      icon: FaBan },
+  { id: 'pinned',    label: 'Pinned Posts',        icon: FaThumbtack },
+  { id: 'settings',  label: 'Community Settings',  icon: FaCog },
+  { id: 'modlog',    label: 'Mod Log',             icon: FaList },
 ]
 
 // ─── SMALL HELPERS ───────────────────────────────────────────────────────────
@@ -186,9 +159,40 @@ function ActionLogBadge({ actionType }) {
   return <span className={`mod-log-badge ${cls}`}>{label}</span>
 }
 
+function LoadingState() {
+  return (
+    <div className='mod-empty-state'>
+      <FaSpinner className='mod-empty-icon mod-spin' />
+      <p>Loading...</p>
+    </div>
+  )
+}
+
+function ErrorState({ message }) {
+  return (
+    <div className='mod-empty-state'>
+      <FaExclamationTriangle className='mod-empty-icon' style={{ color: '#e74c3c' }} />
+      <p>{message}</p>
+    </div>
+  )
+}
+
 // ─── OVERVIEW TAB ────────────────────────────────────────────────────────────
 
-function OverviewTab({ onNavigate }) {
+function OverviewTab({ communityId, token, onNavigate }) {
+  const [stats, setStats] = useState(null)
+  const [loadingStats, setLoadingStats] = useState(true)
+
+  useEffect(() => {
+    if (!communityId || !token) return
+    fetchCommunityStats(communityId, token)
+      .then(setStats)
+      .catch(() => {})
+      .finally(() => setLoadingStats(false))
+  }, [communityId, token])
+
+  const pendingReports = MOCK_REPORTS.length
+
   return (
     <div className='mod-tab-content'>
       <div className='mod-section-header'>
@@ -202,28 +206,34 @@ function OverviewTab({ onNavigate }) {
         <div className='mod-stat-card mod-stat-orange'>
           <div className='mod-stat-icon'><FaFlag /></div>
           <div className='mod-stat-body'>
-            <span className='mod-stat-value'>{MOCK_STATS.pendingReports}</span>
+            <span className='mod-stat-value'>{pendingReports}</span>
             <span className='mod-stat-label'>Pending Reports</span>
           </div>
         </div>
         <div className='mod-stat-card mod-stat-blue'>
           <div className='mod-stat-icon'><FaUsers /></div>
           <div className='mod-stat-body'>
-            <span className='mod-stat-value'>{MOCK_STATS.totalMembers.toLocaleString()}</span>
+            <span className='mod-stat-value'>
+              {loadingStats ? '—' : (stats?.membersCount ?? 0).toLocaleString()}
+            </span>
             <span className='mod-stat-label'>Total Members</span>
           </div>
         </div>
         <div className='mod-stat-card mod-stat-teal'>
           <div className='mod-stat-icon'><FaFileAlt /></div>
           <div className='mod-stat-body'>
-            <span className='mod-stat-value'>{MOCK_STATS.totalPosts}</span>
+            <span className='mod-stat-value'>
+              {loadingStats ? '—' : stats?.postsCount ?? 0}
+            </span>
             <span className='mod-stat-label'>Total Posts</span>
           </div>
         </div>
         <div className='mod-stat-card mod-stat-purple'>
           <div className='mod-stat-icon'><FaShieldAlt /></div>
           <div className='mod-stat-body'>
-            <span className='mod-stat-value'>{MOCK_STATS.activeModerators}</span>
+            <span className='mod-stat-value'>
+              {loadingStats ? '—' : stats?.moderatorsCount ?? 0}
+            </span>
             <span className='mod-stat-label'>Active Moderators</span>
           </div>
         </div>
@@ -233,7 +243,7 @@ function OverviewTab({ onNavigate }) {
         <h3 className='mod-subsection-title'>Quick Actions</h3>
         <div className='mod-quick-action-row'>
           <button className='mod-btn mod-btn-primary' onClick={() => onNavigate('reports')}>
-            <FaFlag /> Review Reports ({MOCK_STATS.pendingReports})
+            <FaFlag /> Review Reports ({pendingReports})
           </button>
           <button className='mod-btn mod-btn-secondary' onClick={() => onNavigate('members')}>
             <FaUsers /> Manage Members
@@ -271,14 +281,13 @@ function OverviewTab({ onNavigate }) {
   )
 }
 
-// ─── REPORTS TAB ─────────────────────────────────────────────────────────────
+// ─── REPORTS TAB (mock — backend integration pending) ────────────────────────
 
 function ReportsTab() {
   const [filter, setFilter] = useState('All')
   const [reports, setReports] = useState(MOCK_REPORTS)
 
   const filtered = filter === 'All' ? reports : reports.filter((r) => r.type === filter)
-
   const handleDismiss = (id) => setReports((prev) => prev.filter((r) => r.id !== id))
   const handleRemove  = (id) => setReports((prev) => prev.filter((r) => r.id !== id))
 
@@ -323,13 +332,24 @@ function ReportsTab() {
                 <span className='mod-report-date'>{report.createdAt}</span>
               </div>
               {report.title && <h4 className='mod-report-title'>{report.title}</h4>}
-              <p className='mod-report-preview'>{report.contentPreview}</p>
+              <div className='mod-report-body'>
+                <p className='mod-report-preview'>{report.contentPreview}</p>
+                {report.type === 'Post' && report.hasImage && (
+                  <div className='mod-report-image-thumb'>
+                    <div className='mod-report-image-placeholder' />
+                    <span className='mod-report-image-label'>Post contains an image</span>
+                  </div>
+                )}
+              </div>
               <div className='mod-report-meta'>
                 <span>Reported by: <strong>u/{report.reporter}</strong></span>
                 <span className='mod-meta-sep'>·</span>
                 <span>Author: <strong>u/{report.reportedUser}</strong></span>
               </div>
               <div className='mod-report-actions'>
+                <Link to={report.viewUrl} className='mod-btn mod-btn-ghost mod-btn-sm'>
+                  {report.type === 'Post' ? 'View Post →' : 'View Comment →'}
+                </Link>
                 <button className='mod-btn mod-btn-ghost' onClick={() => handleDismiss(report.id)}>
                   <FaTimes /> Dismiss
                 </button>
@@ -350,23 +370,73 @@ function ReportsTab() {
 
 // ─── MEMBERS TAB ─────────────────────────────────────────────────────────────
 
-function MembersTab() {
-  const [search, setSearch]       = useState('')
+function MembersTab({ communityId, token, myRole }) {
+  const [members, setMembers]   = useState([])
+  const [loading, setLoading]   = useState(true)
+  const [error, setError]       = useState(null)
+  const [search, setSearch]     = useState('')
   const [roleFilter, setRoleFilter] = useState('All')
-  const [members, setMembers]     = useState(MOCK_MEMBERS)
+  const [pending, setPending]   = useState({})
+  const [banningUserId, setBanningUserId] = useState(null)
+  const [banReason, setBanReason] = useState('')
+
+  const load = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      const data = await fetchMembers(communityId, token)
+      setMembers(data)
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (communityId && token) load()
+  }, [communityId, token])
+
+  const withPending = async (userId, fn) => {
+    if (pending[userId]) return
+    setPending((p) => ({ ...p, [userId]: true }))
+    try {
+      await fn()
+      await load()
+    } catch (e) {
+      alert(e.message)
+    } finally {
+      setPending((p) => ({ ...p, [userId]: false }))
+    }
+  }
+
+  const handlePromote = (userId) =>
+    withPending(userId, () => promoteModerator(communityId, userId, token))
+
+  const handleDemote = (userId) =>
+    withPending(userId, () => demoteModerator(communityId, userId, token))
+
+  const handleKick = (userId) => {
+    if (!window.confirm('Are you sure you want to kick this member?')) return
+    withPending(userId, () => kickMember(communityId, userId, token))
+  }
+
+  const handleBanSubmit = (userId) => {
+    if (!banReason.trim()) { alert('Please provide a ban reason.'); return }
+    withPending(userId, async () => {
+      await banMember(communityId, userId, banReason, token)
+      setBanningUserId(null)
+      setBanReason('')
+    })
+  }
 
   const filtered = members.filter((m) => {
-    const matchSearch = m.username.toLowerCase().includes(search.toLowerCase())
+    const matchSearch = m.userName.toLowerCase().includes(search.toLowerCase())
     const matchRole   = roleFilter === 'All' || m.role === roleFilter.toLowerCase()
     return matchSearch && matchRole
   })
 
-  const handlePromote = (id) =>
-    setMembers((prev) => prev.map((m) => (m.id === id ? { ...m, role: 'moderator' } : m)))
-  const handleDemote  = (id) =>
-    setMembers((prev) => prev.map((m) => (m.id === id ? { ...m, role: 'member' } : m)))
-  const handleKick    = (id) =>
-    setMembers((prev) => prev.filter((m) => m.id !== id))
+  const isOwner = myRole === 'owner'
 
   return (
     <div className='mod-tab-content'>
@@ -401,71 +471,222 @@ function MembersTab() {
         </div>
       </div>
 
-      <div className='mod-member-list'>
-        {filtered.length === 0 ? (
-          <div className='mod-empty-state'>
-            <FaUsers className='mod-empty-icon' />
-            <p>No members found matching your search.</p>
-          </div>
-        ) : (
-          filtered.map((member) => (
-            <div key={member.id} className='mod-member-card'>
-              <div
-                className='mod-member-avatar'
-                style={{ '--avatar-color': stringToColor(member.username) }}
-              >
-                {member.username[0].toUpperCase()}
-              </div>
-              <div className='mod-member-info'>
-                <div className='mod-member-name-row'>
-                  <Link to={`/user/${member.username}`} className='mod-member-username'>
-                    u/{member.username}
-                  </Link>
-                  <RoleBadge role={member.role} />
-                </div>
-                <div className='mod-member-meta'>
-                  <span>{member.karma.toLocaleString()} karma</span>
-                  <span className='mod-meta-sep'>·</span>
-                  <span>Joined {member.joinedAt}</span>
-                </div>
-              </div>
-              {member.role !== 'owner' && (
-                <div className='mod-member-actions'>
-                  {member.role === 'member' && (
-                    <button
-                      className='mod-btn mod-btn-sm mod-btn-blue'
-                      onClick={() => handlePromote(member.id)}
-                    >
-                      <FaUserShield /> Promote
-                    </button>
-                  )}
-                  {member.role === 'moderator' && (
-                    <button
-                      className='mod-btn mod-btn-sm mod-btn-ghost'
-                      onClick={() => handleDemote(member.id)}
-                    >
-                      Demote
-                    </button>
-                  )}
-                  <button
-                    className='mod-btn mod-btn-sm mod-btn-danger'
-                    onClick={() => handleKick(member.id)}
-                  >
-                    <FaBan /> Kick
-                  </button>
-                </div>
-              )}
+      {loading ? (
+        <LoadingState />
+      ) : error ? (
+        <ErrorState message={error} />
+      ) : (
+        <div className='mod-member-list'>
+          {filtered.length === 0 ? (
+            <div className='mod-empty-state'>
+              <FaUsers className='mod-empty-icon' />
+              <p>No members found matching your search.</p>
             </div>
-          ))
-        )}
-      </div>
+          ) : (
+            filtered.map((member) => (
+              <div key={member.userId} className='mod-member-card'>
+                <div
+                  className='mod-member-avatar'
+                  style={{ '--avatar-color': stringToColor(member.userName) }}
+                >
+                  {member.userName[0].toUpperCase()}
+                </div>
+                <div className='mod-member-info'>
+                  <div className='mod-member-name-row'>
+                    <Link to={`/user/${member.userName}`} className='mod-member-username'>
+                      u/{member.userName}
+                    </Link>
+                    <RoleBadge role={member.role} />
+                  </div>
+                  <div className='mod-member-meta'>
+                    <span>{member.karma.toLocaleString()} karma</span>
+                    <span className='mod-meta-sep'>·</span>
+                    <span>Joined {new Date(member.joinedAt).toLocaleDateString()}</span>
+                  </div>
+                </div>
+
+                {member.role !== 'owner' && (
+                  <div className='mod-member-actions'>
+                    {isOwner && member.role === 'member' && (
+                      <button
+                        className='mod-btn mod-btn-sm mod-btn-blue'
+                        onClick={() => handlePromote(member.userId)}
+                        disabled={pending[member.userId]}
+                      >
+                        <FaUserShield /> Promote
+                      </button>
+                    )}
+                    {isOwner && member.role === 'moderator' && (
+                      <button
+                        className='mod-btn mod-btn-sm mod-btn-ghost'
+                        onClick={() => handleDemote(member.userId)}
+                        disabled={pending[member.userId]}
+                      >
+                        Demote
+                      </button>
+                    )}
+                    <button
+                      className='mod-btn mod-btn-sm mod-btn-danger'
+                      onClick={() => handleKick(member.userId)}
+                      disabled={pending[member.userId]}
+                    >
+                      <FaBan /> Kick
+                    </button>
+                    {banningUserId !== member.userId ? (
+                      <button
+                        className='mod-btn mod-btn-sm mod-btn-danger'
+                        onClick={() => { setBanningUserId(member.userId); setBanReason('') }}
+                        disabled={pending[member.userId]}
+                      >
+                        Ban
+                      </button>
+                    ) : (
+                      <div className='mod-ban-inline'>
+                        <input
+                          className='mod-settings-input mod-ban-reason-input'
+                          placeholder='Ban reason...'
+                          value={banReason}
+                          onChange={(e) => setBanReason(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleBanSubmit(member.userId)
+                            if (e.key === 'Escape') { setBanningUserId(null); setBanReason('') }
+                          }}
+                          autoFocus
+                        />
+                        <button
+                          className='mod-btn mod-btn-sm mod-btn-danger-solid'
+                          onClick={() => handleBanSubmit(member.userId)}
+                          disabled={pending[member.userId]}
+                        >
+                          Confirm
+                        </button>
+                        <button
+                          className='mod-btn mod-btn-sm mod-btn-ghost'
+                          onClick={() => { setBanningUserId(null); setBanReason('') }}
+                        >
+                          <FaTimes />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+      )}
     </div>
   )
 }
 
-// ─── PINNED POSTS TAB ────────────────────────────────────────────────────────
+// ─── BANNED MEMBERS TAB ──────────────────────────────────────────────────────
 
-const MAX_PINS = 3
+function BannedMembersTab({ communityId, token }) {
+  const [banned, setBanned]   = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError]     = useState(null)
+  const [pending, setPending] = useState({})
+
+  const load = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      const data = await fetchBannedMembers(communityId, token)
+      setBanned(data)
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (communityId && token) load()
+  }, [communityId, token])
+
+  const handleUnban = async (userId) => {
+    if (pending[userId]) return
+    setPending((p) => ({ ...p, [userId]: true }))
+    try {
+      await unbanMember(communityId, userId, token)
+      await load()
+    } catch (e) {
+      alert(e.message)
+    } finally {
+      setPending((p) => ({ ...p, [userId]: false }))
+    }
+  }
+
+  return (
+    <div className='mod-tab-content'>
+      <div className='mod-section-header'>
+        <h2 className='mod-section-title'>Banned Members</h2>
+        <p className='mod-section-subtitle'>
+          Users currently banned from this community. You can unban them at any time.
+        </p>
+      </div>
+
+      {loading ? (
+        <LoadingState />
+      ) : error ? (
+        <ErrorState message={error} />
+      ) : banned.length === 0 ? (
+        <div className='mod-empty-state'>
+          <FaCheck className='mod-empty-icon' />
+          <p>No members are currently banned.</p>
+        </div>
+      ) : (
+        <div className='mod-member-list'>
+          {banned.map((entry) => (
+            <div key={entry.userId} className='mod-member-card mod-banned-card'>
+              <div
+                className='mod-member-avatar mod-banned-avatar'
+                style={{ '--avatar-color': stringToColor(entry.userName) }}
+              >
+                {entry.userName[0].toUpperCase()}
+              </div>
+              <div className='mod-member-info'>
+                <div className='mod-member-name-row'>
+                  <Link to={`/user/${entry.userName}`} className='mod-member-username'>
+                    u/{entry.userName}
+                  </Link>
+                  <span className='mod-role-badge mod-role-banned'>
+                    <FaBan className='mod-role-icon' /> Banned
+                  </span>
+                </div>
+                <div className='mod-member-meta'>
+                  {entry.bannedAt && (
+                    <>
+                      <span>Banned on {new Date(entry.bannedAt).toLocaleDateString()}</span>
+                      {entry.bannedByUserName && (
+                        <>
+                          <span className='mod-meta-sep'>·</span>
+                          <span>by u/{entry.bannedByUserName}</span>
+                        </>
+                      )}
+                    </>
+                  )}
+                </div>
+                {entry.banReason && <p className='mod-ban-reason'>{entry.banReason}</p>}
+              </div>
+              <div className='mod-member-actions'>
+                <button
+                  className='mod-btn mod-btn-sm mod-btn-secondary'
+                  onClick={() => handleUnban(entry.userId)}
+                  disabled={pending[entry.userId]}
+                >
+                  <FaCheck /> Unban
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── PINNED POSTS TAB (mock) ─────────────────────────────────────────────────
 
 function PinnedTab() {
   const [posts, setPosts] = useState(MOCK_POSTS)
@@ -498,9 +719,7 @@ function PinnedTab() {
 
       {pinned.length > 0 && (
         <div className='mod-pinned-section'>
-          <h3 className='mod-subsection-title'>
-            Currently Pinned ({pinned.length}/{MAX_PINS})
-          </h3>
+          <h3 className='mod-subsection-title'>Currently Pinned ({pinned.length}/{MAX_PINS})</h3>
           <div className='mod-post-list'>
             {pinned.map((post) => (
               <div key={post.id} className='mod-post-card mod-post-pinned'>
@@ -511,10 +730,7 @@ function PinnedTab() {
                     by u/{post.author} · {post.votes} votes · {post.createdAt}
                   </span>
                 </div>
-                <button
-                  className='mod-btn mod-btn-sm mod-btn-ghost'
-                  onClick={() => togglePin(post.id)}
-                >
+                <button className='mod-btn mod-btn-sm mod-btn-ghost' onClick={() => togglePin(post.id)}>
                   Unpin
                 </button>
               </div>
@@ -558,23 +774,104 @@ function PinnedTab() {
 
 // ─── COMMUNITY SETTINGS TAB ──────────────────────────────────────────────────
 
-function CommunitySettingsTab() {
-  const [community, setCommunity] = useState(MOCK_COMMUNITY)
-  const [rules, setRules]         = useState(MOCK_COMMUNITY.rules)
-  const [newRule, setNewRule]     = useState('')
-  const [saved, setSaved]         = useState(false)
+function CommunitySettingsTab({ communityId, token, myRole, communityData, onCommunityUpdate }) {
+  const navigate = useNavigate()
+  const { communityname } = useParams()
 
-  const handleSave = (e) => {
+  const [form, setForm]             = useState(communityData || {})
+  const [rules, setRules]           = useState([])
+  const [newRule, setNewRule]       = useState('')
+  const [saving, setSaving]         = useState(false)
+  const [savedMsg, setSavedMsg]     = useState('')
+  const [showTransfer, setShowTransfer]     = useState(false)
+  const [transferTarget, setTransferTarget] = useState('')
+  const [moderators, setModerators] = useState([])
+  const [transferring, setTransferring]     = useState(false)
+  const [deleting, setDeleting]             = useState(false)
+
+  useEffect(() => {
+    if (communityData) {
+      setForm({
+        title: communityData.title ?? '',
+        description: communityData.description ?? '',
+        category: communityData.category ?? 'Technology',
+        type: communityData.type ?? 'public',
+      })
+    }
+  }, [communityData])
+
+  useEffect(() => {
+    if (!communityId || !token || myRole !== 'owner') return
+    fetchMembers(communityId, token)
+      .then((members) => setModerators(members.filter((m) => m.role === 'moderator')))
+      .catch(() => {})
+  }, [communityId, token, myRole])
+
+  const handleSave = async (e) => {
     e.preventDefault()
-    setSaved(true)
-    setTimeout(() => setSaved(false), 3000)
+    setSaving(true)
+    setSavedMsg('')
+    try {
+      const res = await fetch(`/api/Communities/${communityId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          title: form.title,
+          description: form.description,
+          category: form.category,
+          type: form.type,
+        }),
+      })
+      if (!res.ok) throw new Error(await res.text())
+      const updated = await res.json()
+      onCommunityUpdate(updated)
+      setSavedMsg('Settings saved successfully!')
+      setTimeout(() => setSavedMsg(''), 3000)
+    } catch (e) {
+      alert('Failed to save: ' + e.message)
+    } finally {
+      setSaving(false)
+    }
   }
 
-  const addRule = () => {
-    if (!newRule.trim()) return
-    setRules((prev) => [...prev, newRule.trim()])
-    setNewRule('')
+  const handleTransfer = async () => {
+    if (!transferTarget) return
+    setTransferring(true)
+    try {
+      await transferOwnership(communityId, parseInt(transferTarget), token)
+      alert('Ownership transferred successfully.')
+      setShowTransfer(false)
+      setTransferTarget('')
+      navigate(`/community/${communityname}`)
+    } catch (e) {
+      alert(e.message)
+    } finally {
+      setTransferring(false)
+    }
   }
+
+  const handleDelete = async () => {
+    if (!window.confirm(`Are you sure you want to permanently delete this community? This cannot be undone.`)) return
+    setDeleting(true)
+    try {
+      const res = await fetch(`/api/Communities/${communityId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) throw new Error(await res.text())
+      alert('Community deleted.')
+      navigate('/')
+    } catch (e) {
+      alert('Failed to delete: ' + e.message)
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  const addRule    = () => { if (!newRule.trim()) return; setRules((prev) => [...prev, newRule.trim()]); setNewRule('') }
   const removeRule = (i) => setRules((prev) => prev.filter((_, idx) => idx !== i))
 
   return (
@@ -586,11 +883,10 @@ function CommunitySettingsTab() {
         </p>
       </div>
 
-      {saved && <div className='mod-status-success'>Settings saved successfully!</div>}
+      {savedMsg && <div className='mod-status-success'>{savedMsg}</div>}
 
       <form className='mod-settings-form' onSubmit={handleSave}>
 
-        {/* Identity */}
         <div className='mod-settings-section'>
           <h3 className='mod-settings-section-title'>Identity</h3>
 
@@ -615,8 +911,8 @@ function CommunitySettingsTab() {
             <label className='mod-settings-label'>Community Name</label>
             <input
               className='mod-settings-input'
-              value={community.title}
-              onChange={(e) => setCommunity((prev) => ({ ...prev, title: e.target.value }))}
+              value={form.title ?? ''}
+              onChange={(e) => setForm((prev) => ({ ...prev, title: e.target.value }))}
               placeholder='Community name'
             />
           </div>
@@ -625,15 +921,13 @@ function CommunitySettingsTab() {
             <label className='mod-settings-label'>Description</label>
             <textarea
               className='mod-settings-input mod-settings-textarea'
-              value={community.description}
-              onChange={(e) =>
-                setCommunity((prev) => ({ ...prev, description: e.target.value }))
-              }
+              value={form.description ?? ''}
+              onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
               rows={4}
               maxLength={500}
               placeholder='Describe your community...'
             />
-            <span className='mod-char-count'>{community.description.length}/500</span>
+            <span className='mod-char-count'>{(form.description ?? '').length}/500</span>
           </div>
 
           <div className='mod-form-row'>
@@ -641,10 +935,8 @@ function CommunitySettingsTab() {
               <label className='mod-settings-label'>Category</label>
               <select
                 className='mod-settings-input mod-settings-select'
-                value={community.category}
-                onChange={(e) =>
-                  setCommunity((prev) => ({ ...prev, category: e.target.value }))
-                }
+                value={form.category ?? ''}
+                onChange={(e) => setForm((prev) => ({ ...prev, category: e.target.value }))}
               >
                 {['Technology', 'Science', 'Gaming', 'Sports', 'Art', 'Music', 'Education', 'Other'].map(
                   (c) => <option key={c} value={c}>{c}</option>,
@@ -655,10 +947,8 @@ function CommunitySettingsTab() {
               <label className='mod-settings-label'>Community Type</label>
               <select
                 className='mod-settings-input mod-settings-select'
-                value={community.type}
-                onChange={(e) =>
-                  setCommunity((prev) => ({ ...prev, type: e.target.value }))
-                }
+                value={form.type ?? ''}
+                onChange={(e) => setForm((prev) => ({ ...prev, type: e.target.value }))}
               >
                 <option value='public'>Public — anyone can view and post</option>
                 <option value='restricted'>Restricted — anyone can view, only mods post</option>
@@ -674,7 +964,6 @@ function CommunitySettingsTab() {
           <p className='mod-settings-section-desc'>
             Rules are shown in the community sidebar to all visitors.
           </p>
-
           <div className='mod-rules-list'>
             {rules.map((rule, i) => (
               <div key={i} className='mod-rule-item'>
@@ -691,16 +980,13 @@ function CommunitySettingsTab() {
               </div>
             ))}
           </div>
-
           <div className='mod-add-rule-row'>
             <input
               className='mod-settings-input'
               placeholder='Add a new rule...'
               value={newRule}
               onChange={(e) => setNewRule(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') { e.preventDefault(); addRule() }
-              }}
+              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addRule() } }}
             />
             <button type='button' className='mod-btn mod-btn-secondary' onClick={addRule}>
               Add Rule
@@ -709,33 +995,108 @@ function CommunitySettingsTab() {
         </div>
 
         <div className='mod-form-actions'>
-          <button type='submit' className='mod-btn mod-btn-primary'>Save Changes</button>
+          <button type='submit' className='mod-btn mod-btn-primary' disabled={saving}>
+            {saving ? 'Saving...' : 'Save Changes'}
+          </button>
         </div>
 
-        {/* Danger Zone */}
-        <div className='mod-danger-zone'>
-          <h3 className='mod-danger-title'>
-            <FaExclamationTriangle /> Danger Zone
-          </h3>
-          <div className='mod-danger-item'>
-            <div className='mod-danger-info'>
-              <strong>Delete Community</strong>
-              <p>Permanently delete this community and all its posts. This action cannot be undone.</p>
+        {/* Danger Zone — owner only */}
+        {myRole === 'owner' && (
+          <div className='mod-danger-zone'>
+            <h3 className='mod-danger-title'>
+              <FaExclamationTriangle /> Danger Zone
+            </h3>
+
+            <div className='mod-danger-item'>
+              <div className='mod-danger-info'>
+                <strong>Transfer Ownership</strong>
+                <p>Hand over this community to one of your moderators. You will become a regular moderator.</p>
+              </div>
+              {!showTransfer && (
+                <button
+                  type='button'
+                  className='mod-btn mod-btn-warning'
+                  onClick={() => setShowTransfer(true)}
+                >
+                  Transfer Ownership
+                </button>
+              )}
             </div>
-            <button type='button' className='mod-btn mod-btn-danger-solid'>
-              Delete Community
-            </button>
+
+            {showTransfer && (
+              <div className='mod-transfer-form'>
+                <p className='mod-transfer-warning'>
+                  <FaExclamationTriangle /> This action is permanent. The new owner will have full control over the community.
+                </p>
+                {moderators.length === 0 ? (
+                  <p style={{ color: '#566a89', fontSize: '14px' }}>
+                    No moderators available. Promote a member first.
+                  </p>
+                ) : (
+                  <div className='mod-transfer-row'>
+                    <select
+                      className='mod-settings-input mod-settings-select'
+                      value={transferTarget}
+                      onChange={(e) => setTransferTarget(e.target.value)}
+                    >
+                      <option value=''>Select a moderator...</option>
+                      {moderators.map((m) => (
+                        <option key={m.userId} value={m.userId}>u/{m.userName}</option>
+                      ))}
+                    </select>
+                    <button
+                      type='button'
+                      className='mod-btn mod-btn-danger-solid'
+                      disabled={!transferTarget || transferring}
+                      onClick={handleTransfer}
+                    >
+                      {transferring ? 'Transferring...' : 'Confirm Transfer'}
+                    </button>
+                  </div>
+                )}
+                <button
+                  type='button'
+                  className='mod-btn mod-btn-ghost'
+                  onClick={() => { setShowTransfer(false); setTransferTarget('') }}
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
+
+            <div className='mod-danger-divider' />
+
+            <div className='mod-danger-item'>
+              <div className='mod-danger-info'>
+                <strong>Delete Community</strong>
+                <p>Permanently delete this community and all its posts. This action cannot be undone.</p>
+              </div>
+              <button
+                type='button'
+                className='mod-btn mod-btn-danger-solid'
+                disabled={deleting}
+                onClick={handleDelete}
+              >
+                {deleting ? 'Deleting...' : 'Delete Community'}
+              </button>
+            </div>
           </div>
-        </div>
+        )}
 
       </form>
     </div>
   )
 }
 
-// ─── MOD LOG TAB ─────────────────────────────────────────────────────────────
+// ─── MOD LOG TAB (mock) ──────────────────────────────────────────────────────
 
 function ModLogTab() {
+  const [logFilter, setLogFilter] = useState('all')
+
+  const filtered = logFilter === 'all'
+    ? MOCK_MOD_LOG
+    : MOCK_MOD_LOG.filter((e) => e.actionType === logFilter)
+
   return (
     <div className='mod-tab-content'>
       <div className='mod-section-header'>
@@ -745,37 +1106,56 @@ function ModLogTab() {
         </p>
       </div>
 
-      <div className='mod-log-list mod-log-full'>
-        {MOCK_MOD_LOG.map((entry) => (
-          <div key={entry.id} className='mod-log-entry mod-log-entry-full'>
-            <div className='mod-log-entry-left'>
-              <ActionLogBadge actionType={entry.actionType} />
-            </div>
-            <div className='mod-log-info'>
-              <span className='mod-log-target'>
-                <strong>{entry.action}</strong>: {entry.target}
-                {entry.targetUser && (
-                  <>
-                    {' '}(
-                    <Link to={`/user/${entry.targetUser}`} className='mod-log-user-link'>
-                      u/{entry.targetUser}
-                    </Link>
-                    )
-                  </>
-                )}
-              </span>
-              <span className='mod-log-meta'>
-                by{' '}
-                <Link to={`/user/${entry.moderator}`} className='mod-log-user-link'>
-                  u/{entry.moderator}
-                </Link>
-                <span className='mod-meta-sep'>·</span>
-                {entry.date}
-              </span>
-            </div>
-          </div>
+      <div className='mod-filter-bar'>
+        {LOG_FILTERS.map((f) => (
+          <button
+            key={f.value}
+            className={`mod-filter-btn ${logFilter === f.value ? 'mod-filter-active' : ''}`}
+            onClick={() => setLogFilter(f.value)}
+          >
+            {f.label}
+          </button>
         ))}
       </div>
+
+      {filtered.length === 0 ? (
+        <div className='mod-empty-state'>
+          <FaList className='mod-empty-icon' />
+          <p>No actions of this type found.</p>
+        </div>
+      ) : (
+        <div className='mod-log-list mod-log-full'>
+          {filtered.map((entry) => (
+            <div key={entry.id} className='mod-log-entry mod-log-entry-full'>
+              <div className='mod-log-entry-left'>
+                <ActionLogBadge actionType={entry.actionType} />
+              </div>
+              <div className='mod-log-info'>
+                <span className='mod-log-target'>
+                  <strong>{entry.action}</strong>: {entry.target}
+                  {entry.targetUser && (
+                    <>
+                      {' '}(
+                      <Link to={`/user/${entry.targetUser}`} className='mod-log-user-link'>
+                        u/{entry.targetUser}
+                      </Link>
+                      )
+                    </>
+                  )}
+                </span>
+                <span className='mod-log-meta'>
+                  by{' '}
+                  <Link to={`/user/${entry.moderator}`} className='mod-log-user-link'>
+                    u/{entry.moderator}
+                  </Link>
+                  <span className='mod-meta-sep'>·</span>
+                  {entry.date}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
@@ -784,17 +1164,63 @@ function ModLogTab() {
 
 export function CommunityModPage() {
   const { communityname } = useParams()
+  const { token, user } = useAuth()
+  const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('overview')
 
+  const [community, setCommunity] = useState(null)
+  const [communityId, setCommunityId] = useState(null)
+  const [myRole, setMyRole] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const data = await fetchCommunityBySlug(communityname)
+        setCommunity(data)
+        setCommunityId(data.id)
+
+        if (token) {
+          const role = await fetchMyRole(data.id, token)
+          setMyRole(role)
+          if (role !== 'owner' && role !== 'moderator') {
+            navigate(`/community/${communityname}`)
+          }
+        } else {
+          navigate(`/community/${communityname}`)
+        }
+      } catch {
+        navigate(`/community/${communityname}`)
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
+  }, [communityname, token])
+
+  const handleCommunityUpdate = (updated) => {
+    setCommunity(updated)
+  }
+
   const renderContent = () => {
+    if (loading) return <LoadingState />
     switch (activeTab) {
-      case 'overview': return <OverviewTab onNavigate={setActiveTab} />
+      case 'overview': return <OverviewTab communityId={communityId} token={token} onNavigate={setActiveTab} />
       case 'reports':  return <ReportsTab />
-      case 'members':  return <MembersTab />
+      case 'members':  return <MembersTab communityId={communityId} token={token} myRole={myRole} />
+      case 'banned':   return <BannedMembersTab communityId={communityId} token={token} />
       case 'pinned':   return <PinnedTab />
-      case 'settings': return <CommunitySettingsTab />
+      case 'settings': return (
+        <CommunitySettingsTab
+          communityId={communityId}
+          token={token}
+          myRole={myRole}
+          communityData={community}
+          onCommunityUpdate={handleCommunityUpdate}
+        />
+      )
       case 'modlog':   return <ModLogTab />
-      default:         return <OverviewTab onNavigate={setActiveTab} />
+      default:         return <OverviewTab communityId={communityId} token={token} onNavigate={setActiveTab} />
     }
   }
 

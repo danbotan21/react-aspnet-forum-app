@@ -385,6 +385,55 @@
   flex-wrap: wrap;
 }
 
+.mod-report-body {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 10px;
+}
+
+.mod-report-body .mod-report-preview {
+  flex: 1;
+  margin: 0;
+}
+
+.mod-report-image-thumb {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+
+.mod-report-image-placeholder {
+  width: 90px;
+  height: 70px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #c7d9f5 0%, #a8c4f0 40%, #8fb3ea 100%);
+  border: 1px solid #bfd4f5;
+  position: relative;
+  overflow: hidden;
+}
+
+.mod-report-image-placeholder::after {
+  content: '🖼';
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  opacity: 0.6;
+}
+
+.mod-report-image-label {
+  font-size: 10px;
+  color: #7e93af;
+  text-align: center;
+  max-width: 90px;
+  line-height: 1.3;
+}
+
 .mod-report-actions {
   display: flex;
   gap: 8px;
@@ -552,6 +601,47 @@
   display: flex;
   gap: 8px;
   flex-shrink: 0;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.mod-ban-inline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.mod-ban-reason-input {
+  width: 180px;
+  padding: 6px 10px;
+  font-size: 13px;
+  border-radius: 8px;
+}
+
+/* ─── BANNED MEMBERS ─────────────────────────────────────────── */
+
+.mod-banned-card {
+  border-left: 3px solid #fca5a5;
+  background: linear-gradient(180deg, #fff8f8, #fff5f5);
+}
+
+.mod-banned-avatar {
+  opacity: 0.6;
+}
+
+.mod-role-banned {
+  background: linear-gradient(135deg, #fee2e2, #fecaca);
+  color: #dc2626;
+  border: 1px solid #fca5a5;
+}
+
+.mod-ban-reason {
+  font-size: 12px;
+  color: #7c3535;
+  margin: 4px 0 0;
+  font-style: italic;
+  line-height: 1.4;
 }
 
 /* ─── PINNED POSTS ────────────────────────────────────────────── */
@@ -862,6 +952,47 @@
   line-height: 1.5;
 }
 
+/* ─── TRANSFER OWNERSHIP FORM ─────────────────────────────────── */
+
+.mod-transfer-form {
+  margin-top: 14px;
+  padding: 16px;
+  background: #fff0e0;
+  border: 1px solid #ffd0a0;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.mod-transfer-warning {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #7a4000;
+  font-weight: 500;
+  margin: 0;
+}
+
+.mod-transfer-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.mod-transfer-row .mod-settings-select {
+  flex: 1;
+  min-width: 160px;
+}
+
+.mod-danger-divider {
+  border: none;
+  border-top: 1px solid #fecaca;
+  margin: 4px 0;
+}
+
 /* ─── MOD LOG ─────────────────────────────────────────────────── */
 
 .mod-log-list {
@@ -949,6 +1080,15 @@
 .mod-empty-icon {
   font-size: 36px;
   color: #bfd4f5;
+}
+
+@keyframes mod-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.mod-spin {
+  animation: mod-spin 0.9s linear infinite;
 }
 
 /* ─── STATUS MESSAGES ─────────────────────────────────────────── */
