@@ -76,6 +76,8 @@ export function PostPage() {
   const [showDeletePostModal, setShowDeletePostModal] = useState(false)
   const [isDeletingPost, setIsDeletingPost] = useState(false)
   const [deletePostError, setDeletePostError] = useState('')
+  const [confirmDeleteCommentId, setConfirmDeleteCommentId] = useState(null)
+  const [isDeletingComment, setIsDeletingComment] = useState(false)
 
   // ── Edit post state ───────────────────────────────────────────
   const [isEditing, setIsEditing] = useState(false)
@@ -727,6 +729,35 @@ export function PostPage() {
     }
   }
 
+  const handleDeleteComment = async (commentId) => {
+    if (!token) return
+    setIsDeletingComment(true)
+    try {
+      const response = await fetch(`/api/comments/${commentId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!response.ok) {
+        const msg = await parseErrorText(response, 'Failed to delete comment')
+        throw new Error(msg)
+      }
+      setComments((prev) => prev.filter((c) => c.id !== commentId))
+      setConfirmDeleteCommentId(null)
+      setPost((current) =>
+        current
+          ? {
+              ...current,
+              commentsCount: Math.max((current.commentsCount ?? 1) - 1, 0),
+            }
+          : current,
+      )
+    } catch (err) {
+      alert(err.message)
+    } finally {
+      setIsDeletingComment(false)
+    }
+  }
+
   const renderCommentThread = (comment, depth = 0) => {
     const childComments = commentsByParentId.get(comment.id) || []
     const hasReplies = childComments.length > 0
@@ -734,6 +765,10 @@ export function PostPage() {
     const isReplyBoxOpen = openReplyBoxByCommentId[comment.id] === true
     const isReplySubmitting = submittingReplyByCommentId[comment.id] === true
     const nestingLevel = Math.min(depth, 6)
+    const isOwnComment =
+      user?.userName &&
+      comment.authorName !== '[deleted]' &&
+      user.userName.toLowerCase() === comment.authorName.toLowerCase()
 
     return (
       <div
@@ -829,6 +864,37 @@ export function PostPage() {
                   : `View replies (${childComments.length})`}
               </button>
             )}
+
+            {isOwnComment &&
+              (confirmDeleteCommentId === comment.id ? (
+                <span className='post-comment-delete-confirm'>
+                  <span className='post-comment-delete-label'>Delete?</span>
+                  <button
+                    type='button'
+                    className='post-chip post-chip-delete post-comment-inline-btn'
+                    onClick={() => handleDeleteComment(comment.id)}
+                    disabled={isDeletingComment}
+                  >
+                    {isDeletingComment ? '...' : 'Yes'}
+                  </button>
+                  <button
+                    type='button'
+                    className='post-chip post-comment-inline-btn'
+                    onClick={() => setConfirmDeleteCommentId(null)}
+                    disabled={isDeletingComment}
+                  >
+                    No
+                  </button>
+                </span>
+              ) : (
+                <button
+                  type='button'
+                  className='post-chip post-comment-inline-btn post-comment-delete-btn'
+                  onClick={() => setConfirmDeleteCommentId(comment.id)}
+                >
+                  <FaTrash /> Delete
+                </button>
+              ))}
           </div>
 
           {isReplyBoxOpen && (

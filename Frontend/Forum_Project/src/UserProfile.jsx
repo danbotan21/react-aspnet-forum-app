@@ -11,7 +11,7 @@ import { ProfileVotedTab } from './ProfileVotedTab'
 import { useAuth } from './AuthContext'
 import { normalizeImageSrc } from './utils/media'
 import { fetchUserPostsPage } from './utils/postFeedApi'
-import { fetchMySavedItems } from './utils/savedItemApi'
+import { fetchMySavedItems, unsaveItem, savePost } from './utils/savedItemApi'
 import { fetchMyVotes } from './utils/voteApi'
 
 const PROFILE_TABS = [
@@ -79,11 +79,7 @@ export function UserProfile() {
     loggedUser.length > 0 &&
     displayName.toLowerCase() === loggedUser.toLowerCase()
 
-  const tabs = isOwnProfile
-    ? PROFILE_TABS
-    : PROFILE_TABS.filter(
-        (tab) => !['Saved', 'Upvoted', 'Downvoted'].includes(tab),
-      )
+  const tabs = PROFILE_TABS
 
   const [activeTab, setActiveTab] = useState('Overview')
   const [profileUser, setProfileUser] = useState(null)
@@ -118,6 +114,7 @@ export function UserProfile() {
   const [postToDeleteId, setPostToDeleteId] = useState(null)
   const [isDeletingPost, setIsDeletingPost] = useState(false)
   const [deletePostError, setDeletePostError] = useState('')
+  const [profilePostSavedMap, setProfilePostSavedMap] = useState({})
 
   const postsLoadMoreRef = useRef(null)
 
@@ -371,26 +368,34 @@ export function UserProfile() {
   ])
 
   useEffect(() => {
-    if (!isOwnProfile || !token) {
+    if (!profileUser?.id) {
       setSavedItems([])
       setUpvotedPosts([])
       setDownvotedPosts([])
+      setProfilePostSavedMap({})
       setIsProfileDataLoading(false)
       return
     }
 
     let cancelled = false
 
-    const loadOwnData = async () => {
+    const loadProfileData = async () => {
       setIsProfileDataLoading(true)
 
       try {
-        const [fetchedSaved, allMyVotes] = await Promise.all([
-          fetchMySavedItems(token),
-          fetchMyVotes(token),
-        ])
+        const [fetchedSaved, allVotes] =
+          isOwnProfile && token
+            ? await Promise.all([fetchMySavedItems(token), fetchMyVotes(token)])
+            : await Promise.all([
+                fetch(`/api/saveditem/user/${profileUser.id}`).then((r) =>
+                  r.ok ? r.json() : [],
+                ),
+                fetch(`/api/vote/user/${profileUser.id}`).then((r) =>
+                  r.ok ? r.json() : [],
+                ),
+              ])
 
-        const userPostVotes = allMyVotes.filter((vote) => Boolean(vote.postId))
+        const userPostVotes = allVotes.filter((vote) => Boolean(vote.postId))
 
         const savedCommentIds = [
           ...new Set(
@@ -462,6 +467,7 @@ export function UserProfile() {
               if (!post) return null
               return {
                 id: `saved-${savedItem.id}`,
+                savedItemId: savedItem.id,
                 type: 'post',
                 community: `r/${post.communitySlug}`,
                 author: `u/${post.authorName}`,
@@ -484,6 +490,7 @@ export function UserProfile() {
 
               return {
                 id: `saved-${savedItem.id}`,
+                savedItemId: savedItem.id,
                 type: 'comment',
                 community: `r/${post.communitySlug}`,
                 author: `u/${comment.authorName}`,
@@ -514,6 +521,14 @@ export function UserProfile() {
           setSavedItems(mappedSavedItems)
           setUpvotedPosts(mappedUpvoted)
           setDownvotedPosts(mappedDownvoted)
+
+          if (isOwnProfile) {
+            const postSavedMap = {}
+            mappedSavedItems.forEach((item) => {
+              if (item.type === 'post') postSavedMap[item.postId] = item.savedItemId
+            })
+            setProfilePostSavedMap(postSavedMap)
+          }
         }
       } catch {
         if (!cancelled) {
@@ -528,12 +543,12 @@ export function UserProfile() {
       }
     }
 
-    loadOwnData()
+    loadProfileData()
 
     return () => {
       cancelled = true
     }
-  }, [isOwnProfile, token])
+  }, [profileUser?.id, isOwnProfile, token])
 
   const hasPosts = totalPostsCount > 0
   const hasComments = comments.length > 0
@@ -636,6 +651,107 @@ export function UserProfile() {
       setDeletePostError(err.message)
     } finally {
       setIsDeletingPost(false)
+    }
+  }
+
+  const handleDeleteComment = async (commentId) => {
+    if (!token) return
+    setOpenMoreCommentId(null)
+    try {
+      const response = await fetch(`/api/comments/${commentId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!response.ok) throw new Error('Failed to delete comment')
+      setComments((prev) => prev.filter((c) => c.id !== commentId))
+    } catch (err) {
+      alert(err.message)
+    }
+  }
+
+  const handleRemoveSaved = async (savedId) => {
+    if (!token) return
+    const item = savedItems.find((i) => i.id === savedId)
+    if (!item) return
+
+    setOpenMoreSavedId(null)
+    setSavedItems((prev) => prev.filter((i) => i.id !== savedId))
+    if (item.type === 'post') {
+      setProfilePostSavedMap((prev) => {
+        const next = { ...prev }
+        delete next[item.postId]
+        return next
+      })
+    }
+
+    try {
+      await unsaveItem({ savedItemId: item.savedItemId, token })
+    } catch (err) {
+      setSavedItems((prev) => [...prev, item])
+      if (item.type === 'post') {
+        setProfilePostSavedMap((prev) => ({
+          ...prev,
+          [item.postId]: item.savedItemId,
+        }))
+      }
+      alert(err.message)
+    }
+  }
+
+  const handleToggleSavePostInProfile = async (postId) => {
+    if (!token) {
+      alert('Please login to save posts.')
+      return
+    }
+    setOpenMorePostId(null)
+
+    const existingSavedItemId = profilePostSavedMap[postId]
+
+    if (existingSavedItemId) {
+      setProfilePostSavedMap((prev) => {
+        const next = { ...prev }
+        delete next[postId]
+        return next
+      })
+      setSavedItems((prev) =>
+        prev.filter((i) => !(i.type === 'post' && i.postId === postId)),
+      )
+      try {
+        await unsaveItem({ savedItemId: existingSavedItemId, token })
+      } catch (err) {
+        setProfilePostSavedMap((prev) => ({
+          ...prev,
+          [postId]: existingSavedItemId,
+        }))
+        alert(err.message)
+      }
+    } else {
+      try {
+        const created = await savePost({ postId, token })
+        const targetPost = posts.find((p) => p.id === postId)
+        setProfilePostSavedMap((prev) => ({ ...prev, [postId]: created.id }))
+        if (targetPost) {
+          setSavedItems((prev) => [
+            ...prev,
+            {
+              id: `saved-${created.id}`,
+              savedItemId: created.id,
+              type: 'post',
+              community: targetPost.community,
+              author: `u/${profileUser?.userName || ''}`,
+              time: formatDate(new Date().toISOString()),
+              title: targetPost.title,
+              text: targetPost.text || '',
+              image: targetPost.image,
+              votes: targetPost.votes,
+              comments: targetPost.comments,
+              postId,
+            },
+          ])
+        }
+      } catch (err) {
+        alert(err.message)
+      }
     }
   }
 
@@ -968,9 +1084,9 @@ export function UserProfile() {
               <button
                 className='pp-more-item'
                 role='menuitem'
-                onClick={() => setOpenMorePostId(null)}
+                onClick={() => handleToggleSavePostInProfile(openMorePostId)}
               >
-                Save
+                {profilePostSavedMap[openMorePostId] ? 'Unsave' : 'Save'}
               </button>
               <button
                 className='pp-more-item pp-more-item-danger'
@@ -1021,7 +1137,7 @@ export function UserProfile() {
               <button
                 className='pp-more-item pp-more-item-danger'
                 role='menuitem'
-                onClick={() => setOpenMoreCommentId(null)}
+                onClick={() => handleDeleteComment(openMoreCommentId)}
               >
                 Delete Comment
               </button>
@@ -1047,7 +1163,7 @@ export function UserProfile() {
               <button
                 className='pp-more-item pp-more-item-danger'
                 role='menuitem'
-                onClick={() => setOpenMoreSavedId(null)}
+                onClick={() => handleRemoveSaved(openMoreSavedId)}
               >
                 Remove from saved
               </button>

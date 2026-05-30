@@ -432,6 +432,29 @@
   cursor: not-allowed;
 }
 
+.post-comment-delete-btn {
+  color: #b91c1c;
+  opacity: 0.75;
+}
+
+.post-comment-delete-btn:hover {
+  opacity: 1;
+  background: #fee2e2;
+  border-color: #fca5a5;
+}
+
+.post-comment-delete-confirm {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.post-comment-delete-label {
+  font-size: 0.78rem;
+  color: #b91c1c;
+  font-weight: 500;
+}
+
 .post-delete-overlay {
   position: fixed;
   inset: 0;
