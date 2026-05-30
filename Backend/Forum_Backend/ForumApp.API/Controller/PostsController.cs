@@ -1,5 +1,7 @@
+using System.Security.Claims;
 using ForumApp.BusinessLayer.Interfaces;
 using ForumApp.Domain.Models.Post;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ForumApp.API.Controller
@@ -35,9 +37,7 @@ namespace ForumApp.API.Controller
             return Ok(post);
         }
 
-
-
-
+        // GET api/posts/community/{communityId}?sortBy=new&page=1&pageSize=15
         [HttpGet("community/{communityId:int}")]
         public async Task<IActionResult> GetByCommunity(int communityId, [FromQuery] string? sortBy, [FromQuery] int page = 1, [FromQuery] int pageSize = 15, CancellationToken ct = default)
         {
@@ -53,13 +53,15 @@ namespace ForumApp.API.Controller
             return Ok(posts);
         }
 
-
+        // POST api/posts
+        [Authorize]
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] PostCreateDto postData, [FromQuery] int authorId, CancellationToken ct)
+        public async Task<IActionResult> Create([FromBody] PostCreateDto postData, CancellationToken ct)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
+            var authorId = GetCurrentUserId();
             var created = await _postService.CreatePostAsync(postData, authorId, ct);
 
             if (created == null)
@@ -68,13 +70,15 @@ namespace ForumApp.API.Controller
             return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
         }
 
-        // PUT api/posts/{id}?requestingUserId=1
+        // PUT api/posts/{id}
+        [Authorize]
         [HttpPut("{id:int}")]
-        public async Task<IActionResult> Update(int id, [FromBody] PostUpdateDto postData, [FromQuery] int requestingUserId, CancellationToken ct)
+        public async Task<IActionResult> Update(int id, [FromBody] PostUpdateDto postData, CancellationToken ct)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
+            var requestingUserId = GetCurrentUserId();
             var updated = await _postService.UpdatePostAsync(id, postData, requestingUserId, ct);
 
             if (updated == null)
@@ -83,16 +87,25 @@ namespace ForumApp.API.Controller
             return Ok(updated);
         }
 
-        // DELETE api/posts/{id}?requestingUserId=1
+        // DELETE api/posts/{id}
+        [Authorize]
         [HttpDelete("{id:int}")]
-        public async Task<IActionResult> Delete(int id, [FromQuery] int requestingUserId, CancellationToken ct)
+        public async Task<IActionResult> Delete(int id, CancellationToken ct)
         {
+            var requestingUserId = GetCurrentUserId();
             var result = await _postService.DeletePostAsync(id, requestingUserId, ct);
 
             if (!result.IsSuccess)
                 return BadRequest(result.Message);
 
             return Ok(result.Message);
+        }
+
+        private int GetCurrentUserId()
+        {
+            var claim = User.FindFirst(ClaimTypes.NameIdentifier)
+                        ?? User.FindFirst("sub");
+            return int.Parse(claim!.Value);
         }
     }
 }

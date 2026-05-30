@@ -11,10 +11,12 @@ namespace ForumApp.API.Controller
     public class AuthController : ControllerBase
     {
         private readonly IUserActions _userService;
+        private readonly IConfiguration _configuration;
 
-        public AuthController(IUserActions userService)
+        public AuthController(IUserActions userService, IConfiguration configuration)
         {
             _userService = userService;
+            _configuration = configuration;
         }
 
         [HttpPost("register")]
@@ -27,7 +29,6 @@ namespace ForumApp.API.Controller
             if (result == null)
                 return BadRequest(new { message = "Email or username already in use." });
 
-            //  Returnam 201 Created cu datele userului nou creat
             return StatusCode(201, result);
         }
 
@@ -41,21 +42,38 @@ namespace ForumApp.API.Controller
             if (result == null)
                 return Unauthorized(new { message = "Invalid email or password." });
 
-            return Ok(result);
+            SetRefreshTokenCookie(result.RefreshToken);
+
+            return Ok(new { token = result.Token, user = result.User });
         }
 
-        // React apeleaza acest endpoint automat cand primeste 401 (access token expirat)
         [HttpPost("refresh")]
-        public async Task<IActionResult> Refresh([FromBody] RefreshTokenRequestDto dto, CancellationToken ct)
+        public async Task<IActionResult> Refresh(CancellationToken ct)
         {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
+            var refreshToken = Request.Cookies["refreshToken"];
 
-            var result = await _userService.RefreshTokenAsync(dto.RefreshToken, ct);
+            if (string.IsNullOrEmpty(refreshToken))
+                return Unauthorized(new { message = "No refresh token. Please log in again." });
+
+            var result = await _userService.RefreshTokenAsync(refreshToken, ct);
             if (result == null)
-                return Unauthorized(new { message = "Refresh token invalid sau expirat. Te rog logheaza-te din nou." });
+                return Unauthorized(new { message = "Refresh token invalid or expired. Please log in again." });
 
-            return Ok(result);
+            SetRefreshTokenCookie(result.RefreshToken);
+
+            return Ok(new { token = result.Token, user = result.User });
+        }
+
+        [HttpPost("logout")]
+        public IActionResult Logout()
+        {
+            Response.Cookies.Delete("refreshToken", new CookieOptions
+            {
+                HttpOnly = true,
+                SameSite = SameSiteMode.Lax,
+                Secure = false
+            });
+            return Ok(new { message = "Logged out." });
         }
 
         [Authorize]
@@ -126,12 +144,30 @@ namespace ForumApp.API.Controller
             if (!action.IsSuccess)
                 return BadRequest(new { message = action.Message });
 
+            Response.Cookies.Delete("refreshToken", new CookieOptions
+            {
+                HttpOnly = true,
+                SameSite = SameSiteMode.Lax,
+                Secure = false
+            });
+
             return Ok(action.Message);
+        }
+
+        private void SetRefreshTokenCookie(string refreshToken)
+        {
+            var expiryDays = int.Parse(_configuration["JwtSettings:RefreshTokenExpiryDays"]!);
+            Response.Cookies.Append("refreshToken", refreshToken, new CookieOptions
+            {
+                HttpOnly = true,
+                SameSite = SameSiteMode.Lax,
+                Secure = false, // Set true in production (requires HTTPS)
+                Expires = DateTimeOffset.UtcNow.AddDays(expiryDays)
+            });
         }
 
         private int GetCurrentUserId()
         {
-            // Extrage din claim-ul "sub" (NameIdentifier)
             var claim = User.FindFirst(ClaimTypes.NameIdentifier)
                         ?? User.FindFirst("sub");
             return int.Parse(claim!.Value);

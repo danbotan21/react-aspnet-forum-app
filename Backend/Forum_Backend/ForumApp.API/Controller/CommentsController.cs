@@ -1,5 +1,7 @@
+using System.Security.Claims;
 using ForumApp.BusinessLayer.Interfaces;
 using ForumApp.Domain.Models.Comment;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ForumApp.API.Controller
@@ -43,13 +45,15 @@ namespace ForumApp.API.Controller
             return Ok(comments);
         }
 
-        // POST api/comments?authorId=1
+        // POST api/comments
+        [Authorize]
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] CommentCreateDto commentData, [FromQuery] int authorId, CancellationToken ct)
+        public async Task<IActionResult> Create([FromBody] CommentCreateDto commentData, CancellationToken ct)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
+            var authorId = GetCurrentUserId();
             var created = await _commentService.CreateCommentAsync(commentData, authorId, ct);
 
             if (created == null)
@@ -58,13 +62,15 @@ namespace ForumApp.API.Controller
             return CreatedAtAction(nameof(GetById), new { id = created.ID }, created);
         }
 
-        // PUT api/comments/{id}?requestingUserId=1
+        // PUT api/comments/{id}
+        [Authorize]
         [HttpPut("{id:int}")]
-        public async Task<IActionResult> Update(int id, [FromBody] CommentCreateDto commentData, [FromQuery] int requestingUserId, CancellationToken ct)
+        public async Task<IActionResult> Update(int id, [FromBody] CommentCreateDto commentData, CancellationToken ct)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
+            var requestingUserId = GetCurrentUserId();
             var updated = await _commentService.UpdateCommentAsync(id, commentData, requestingUserId, ct);
 
             if (updated == null)
@@ -73,16 +79,25 @@ namespace ForumApp.API.Controller
             return Ok(updated);
         }
 
-        // DELETE api/comments/{id}?requestingUserId=1
+        // DELETE api/comments/{id}
+        [Authorize]
         [HttpDelete("{id:int}")]
-        public async Task<IActionResult> Delete(int id, [FromQuery] int requestingUserId, CancellationToken ct)
+        public async Task<IActionResult> Delete(int id, CancellationToken ct)
         {
+            var requestingUserId = GetCurrentUserId();
             var result = await _commentService.DeleteCommentAsync(id, requestingUserId, ct);
 
             if (!result.IsSuccess)
                 return BadRequest(result.Message);
 
             return Ok(result.Message);
+        }
+
+        private int GetCurrentUserId()
+        {
+            var claim = User.FindFirst(ClaimTypes.NameIdentifier)
+                        ?? User.FindFirst("sub");
+            return int.Parse(claim!.Value);
         }
     }
 }

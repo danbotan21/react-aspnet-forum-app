@@ -181,10 +181,11 @@ namespace ForumApp.BusinessLayer.Structure
             return vote != null ? MapToResponseDTO(vote) : null;
         }
 
-        public async Task<IReadOnlyList<VoteResponseDTO>> GetAllVotesAsync(CancellationToken ct = default)
+        public async Task<IReadOnlyList<VoteResponseDTO>> GetUserVotesAsync(int userId, CancellationToken ct = default)
         {
             var votes = await _context.Votes
                 .Include(v => v.Author)
+                .Where(v => v.AuthorId == userId)
                 .OrderByDescending(v => v.VotedAt)
                 .ToListAsync(ct);
 
