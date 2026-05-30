@@ -28,6 +28,7 @@ namespace ForumApp.BusinessLayer.Structure
             Type = post.Type,
             Votes = post.Votes,
             CommentsCount = post.CommentsCount,
+            IsPinned = post.IsPinned,
             CreatedAt = post.CreatedAt,
             AuthorName = post.Author.UserName,
             CommunitySlug = post.Community.Slug
@@ -48,6 +49,18 @@ namespace ForumApp.BusinessLayer.Structure
                 "top" => query.OrderByDescending(p => p.Votes).ThenByDescending(p => p.CreatedAt).ThenByDescending(p => p.Id),
                 "mostcomments" => query.OrderByDescending(p => p.CommentsCount).ThenByDescending(p => p.CreatedAt).ThenByDescending(p => p.Id),
                 _ => query.OrderByDescending(p => p.Votes).ThenByDescending(p => p.CreatedAt).ThenByDescending(p => p.Id)
+            };
+        }
+
+        // Pinned posts first, then secondary sort by chosen criterion
+        private static IQueryable<PostData> ApplyPinnedFirstSort(IQueryable<PostData> query, string? sortBy)
+        {
+            return sortBy?.ToLower() switch
+            {
+                "new" => query.OrderByDescending(p => p.IsPinned).ThenByDescending(p => p.CreatedAt).ThenByDescending(p => p.Id),
+                "top" => query.OrderByDescending(p => p.IsPinned).ThenByDescending(p => p.Votes).ThenByDescending(p => p.CreatedAt).ThenByDescending(p => p.Id),
+                "mostcomments" => query.OrderByDescending(p => p.IsPinned).ThenByDescending(p => p.CommentsCount).ThenByDescending(p => p.CreatedAt).ThenByDescending(p => p.Id),
+                _ => query.OrderByDescending(p => p.IsPinned).ThenByDescending(p => p.Votes).ThenByDescending(p => p.CreatedAt).ThenByDescending(p => p.Id)
             };
         }
 
@@ -112,14 +125,14 @@ namespace ForumApp.BusinessLayer.Structure
             var (normalizedPage, normalizedPageSize) = NormalizePagination(page, pageSize);
             var skip = (normalizedPage - 1) * normalizedPageSize;
 
-            var query = _context.Posts
-                .AsNoTracking()
-                .Include(p => p.Author)
-                .Include(p => p.Community)
-                .Where(p => p.CommunityId == communityId)
-                .AsQueryable();
-
-            query = ApplySort(query, sortBy);
+            // Pinned posts always appear first, then secondary sort by chosen criterion
+            var query = ApplyPinnedFirstSort(
+                _context.Posts
+                    .AsNoTracking()
+                    .Include(p => p.Author)
+                    .Include(p => p.Community)
+                    .Where(p => p.CommunityId == communityId),
+                sortBy);
 
             var batch = await query
                 .Skip(skip)
@@ -308,6 +321,86 @@ namespace ForumApp.BusinessLayer.Structure
             }
 
             return new ActionResponse { IsSuccess = true, Message = "Post deleted successfully." };
+        }
+
+        // ── Pinning ──────────────────────────────────────────────────────────
+
+        public async Task<ActionResponse> PinPostAsync(int postId, int communityId, int requestingUserId, CancellationToken ct = default)
+        {
+            var isMod = await _context.CommunityMembers
+                .AnyAsync(m => m.CommunityId == communityId && m.UserId == requestingUserId
+                               && (m.Role == "owner" || m.Role == "moderator") && !m.IsBanned, ct);
+
+            if (!isMod)
+                return new ActionResponse { IsSuccess = false, Message = "You must be a moderator or owner to pin posts." };
+
+            var post = await _context.Posts
+                .FirstOrDefaultAsync(p => p.Id == postId && p.CommunityId == communityId, ct);
+
+            if (post == null)
+                return new ActionResponse { IsSuccess = false, Message = "Post not found in this community." };
+
+            if (post.IsPinned)
+                return new ActionResponse { IsSuccess = false, Message = "Post is already pinned." };
+
+            var pinnedCount = await _context.Posts
+                .CountAsync(p => p.CommunityId == communityId && p.IsPinned, ct);
+
+            if (pinnedCount >= 3)
+                return new ActionResponse { IsSuccess = false, Message = "Maximum 3 posts can be pinned at the same time." };
+
+            post.IsPinned = true;
+
+            try { await _context.SaveChangesAsync(ct); }
+            catch (DbUpdateException) { return new ActionResponse { IsSuccess = false, Message = "Failed to pin post." }; }
+
+            return new ActionResponse { IsSuccess = true, Message = "Post pinned successfully." };
+        }
+
+        public async Task<ActionResponse> UnpinPostAsync(int postId, int communityId, int requestingUserId, CancellationToken ct = default)
+        {
+            var isMod = await _context.CommunityMembers
+                .AnyAsync(m => m.CommunityId == communityId && m.UserId == requestingUserId
+                               && (m.Role == "owner" || m.Role == "moderator") && !m.IsBanned, ct);
+
+            if (!isMod)
+                return new ActionResponse { IsSuccess = false, Message = "You must be a moderator or owner to unpin posts." };
+
+            var post = await _context.Posts
+                .FirstOrDefaultAsync(p => p.Id == postId && p.CommunityId == communityId, ct);
+
+            if (post == null)
+                return new ActionResponse { IsSuccess = false, Message = "Post not found in this community." };
+
+            if (!post.IsPinned)
+                return new ActionResponse { IsSuccess = false, Message = "Post is not currently pinned." };
+
+            post.IsPinned = false;
+
+            try { await _context.SaveChangesAsync(ct); }
+            catch (DbUpdateException) { return new ActionResponse { IsSuccess = false, Message = "Failed to unpin post." }; }
+
+            return new ActionResponse { IsSuccess = true, Message = "Post unpinned successfully." };
+        }
+
+        public async Task<PostBatchResponseDto> GetPinnedPostsAsync(int communityId, CancellationToken ct = default)
+        {
+            var posts = await _context.Posts
+                .AsNoTracking()
+                .Include(p => p.Author)
+                .Include(p => p.Community)
+                .Where(p => p.CommunityId == communityId && p.IsPinned)
+                .OrderByDescending(p => p.Votes)
+                .ThenByDescending(p => p.CreatedAt)
+                .ToListAsync(ct);
+
+            return new PostBatchResponseDto
+            {
+                Items = posts.Select(MapToDto).ToList().AsReadOnly(),
+                Page = 1,
+                PageSize = posts.Count,
+                HasMore = false
+            };
         }
     }
 }

@@ -11,10 +11,12 @@ namespace ForumApp.API.Controller
     public class CommunitiesController : ControllerBase
     {
         private readonly ICommunityActions _communityService;
+        private readonly IPostActions _postService;
 
-        public CommunitiesController(ICommunityActions communityService)
+        public CommunitiesController(ICommunityActions communityService, IPostActions postService)
         {
             _communityService = communityService;
+            _postService = postService;
         }
 
         // GET api/communities
@@ -280,6 +282,38 @@ namespace ForumApp.API.Controller
         {
             var requestingUserId = GetCurrentUserId();
             var result = await _communityService.TransferOwnershipAsync(id, newOwnerId, requestingUserId, ct);
+
+            if (!result.IsSuccess) return BadRequest(result.Message);
+            return Ok(result.Message);
+        }
+
+        // GET api/communities/{communityId}/posts/pinned — list pinned posts
+        [HttpGet("{communityId:int}/posts/pinned")]
+        public async Task<IActionResult> GetPinnedPosts(int communityId, CancellationToken ct)
+        {
+            var batch = await _postService.GetPinnedPostsAsync(communityId, ct);
+            return Ok(batch);
+        }
+
+        // POST api/communities/{communityId}/posts/{postId}/pin — pin a post
+        [Authorize]
+        [HttpPost("{communityId:int}/posts/{postId:int}/pin")]
+        public async Task<IActionResult> PinPost(int communityId, int postId, CancellationToken ct)
+        {
+            var requestingUserId = GetCurrentUserId();
+            var result = await _postService.PinPostAsync(postId, communityId, requestingUserId, ct);
+
+            if (!result.IsSuccess) return BadRequest(result.Message);
+            return Ok(result.Message);
+        }
+
+        // DELETE api/communities/{communityId}/posts/{postId}/pin — unpin a post
+        [Authorize]
+        [HttpDelete("{communityId:int}/posts/{postId:int}/pin")]
+        public async Task<IActionResult> UnpinPost(int communityId, int postId, CancellationToken ct)
+        {
+            var requestingUserId = GetCurrentUserId();
+            var result = await _postService.UnpinPostAsync(postId, communityId, requestingUserId, ct);
 
             if (!result.IsSuccess) return BadRequest(result.Message);
             return Ok(result.Message);

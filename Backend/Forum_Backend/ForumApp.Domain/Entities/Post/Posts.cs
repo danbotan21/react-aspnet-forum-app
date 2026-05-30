@@ -27,6 +27,7 @@ namespace ForumApp.Domain.Entities.Post
         public string Type { get; set; } = string.Empty;
         public int Votes { get; set; }
         public int CommentsCount { get; set; }
+        public bool IsPinned { get; set; } = false;
         public DateTime CreatedAt { get; set; }
 
         // Relatia cu User (autorul postarii)

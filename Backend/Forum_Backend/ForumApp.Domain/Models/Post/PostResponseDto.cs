@@ -13,5 +13,6 @@ namespace ForumApp.Domain.Models.Post
         public DateTime CreatedAt { get; set; }
         public string AuthorName { get; set; }
         public string CommunitySlug { get; set; }
+        public bool IsPinned { get; set; }
     }
 }

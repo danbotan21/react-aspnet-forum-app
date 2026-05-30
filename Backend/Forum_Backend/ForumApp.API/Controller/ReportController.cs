@@ -32,6 +32,7 @@ namespace ForumApp.API.Controller
         }
 
         // GET api/report — admin only (all reports)
+        [Authorize]
         [HttpGet]
         public async Task<IActionResult> GetAllReports(CancellationToken ct)
         {

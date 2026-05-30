@@ -13,5 +13,10 @@ namespace ForumApp.BusinessLayer.Interfaces
         Task<PostResponseDto?> UpdatePostAsync(int postId, PostUpdateDto postData, int requestingUserId, CancellationToken ct = default);
         Task<ActionResponse> DeletePostAsync(int postId, int requestingUserId, CancellationToken ct = default);
         Task<IReadOnlyList<PostResponseDto>> SearchPostsAsync(string term, int limit, CancellationToken ct = default);
+
+        // ── Pinning (mod/owner only) ──────────────────────────────────────────
+        Task<ActionResponse> PinPostAsync(int postId, int communityId, int requestingUserId, CancellationToken ct = default);
+        Task<ActionResponse> UnpinPostAsync(int postId, int communityId, int requestingUserId, CancellationToken ct = default);
+        Task<PostBatchResponseDto> GetPinnedPostsAsync(int communityId, CancellationToken ct = default);
     }
 }
