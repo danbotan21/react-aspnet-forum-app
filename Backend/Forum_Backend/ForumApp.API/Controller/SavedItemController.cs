@@ -69,6 +69,15 @@ namespace ForumApp.API.Controller
             return Ok(result);
         }
 
+        // GET api/saveditem/user/{userId} — public: saved items for any user
+        [AllowAnonymous]
+        [HttpGet("user/{userId}")]
+        public async Task<IActionResult> GetSavedItemsByUserId(int userId)
+        {
+            var result = await _savedItemService.GetSavedItemsByUserAsync(userId);
+            return Ok(result);
+        }
+
         // GET api/saveditem/post/{postId}
         [HttpGet("post/{postId}")]
         public async Task<IActionResult> GetUserSavedPost(int postId)

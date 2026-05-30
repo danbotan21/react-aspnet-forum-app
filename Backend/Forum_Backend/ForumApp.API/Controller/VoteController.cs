@@ -115,6 +115,14 @@ namespace ForumApp.API.Controller
             return Ok(result);
         }
 
+        // GET api/vote/user/{userId} — public: all post votes cast by a specific user
+        [HttpGet("user/{userId}")]
+        public async Task<IActionResult> GetVotesByUser(int userId)
+        {
+            var result = await _voteService.GetUserVotesAsync(userId);
+            return Ok(result);
+        }
+
         private int GetCurrentUserId()
         {
             var claim = User.FindFirst(ClaimTypes.NameIdentifier)
