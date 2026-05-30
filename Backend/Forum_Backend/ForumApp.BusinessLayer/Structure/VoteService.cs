@@ -27,6 +27,14 @@ namespace ForumApp.BusinessLayer.Structure
             var targetAuthorId = await GetTargetAuthorIdAsync(voteData.PostId, voteData.CommentId, ct);
             if (!targetAuthorId.HasValue) return null;
 
+            var communityId = await GetTargetCommunityIdAsync(voteData.PostId, voteData.CommentId, ct);
+            if (communityId.HasValue)
+            {
+                var isBanned = await _context.CommunityMembers
+                    .AnyAsync(m => m.CommunityId == communityId.Value && m.UserId == userId && m.IsBanned, ct);
+                if (isBanned) return null;
+            }
+
             var existingVote = await _context.Votes
                 .Include(v => v.Author)
                 .FirstOrDefaultAsync(v =>
@@ -225,6 +233,27 @@ namespace ForumApp.BusinessLayer.Structure
                 return await _context.Comments
                     .Where(c => c.ID == commentId.Value)
                     .Select(c => (int?)c.AuthorId)
+                    .FirstOrDefaultAsync(ct);
+            }
+
+            return null;
+        }
+
+        private async Task<int?> GetTargetCommunityIdAsync(int? postId, int? commentId, CancellationToken ct)
+        {
+            if (postId.HasValue)
+            {
+                return await _context.Posts
+                    .Where(p => p.Id == postId.Value)
+                    .Select(p => (int?)p.CommunityId)
+                    .FirstOrDefaultAsync(ct);
+            }
+
+            if (commentId.HasValue)
+            {
+                return await _context.Comments
+                    .Where(c => c.ID == commentId.Value)
+                    .Select(c => (int?)c.Post.CommunityId)
                     .FirstOrDefaultAsync(ct);
             }
 

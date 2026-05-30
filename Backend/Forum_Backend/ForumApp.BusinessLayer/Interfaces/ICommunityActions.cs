@@ -1,4 +1,5 @@
 using ForumApp.Domain.Models.Community;
+using ForumApp.Domain.Models.ModLog;
 using ForumApp.Domain.Models.Responses;
 
 
@@ -31,6 +32,9 @@ namespace ForumApp.BusinessLayer.Interfaces
         Task<ActionResponse> UnbanMemberAsync(int communityId, int targetUserId, int requestingUserId, CancellationToken ct = default);
         Task<CommunityStatsDto> GetCommunityStatsAsync(int communityId, CancellationToken ct = default);
         Task<ActionResponse> TransferOwnershipAsync(int communityId, int newOwnerId, int requestingUserId, CancellationToken ct = default);
+        Task<IReadOnlyList<ModLogEntryDto>> GetModLogAsync(int communityId, int requestingUserId, string? actionType = null, CancellationToken ct = default);
+        Task<IReadOnlyList<CommunityWithRoleDto>> GetUserCommunitiesWithRolesAsync(int userId, CancellationToken ct = default);
+        Task<(bool IsBanned, string? BanReason)> GetUserBanStatusAsync(int communityId, int userId, CancellationToken ct = default);
     }
 
 }

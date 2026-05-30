@@ -43,6 +43,26 @@ namespace ForumApp.API.Controller
             return Ok(communities);
         }
 
+        // GET api/communities/my — authenticated, returns communities with the caller's role
+        [Authorize]
+        [HttpGet("my")]
+        public async Task<IActionResult> GetMyCommunities(CancellationToken ct)
+        {
+            var userId = GetCurrentUserId();
+            var communities = await _communityService.GetUserCommunitiesWithRolesAsync(userId, ct);
+            return Ok(communities);
+        }
+
+        // GET api/communities/{id}/mybannedstatus — returns ban status for the authenticated user
+        [Authorize]
+        [HttpGet("{id:int}/mybannedstatus")]
+        public async Task<IActionResult> MyBannedStatus(int id, CancellationToken ct)
+        {
+            var userId = GetCurrentUserId();
+            var (isBanned, banReason) = await _communityService.GetUserBanStatusAsync(id, userId, ct);
+            return Ok(new { isBanned, banReason });
+        }
+
         // GET api/communities/search?term=programming
         [HttpGet("search")]
         public async Task<IActionResult> Search([FromQuery] string term, CancellationToken ct)

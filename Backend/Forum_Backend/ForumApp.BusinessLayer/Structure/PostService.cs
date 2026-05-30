@@ -1,5 +1,6 @@
 using ForumApp.BusinessLayer.Interfaces;
 using ForumApp.DataAccess;
+using ForumApp.Domain.Entities.ModLog;
 using ForumApp.Domain.Entities.Post;
 using ForumApp.Domain.Models.Post;
 using ForumApp.Domain.Models.Responses;
@@ -101,14 +102,19 @@ namespace ForumApp.BusinessLayer.Structure
             {
                 if (requestingUserId.HasValue)
                 {
-                    // Show private community posts only if the user is a non-banned member
                     var uid = requestingUserId.Value;
                     query = query.Where(p =>
-                        p.Community.Type.ToLower() != "private" ||
-                        _context.CommunityMembers.Any(m =>
+                        // Exclude posts from any community where the user is banned
+                        !_context.CommunityMembers.Any(m =>
                             m.CommunityId == p.CommunityId &&
                             m.UserId == uid &&
-                            !m.IsBanned));
+                            m.IsBanned) &&
+                        // For private communities, user must also be a non-banned member
+                        (p.Community.Type.ToLower() != "private" ||
+                         _context.CommunityMembers.Any(m =>
+                             m.CommunityId == p.CommunityId &&
+                             m.UserId == uid &&
+                             !m.IsBanned)));
                 }
                 else
                 {
@@ -166,6 +172,26 @@ namespace ForumApp.BusinessLayer.Structure
                 }
 
                 if (!canAccess)
+                {
+                    return new PostBatchResponseDto
+                    {
+                        Items = Array.Empty<PostResponseDto>(),
+                        Page = 1,
+                        PageSize = 0,
+                        HasMore = false
+                    };
+                }
+            }
+
+            // Block banned users from viewing posts in any community type
+            if (requestingUserId.HasValue)
+            {
+                var isBanned = await _context.CommunityMembers
+                    .AnyAsync(m => m.CommunityId == communityId
+                                && m.UserId == requestingUserId.Value
+                                && m.IsBanned, ct);
+
+                if (isBanned)
                 {
                     return new PostBatchResponseDto
                     {
@@ -336,14 +362,13 @@ namespace ForumApp.BusinessLayer.Structure
 
             if (post.AuthorId != requestingUserId)
             {
-                var ownerUserId = await _context.CommunityMembers
-                    .Where(m => m.CommunityId == post.CommunityId)
-                    .OrderBy(m => m.JoinedAt)
-                    .ThenBy(m => m.Id)
-                    .Select(m => (int?)m.UserId)
-                    .FirstOrDefaultAsync(ct);
+                var isModOrOwner = await _context.CommunityMembers
+                    .AnyAsync(m => m.CommunityId == post.CommunityId
+                                && m.UserId == requestingUserId
+                                && (m.Role == "owner" || m.Role == "moderator")
+                                && !m.IsBanned, ct);
 
-                if (ownerUserId == null || ownerUserId != requestingUserId)
+                if (!isModOrOwner)
                     return new ActionResponse { IsSuccess = false, Message = "You do not have permission to delete this post." };
             }
 
@@ -406,6 +431,7 @@ namespace ForumApp.BusinessLayer.Structure
                 return new ActionResponse { IsSuccess = false, Message = "Maximum 3 posts can be pinned at the same time." };
 
             post.IsPinned = true;
+            _context.ModLogs.Add(new ModLogEntry { CommunityId = communityId, ActionType = "pin", ActorId = requestingUserId, TargetPostId = postId, CreatedAt = DateTime.UtcNow });
 
             try { await _context.SaveChangesAsync(ct); }
             catch (DbUpdateException) { return new ActionResponse { IsSuccess = false, Message = "Failed to pin post." }; }
@@ -432,6 +458,7 @@ namespace ForumApp.BusinessLayer.Structure
                 return new ActionResponse { IsSuccess = false, Message = "Post is not currently pinned." };
 
             post.IsPinned = false;
+            _context.ModLogs.Add(new ModLogEntry { CommunityId = communityId, ActionType = "unpin", ActorId = requestingUserId, TargetPostId = postId, CreatedAt = DateTime.UtcNow });
 
             try { await _context.SaveChangesAsync(ct); }
             catch (DbUpdateException) { return new ActionResponse { IsSuccess = false, Message = "Failed to unpin post." }; }

@@ -2,7 +2,9 @@ using ForumApp.BusinessLayer.Interfaces;
 using ForumApp.DataAccess;
 using ForumApp.Domain.Entities.Community;
 using ForumApp.Domain.Entities.CommunityMember;
+using ForumApp.Domain.Entities.ModLog;
 using ForumApp.Domain.Models.Community;
+using ForumApp.Domain.Models.ModLog;
 using ForumApp.Domain.Models.Responses;
 using Microsoft.EntityFrameworkCore;
 using ForumApp.Domain.Entities.Post;
@@ -31,6 +33,20 @@ namespace ForumApp.BusinessLayer.Structure
             return await _context.CommunityMembers
                 .AnyAsync(m => m.CommunityId == communityId && m.UserId == userId
                                && (m.Role == "owner" || m.Role == "moderator") && !m.IsBanned, ct);
+        }
+
+        private void AddModLog(int communityId, string actionType, int actorId, int? targetUserId = null, int? targetPostId = null, string? details = null)
+        {
+            _context.ModLogs.Add(new ModLogEntry
+            {
+                CommunityId = communityId,
+                ActionType = actionType,
+                ActorId = actorId,
+                TargetUserId = targetUserId,
+                TargetPostId = targetPostId,
+                Details = details,
+                CreatedAt = DateTime.UtcNow
+            });
         }
 
         // Mapare privata: entitate → DTO
@@ -126,7 +142,10 @@ namespace ForumApp.BusinessLayer.Structure
                 if (!isMember) return null;
             }
 
-            return MapToDto(community);
+            var dto = MapToDto(community);
+            dto.MembersCount = await _context.CommunityMembers
+                .CountAsync(m => m.CommunityId == community.Id && !m.IsBanned, ct);
+            return dto;
         }
 
 
@@ -287,7 +306,7 @@ namespace ForumApp.BusinessLayer.Structure
         public async Task<ActionResponse> LeaveCommunityAsync(int communityId, int userId, CancellationToken ct = default)
         {
             var membership = await _context.CommunityMembers
-                .FirstOrDefaultAsync(m => m.CommunityId == communityId && m.UserId == userId && !m.IsBanned, ct);
+                .FirstOrDefaultAsync(m => m.CommunityId == communityId && m.UserId == userId, ct);
 
             if (membership == null)
                 return new ActionResponse { IsSuccess = false, Message = "You are not a member of this community." };
@@ -312,7 +331,7 @@ namespace ForumApp.BusinessLayer.Structure
 
             _context.CommunityMembers.Remove(membership);
 
-            if (community != null && community.MembersCount > 0)
+            if (community != null && community.MembersCount > 0 && !membership.IsBanned)
                 community.MembersCount--;
 
             try
@@ -422,6 +441,7 @@ namespace ForumApp.BusinessLayer.Structure
                 return new ActionResponse { IsSuccess = false, Message = "User is already a moderator or owner." };
 
             target.Role = "moderator";
+            AddModLog(communityId, "promote", requestingUserId, targetUserId);
 
             try { await _context.SaveChangesAsync(ct); }
             catch (DbUpdateException) { return new ActionResponse { IsSuccess = false, Message = "Failed to promote member." }; }
@@ -442,6 +462,7 @@ namespace ForumApp.BusinessLayer.Structure
                 return new ActionResponse { IsSuccess = false, Message = "User is not a moderator in this community." };
 
             target.Role = "member";
+            AddModLog(communityId, "demote", requestingUserId, targetUserId);
 
             try { await _context.SaveChangesAsync(ct); }
             catch (DbUpdateException) { return new ActionResponse { IsSuccess = false, Message = "Failed to demote moderator." }; }
@@ -473,6 +494,7 @@ namespace ForumApp.BusinessLayer.Structure
             var community = await _context.Communities.FirstOrDefaultAsync(c => c.Id == communityId, ct);
             _context.CommunityMembers.Remove(target);
             if (community != null && community.MembersCount > 0) community.MembersCount--;
+            AddModLog(communityId, "kick", requestingUserId, targetUserId);
 
             try { await _context.SaveChangesAsync(ct); }
             catch (DbUpdateException) { return new ActionResponse { IsSuccess = false, Message = "Failed to kick member." }; }
@@ -523,6 +545,7 @@ namespace ForumApp.BusinessLayer.Structure
             target.BanReason = reason;
             target.BannedAt = DateTime.UtcNow;
             target.BannedByUserId = requestingUserId;
+            AddModLog(communityId, "ban", requestingUserId, targetUserId, null, reason);
 
             try { await _context.SaveChangesAsync(ct); }
             catch (DbUpdateException) { return new ActionResponse { IsSuccess = false, Message = "Failed to ban member." }; }
@@ -550,6 +573,7 @@ namespace ForumApp.BusinessLayer.Structure
 
             var community = await _context.Communities.FirstOrDefaultAsync(c => c.Id == communityId, ct);
             if (community != null) community.MembersCount++;
+            AddModLog(communityId, "unban", requestingUserId, targetUserId);
 
             try { await _context.SaveChangesAsync(ct); }
             catch (DbUpdateException) { return new ActionResponse { IsSuccess = false, Message = "Failed to unban member." }; }
@@ -580,6 +604,36 @@ namespace ForumApp.BusinessLayer.Structure
             };
         }
 
+        public async Task<IReadOnlyList<ModLogEntryDto>> GetModLogAsync(int communityId, int requestingUserId, string? actionType = null, CancellationToken ct = default)
+        {
+            var canAct = await IsModeratorOrOwnerAsync(communityId, requestingUserId, ct);
+            if (!canAct) return new List<ModLogEntryDto>().AsReadOnly();
+
+            var query = _context.ModLogs
+                .Where(l => l.CommunityId == communityId)
+                .AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(actionType) && actionType.ToLower() != "all")
+                query = query.Where(l => l.ActionType == actionType.ToLower());
+
+            var entries = await query
+                .OrderByDescending(l => l.CreatedAt)
+                .Take(200)
+                .Select(l => new ModLogEntryDto
+                {
+                    Id = l.Id,
+                    ActionType = l.ActionType,
+                    ActorUserName = l.Actor.UserName,
+                    TargetUserName = l.TargetUser != null ? l.TargetUser.UserName : null,
+                    TargetPostId = l.TargetPostId,
+                    Details = l.Details,
+                    CreatedAt = l.CreatedAt
+                })
+                .ToListAsync(ct);
+
+            return entries.AsReadOnly();
+        }
+
         public async Task<ActionResponse> TransferOwnershipAsync(int communityId, int newOwnerId, int requestingUserId, CancellationToken ct = default)
         {
             var isOwner = await IsOwnerAsync(communityId, requestingUserId, ct);
@@ -597,6 +651,7 @@ namespace ForumApp.BusinessLayer.Structure
 
             if (currentOwner != null) currentOwner.Role = "member";
             newOwner.Role = "owner";
+            AddModLog(communityId, "transfer", requestingUserId, newOwnerId);
 
             try { await _context.SaveChangesAsync(ct); }
             catch (DbUpdateException) { return new ActionResponse { IsSuccess = false, Message = "Failed to transfer ownership." }; }
@@ -604,7 +659,35 @@ namespace ForumApp.BusinessLayer.Structure
             return new ActionResponse { IsSuccess = true, Message = "Ownership transferred successfully." };
         }
 
+        public async Task<IReadOnlyList<CommunityWithRoleDto>> GetUserCommunitiesWithRolesAsync(int userId, CancellationToken ct = default)
+        {
+            var memberships = await _context.CommunityMembers
+                .Where(m => m.UserId == userId)
+                .Include(m => m.Community)
+                .OrderBy(m => m.Community.Title)
+                .Select(m => new CommunityWithRoleDto
+                {
+                    Id = m.Community.Id,
+                    Title = m.Community.Title,
+                    Slug = m.Community.Slug,
+                    AvatarUrl = m.Community.AvatarUrl,
+                    MembersCount = m.Community.MembersCount,
+                    Type = m.Community.Type,
+                    Role = m.Role,
+                    IsBanned = m.IsBanned,
+                    BanReason = m.BanReason,
+                })
+                .ToListAsync(ct);
 
+            return memberships.AsReadOnly();
+        }
+
+        public async Task<(bool IsBanned, string? BanReason)> GetUserBanStatusAsync(int communityId, int userId, CancellationToken ct = default)
+        {
+            var member = await _context.CommunityMembers
+                .FirstOrDefaultAsync(m => m.CommunityId == communityId && m.UserId == userId && m.IsBanned, ct);
+            return (member != null, member?.BanReason);
+        }
 
     }
 }

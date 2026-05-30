@@ -1,4 +1,5 @@
 using ForumApp.DataAccess;
+using ForumApp.Domain.Entities.ModLog;
 using ForumApp.Domain.Entities.Report;
 using ForumApp.Domain.Models.Report;
 using ForumApp.Domain.Models.Responses;
@@ -83,6 +84,20 @@ namespace ForumApp.BusinessLayer.Structure
                         .Include(c => c.Post)
                         .FirstOrDefaultAsync(c => c.ID == reportData.ReportedItemId, ct);
                     communityId = comment?.Post?.CommunityId;
+                }
+
+                if (communityId.HasValue)
+                {
+                    var isBanned = await _context.CommunityMembers
+                        .AnyAsync(m => m.CommunityId == communityId.Value && m.UserId == reporterId && m.IsBanned, ct);
+                    if (isBanned)
+                    {
+                        return new ActionResponse
+                        {
+                            IsSuccess = false,
+                            Message = "You are banned from this community and cannot submit reports."
+                        };
+                    }
                 }
 
                 var report = new ReportData
@@ -226,6 +241,7 @@ namespace ForumApp.BusinessLayer.Structure
                     PostTitle = post.Title,
                     ContentPreview = preview,
                     HasImage = post.ImageUrl != null,
+                    PostImageUrl = post.ImageUrl,
                     ContentAuthorUserName = post.Author.UserName,
                     ReportedItemId = report.ReportedItemId,
                     PostId = post.Id
@@ -273,6 +289,9 @@ namespace ForumApp.BusinessLayer.Structure
             report.ActionedByUserId = requestingUserId;
             report.ActionedAt = DateTime.UtcNow;
 
+            if (report.CommunityId.HasValue)
+                _context.ModLogs.Add(new ModLogEntry { CommunityId = report.CommunityId.Value, ActionType = "dismiss", ActorId = requestingUserId, CreatedAt = DateTime.UtcNow, Details = $"Report #{report.Id}" });
+
             try { await _context.SaveChangesAsync(ct); }
             catch { return new ActionResponse { IsSuccess = false, Message = "Failed to dismiss report." }; }
 
@@ -313,6 +332,12 @@ namespace ForumApp.BusinessLayer.Structure
                 r.Status = "actioned";
                 r.ActionedByUserId = requestingUserId;
                 r.ActionedAt = DateTime.UtcNow;
+            }
+
+            if (report.CommunityId.HasValue)
+            {
+                var targetPostId = report.Type == ReportType.Post ? (int?)report.ReportedItemId : null;
+                _context.ModLogs.Add(new ModLogEntry { CommunityId = report.CommunityId.Value, ActionType = "remove", ActorId = requestingUserId, TargetPostId = targetPostId, CreatedAt = DateTime.UtcNow, Details = $"Report #{report.Id}" });
             }
 
             try { await _context.SaveChangesAsync(ct); }

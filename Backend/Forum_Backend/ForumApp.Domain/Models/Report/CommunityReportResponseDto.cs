@@ -13,6 +13,7 @@ namespace ForumApp.Domain.Models.Report
         public string? PostTitle { get; set; }
         public string? ContentPreview { get; set; }
         public bool HasImage { get; set; }
+        public string? PostImageUrl { get; set; }
         public string ContentAuthorUserName { get; set; } = string.Empty;
 
         public int ReportedItemId { get; set; }
