@@ -237,6 +237,22 @@ namespace ForumApp.BusinessLayer.Structure
             return MapToDto(post);
         }
 
+        public async Task<IReadOnlyList<PostResponseDto>> SearchPostsAsync(string term, int limit, CancellationToken ct = default)
+        {
+            var lowerTerm = term.ToLower();
+            var posts = await _context.Posts
+                .AsNoTracking()
+                .Include(p => p.Author)
+                .Include(p => p.Community)
+                .Where(p => p.Title.ToLower().Contains(lowerTerm))
+                .OrderByDescending(p => p.Votes)
+                .ThenByDescending(p => p.CreatedAt)
+                .Take(limit)
+                .ToListAsync(ct);
+
+            return posts.Select(MapToDto).ToList().AsReadOnly();
+        }
+
         public async Task<ActionResponse> DeletePostAsync(int postId, int requestingUserId, CancellationToken ct = default)
         {
             var post = await _context.Posts

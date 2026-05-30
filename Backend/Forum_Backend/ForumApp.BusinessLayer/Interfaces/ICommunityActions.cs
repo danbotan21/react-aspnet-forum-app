@@ -19,6 +19,18 @@ namespace ForumApp.BusinessLayer.Interfaces
         Task<ActionResponse> LeaveCommunityAsync(int communityId, int userId, CancellationToken ct = default);
         Task<bool> IsMemberAsync(int communityId, int userId, CancellationToken ct = default);
         Task<bool> IsOwnerAsync(int communityId, int userId, CancellationToken ct = default);
+
+        // Mod panel operations
+        Task<string?> GetUserRoleAsync(int communityId, int userId, CancellationToken ct = default);
+        Task<IReadOnlyList<CommunityMemberResponseDto>> GetMembersAsync(int communityId, CancellationToken ct = default);
+        Task<IReadOnlyList<CommunityMemberResponseDto>> GetBannedMembersAsync(int communityId, CancellationToken ct = default);
+        Task<ActionResponse> PromoteToModeratorAsync(int communityId, int targetUserId, int requestingUserId, CancellationToken ct = default);
+        Task<ActionResponse> DemoteFromModeratorAsync(int communityId, int targetUserId, int requestingUserId, CancellationToken ct = default);
+        Task<ActionResponse> KickMemberAsync(int communityId, int targetUserId, int requestingUserId, CancellationToken ct = default);
+        Task<ActionResponse> BanMemberAsync(int communityId, int targetUserId, int requestingUserId, string reason, CancellationToken ct = default);
+        Task<ActionResponse> UnbanMemberAsync(int communityId, int targetUserId, int requestingUserId, CancellationToken ct = default);
+        Task<CommunityStatsDto> GetCommunityStatsAsync(int communityId, CancellationToken ct = default);
+        Task<ActionResponse> TransferOwnershipAsync(int communityId, int newOwnerId, int requestingUserId, CancellationToken ct = default);
     }
 
 }

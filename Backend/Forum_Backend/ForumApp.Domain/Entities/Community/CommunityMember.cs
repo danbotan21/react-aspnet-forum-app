@@ -18,5 +18,17 @@ namespace ForumApp.Domain.Entities.CommunityMember
         public CommunityData Community { get; set; } = null!;
 
         public DateTime JoinedAt { get; set; } = DateTime.UtcNow;
+
+        [StringLength(20)]
+        public string Role { get; set; } = "member"; // "owner", "moderator", "member"
+
+        public bool IsBanned { get; set; } = false;
+
+        [StringLength(500)]
+        public string? BanReason { get; set; }
+
+        public DateTime? BannedAt { get; set; }
+
+        public int? BannedByUserId { get; set; }
     }
 }

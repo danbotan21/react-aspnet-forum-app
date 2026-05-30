@@ -12,5 +12,6 @@ namespace ForumApp.BusinessLayer.Interfaces
         Task<PostBatchResponseDto> GetPostsByUserAsync(int userId, int page = 1, int pageSize = 15, CancellationToken ct = default);
         Task<PostResponseDto?> UpdatePostAsync(int postId, PostUpdateDto postData, int requestingUserId, CancellationToken ct = default);
         Task<ActionResponse> DeletePostAsync(int postId, int requestingUserId, CancellationToken ct = default);
+        Task<IReadOnlyList<PostResponseDto>> SearchPostsAsync(string term, int limit, CancellationToken ct = default);
     }
 }

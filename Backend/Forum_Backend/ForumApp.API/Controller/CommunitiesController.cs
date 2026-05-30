@@ -156,6 +156,135 @@ namespace ForumApp.API.Controller
             return Ok(result.Message);
         }
 
+        // GET api/communities/{id}/myrole — returns current user's role or null
+        [Authorize]
+        [HttpGet("{id:int}/myrole")]
+        public async Task<IActionResult> MyRole(int id, CancellationToken ct)
+        {
+            var userId = GetCurrentUserId();
+            var role = await _communityService.GetUserRoleAsync(id, userId, ct);
+            return Ok(new { role });
+        }
+
+        // GET api/communities/{id}/members
+        [Authorize]
+        [HttpGet("{id:int}/members")]
+        public async Task<IActionResult> GetMembers(int id, CancellationToken ct)
+        {
+            var userId = GetCurrentUserId();
+            var isMod = await _communityService.IsOwnerAsync(id, userId, ct)
+                        || (await _communityService.GetUserRoleAsync(id, userId, ct)) == "moderator";
+
+            if (!isMod) return Forbid();
+
+            var members = await _communityService.GetMembersAsync(id, ct);
+            return Ok(members);
+        }
+
+        // GET api/communities/{id}/banned
+        [Authorize]
+        [HttpGet("{id:int}/banned")]
+        public async Task<IActionResult> GetBanned(int id, CancellationToken ct)
+        {
+            var userId = GetCurrentUserId();
+            var isMod = await _communityService.IsOwnerAsync(id, userId, ct)
+                        || (await _communityService.GetUserRoleAsync(id, userId, ct)) == "moderator";
+
+            if (!isMod) return Forbid();
+
+            var banned = await _communityService.GetBannedMembersAsync(id, ct);
+            return Ok(banned);
+        }
+
+        // GET api/communities/{id}/stats
+        [Authorize]
+        [HttpGet("{id:int}/stats")]
+        public async Task<IActionResult> GetStats(int id, CancellationToken ct)
+        {
+            var userId = GetCurrentUserId();
+            var isMod = await _communityService.IsOwnerAsync(id, userId, ct)
+                        || (await _communityService.GetUserRoleAsync(id, userId, ct)) == "moderator";
+
+            if (!isMod) return Forbid();
+
+            var stats = await _communityService.GetCommunityStatsAsync(id, ct);
+            return Ok(stats);
+        }
+
+        // POST api/communities/{id}/moderators/{userId} — promote to moderator
+        [Authorize]
+        [HttpPost("{id:int}/moderators/{targetUserId:int}")]
+        public async Task<IActionResult> Promote(int id, int targetUserId, CancellationToken ct)
+        {
+            var requestingUserId = GetCurrentUserId();
+            var result = await _communityService.PromoteToModeratorAsync(id, targetUserId, requestingUserId, ct);
+
+            if (!result.IsSuccess) return BadRequest(result.Message);
+            return Ok(result.Message);
+        }
+
+        // DELETE api/communities/{id}/moderators/{userId} — demote from moderator
+        [Authorize]
+        [HttpDelete("{id:int}/moderators/{targetUserId:int}")]
+        public async Task<IActionResult> Demote(int id, int targetUserId, CancellationToken ct)
+        {
+            var requestingUserId = GetCurrentUserId();
+            var result = await _communityService.DemoteFromModeratorAsync(id, targetUserId, requestingUserId, ct);
+
+            if (!result.IsSuccess) return BadRequest(result.Message);
+            return Ok(result.Message);
+        }
+
+        // DELETE api/communities/{id}/members/{userId} — kick member
+        [Authorize]
+        [HttpDelete("{id:int}/members/{targetUserId:int}")]
+        public async Task<IActionResult> Kick(int id, int targetUserId, CancellationToken ct)
+        {
+            var requestingUserId = GetCurrentUserId();
+            var result = await _communityService.KickMemberAsync(id, targetUserId, requestingUserId, ct);
+
+            if (!result.IsSuccess) return BadRequest(result.Message);
+            return Ok(result.Message);
+        }
+
+        // POST api/communities/{id}/ban/{userId} — ban member
+        [Authorize]
+        [HttpPost("{id:int}/ban/{targetUserId:int}")]
+        public async Task<IActionResult> Ban(int id, int targetUserId, [FromBody] ForumApp.Domain.Models.Community.BanMemberDto dto, CancellationToken ct)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+
+            var requestingUserId = GetCurrentUserId();
+            var result = await _communityService.BanMemberAsync(id, targetUserId, requestingUserId, dto.Reason, ct);
+
+            if (!result.IsSuccess) return BadRequest(result.Message);
+            return Ok(result.Message);
+        }
+
+        // DELETE api/communities/{id}/ban/{userId} — unban member
+        [Authorize]
+        [HttpDelete("{id:int}/ban/{targetUserId:int}")]
+        public async Task<IActionResult> Unban(int id, int targetUserId, CancellationToken ct)
+        {
+            var requestingUserId = GetCurrentUserId();
+            var result = await _communityService.UnbanMemberAsync(id, targetUserId, requestingUserId, ct);
+
+            if (!result.IsSuccess) return BadRequest(result.Message);
+            return Ok(result.Message);
+        }
+
+        // POST api/communities/{id}/transfer/{newOwnerId} — transfer ownership
+        [Authorize]
+        [HttpPost("{id:int}/transfer/{newOwnerId:int}")]
+        public async Task<IActionResult> Transfer(int id, int newOwnerId, CancellationToken ct)
+        {
+            var requestingUserId = GetCurrentUserId();
+            var result = await _communityService.TransferOwnershipAsync(id, newOwnerId, requestingUserId, ct);
+
+            if (!result.IsSuccess) return BadRequest(result.Message);
+            return Ok(result.Message);
+        }
+
         private int GetCurrentUserId()
         {
             var claim = User.FindFirst(ClaimTypes.NameIdentifier)

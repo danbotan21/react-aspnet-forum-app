@@ -53,6 +53,17 @@ namespace ForumApp.API.Controller
             return Ok(posts);
         }
 
+        // GET api/posts/search?term=amazing&limit=5
+        [HttpGet("search")]
+        public async Task<IActionResult> Search([FromQuery] string term, [FromQuery] int limit = 5, CancellationToken ct = default)
+        {
+            if (string.IsNullOrWhiteSpace(term))
+                return BadRequest("Search term cannot be empty.");
+
+            var posts = await _postService.SearchPostsAsync(term, Math.Min(limit, 20), ct);
+            return Ok(posts);
+        }
+
         // POST api/posts
         [Authorize]
         [HttpPost]
