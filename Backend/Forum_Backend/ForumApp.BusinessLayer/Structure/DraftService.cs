@@ -18,30 +18,14 @@ namespace ForumApp.BusinessLayer.Structure
 
         public async Task<DraftResponseDTO> CreateDraftAsync(CreateDraftRequestDTO draftData, int authorId, CancellationToken ct = default)
         {
-            // Verifică dacă Post-ul există
-            var post = await _context.Posts
-                .FirstOrDefaultAsync(p => p.Id == draftData.PostId, ct);
-
-            if (post == null)
-            {
-                throw new InvalidOperationException($"Post with ID {draftData.PostId} not found.");
-            }
-
-            // Verifică dacă există deja un draft pentru acest post de către același autor
-            var existingDraft = await _context.Drafts
-                .FirstOrDefaultAsync(d => d.PostId == draftData.PostId && d.AuthorId == authorId, ct);
-
-            if (existingDraft != null)
-            {
-                // Returnează draft-ul existent în loc să creezi unul nou
-                return MapToResponseDTO(existingDraft);
-            }
-
-            // Creează draft nou
             var newDraft = new DraftData
             {
                 AuthorId = authorId,
-                PostId = draftData.PostId,
+                Title = draftData.Title,
+                Body = draftData.Body,
+                LinkUrl = draftData.LinkUrl,
+                ImageUrl = draftData.ImageUrl,
+                CommunityId = draftData.CommunityId,
                 CreatedAt = DateTime.UtcNow,
                 LastModifiedAt = DateTime.UtcNow
             };
@@ -49,9 +33,9 @@ namespace ForumApp.BusinessLayer.Structure
             _context.Drafts.Add(newDraft);
             await _context.SaveChangesAsync(ct);
 
-            // Reîncarcă cu relațiile pentru response
             await _context.Entry(newDraft).Reference(d => d.Author).LoadAsync(ct);
-            await _context.Entry(newDraft).Reference(d => d.Post).LoadAsync(ct);
+            if (newDraft.CommunityId.HasValue)
+                await _context.Entry(newDraft).Reference(d => d.Community).LoadAsync(ct);
 
             return MapToResponseDTO(newDraft);
         }
@@ -60,28 +44,22 @@ namespace ForumApp.BusinessLayer.Structure
         {
             var draft = await _context.Drafts
                 .Include(d => d.Author)
-                .Include(d => d.Post)
+                .Include(d => d.Community)
                 .FirstOrDefaultAsync(d => d.Id == draftId, ct);
 
-            if (draft == null) return null;
+            if (draft == null || draft.AuthorId != authorId) return null;
 
-            // Validare: doar autorul poate modifica propriul draft
-            if (draft.AuthorId != authorId) return null;
-
-            // Verifică dacă noul Post există
-            var post = await _context.Posts
-                .FirstOrDefaultAsync(p => p.Id == draftData.PostId, ct);
-
-            if (post == null) return null;
-
-            // Actualizează draft-ul
-            draft.PostId = draftData.PostId;
+            draft.Title = draftData.Title;
+            draft.Body = draftData.Body;
+            draft.LinkUrl = draftData.LinkUrl;
+            draft.ImageUrl = draftData.ImageUrl;
+            draft.CommunityId = draftData.CommunityId;
             draft.LastModifiedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync(ct);
 
-            // Reîncarcă Post dacă s-a schimbat
-            await _context.Entry(draft).Reference(d => d.Post).LoadAsync(ct);
+            if (draft.CommunityId.HasValue && draft.Community == null)
+                await _context.Entry(draft).Reference(d => d.Community).LoadAsync(ct);
 
             return MapToResponseDTO(draft);
         }
@@ -90,13 +68,10 @@ namespace ForumApp.BusinessLayer.Structure
         {
             var draft = await _context.Drafts
                 .Include(d => d.Author)
-                .Include(d => d.Post)
+                .Include(d => d.Community)
                 .FirstOrDefaultAsync(d => d.Id == draftId, ct);
 
-            if (draft == null) return null;
-
-            // Validare: doar autorul poate vedea propriul draft
-            if (draft.AuthorId != authorId) return null;
+            if (draft == null || draft.AuthorId != authorId) return null;
 
             return MapToResponseDTO(draft);
         }
@@ -105,7 +80,7 @@ namespace ForumApp.BusinessLayer.Structure
         {
             var drafts = await _context.Drafts
                 .Include(d => d.Author)
-                .Include(d => d.Post)
+                .Include(d => d.Community)
                 .Where(d => d.AuthorId == authorId)
                 .OrderByDescending(d => d.LastModifiedAt)
                 .ToListAsync(ct);
@@ -119,48 +94,33 @@ namespace ForumApp.BusinessLayer.Structure
                 .FirstOrDefaultAsync(d => d.Id == draftId, ct);
 
             if (draft == null)
-            {
-                return new ActionResponse
-                {
-                    IsSuccess = false,
-                    Message = "Draft not found"
-                };
-            }
+                return new ActionResponse { IsSuccess = false, Message = "Draft not found" };
 
-            // Validare: doar autorul poate șterge propriul draft
             if (draft.AuthorId != authorId)
-            {
-                return new ActionResponse
-                {
-                    IsSuccess = false,
-                    Message = "Unauthorized to delete this draft"
-                };
-            }
+                return new ActionResponse { IsSuccess = false, Message = "Unauthorized to delete this draft" };
 
             _context.Drafts.Remove(draft);
             await _context.SaveChangesAsync(ct);
 
-            return new ActionResponse
-            {
-                IsSuccess = true,
-                Message = "Draft deleted successfully"
-            };
+            return new ActionResponse { IsSuccess = true, Message = "Draft deleted successfully" };
         }
 
-        // Metodă helper pentru mapare la DTO
-        private DraftResponseDTO MapToResponseDTO(DraftData draft)
+        private static DraftResponseDTO MapToResponseDTO(DraftData draft)
         {
             return new DraftResponseDTO
             {
                 Id = draft.Id,
                 AuthorId = draft.AuthorId,
                 AuthorUserName = draft.Author?.UserName ?? string.Empty,
-                PostId = draft.PostId,
-                PostTitle = draft.Post?.Title ?? string.Empty,
+                Title = draft.Title,
+                Body = draft.Body,
+                LinkUrl = draft.LinkUrl,
+                ImageUrl = draft.ImageUrl,
+                CommunityId = draft.CommunityId,
+                CommunitySlug = draft.Community?.Slug,
                 CreatedAt = draft.CreatedAt,
                 LastModifiedAt = draft.LastModifiedAt
             };
         }
     }
 }
-

@@ -51,6 +51,12 @@ namespace ForumApp.DataAccess
                 .HasForeignKey(d => d.AuthorId)
                 .OnDelete(DeleteBehavior.NoAction);
 
+            modelBuilder.Entity<DraftData>()
+                .HasOne(d => d.Community)
+                .WithMany()
+                .HasForeignKey(d => d.CommunityId)
+                .OnDelete(DeleteBehavior.SetNull);
+
             modelBuilder.Entity<CommentData>()
                 .HasOne(c => c.Author)
                 .WithMany(u => u.Comments)
