@@ -17,6 +17,16 @@ namespace ForumApp.BusinessLayer.Structure
             _context = context;
         }
 
+        private async Task<int?> GetOwnerUserIdAsync(int communityId, CancellationToken ct = default)
+        {
+            return await _context.CommunityMembers
+                .Where(m => m.CommunityId == communityId)
+                .OrderBy(m => m.JoinedAt)
+                .ThenBy(m => m.Id)
+                .Select(m => (int?)m.UserId)
+                .FirstOrDefaultAsync(ct);
+        }
+
         // Mapare privata: entitate → DTO
         private static CommunityResponseDto MapToDto(CommunityData community) => new CommunityResponseDto
         {
@@ -108,8 +118,6 @@ namespace ForumApp.BusinessLayer.Structure
                 Description = communityData.Description,
                 Category = communityData.Category,
                 Type = communityData.Type,
-                AvatarUrl = communityData.AvatarUrl,
-                BannerUrl = communityData.BannerUrl,
                 MembersCount = 1,
                 CreatedAt = DateTime.UtcNow
             };
@@ -155,10 +163,8 @@ namespace ForumApp.BusinessLayer.Structure
 
             if (community == null) return null;
 
-            var isMember = await _context.CommunityMembers
-                .AnyAsync(m => m.CommunityId == communityId && m.UserId == requestingUserId, ct);
-
-            if (!isMember) return null;
+            var ownerUserId = await GetOwnerUserIdAsync(communityId, ct);
+            if (ownerUserId == null || ownerUserId != requestingUserId) return null;
 
             if (communityData.Title != null) community.Title = communityData.Title;
             if (communityData.Description != null) community.Description = communityData.Description;
@@ -189,11 +195,9 @@ namespace ForumApp.BusinessLayer.Structure
             if (community == null)
                 return new ActionResponse { IsSuccess = false, Message = "Community not found." };
 
-            var isMember = await _context.CommunityMembers
-                .AnyAsync(m => m.CommunityId == communityId && m.UserId == requestingUserId, ct);
-
-            if (!isMember)
-                return new ActionResponse { IsSuccess = false, Message = "You do not have permission to delete this community." };
+            var ownerUserId = await GetOwnerUserIdAsync(communityId, ct);
+            if (ownerUserId == null || ownerUserId != requestingUserId)
+                return new ActionResponse { IsSuccess = false, Message = "Only the community owner can delete this community." };
 
             _context.Communities.Remove(community);
 
@@ -258,31 +262,9 @@ namespace ForumApp.BusinessLayer.Structure
             var community = await _context.Communities
                 .FirstOrDefaultAsync(c => c.Id == communityId, ct);
 
-            // METODA TEMPORARA: Identificam "ownerul" ca fiind primul membru care a intrat
-            var oldestMember = await _context.CommunityMembers
-                .Where(m => m.CommunityId == communityId)
-                .OrderBy(m => m.JoinedAt)
-                .FirstOrDefaultAsync(ct);
+            var ownerUserId = await GetOwnerUserIdAsync(communityId, ct);
+            var isOwnerLeaving = ownerUserId == userId;
 
-            if (oldestMember != null && oldestMember.UserId == userId)
-            {
-                // Este ownerul, deci stergem complet comunitatea
-                if (community != null)
-                {
-                    _context.Communities.Remove(community);
-                    try
-                    {
-                        await _context.SaveChangesAsync(ct);
-                        return new ActionResponse { IsSuccess = true, Message = "Community deleted because the owner left." };
-                    }
-                    catch (DbUpdateException)
-                    {
-                        return new ActionResponse { IsSuccess = false, Message = "Failed to delete community on owner leave." };
-                    }
-                }
-            }
-
-            // Daca nu este ownerul, face leave in mod normal
             _context.CommunityMembers.Remove(membership);
 
             if (community != null && community.MembersCount > 0)
@@ -297,6 +279,25 @@ namespace ForumApp.BusinessLayer.Structure
                 return new ActionResponse { IsSuccess = false, Message = "Failed to leave community." };
             }
 
+            if (isOwnerLeaving)
+            {
+                var successorOwnerUserId = await GetOwnerUserIdAsync(communityId, ct);
+                if (successorOwnerUserId.HasValue)
+                {
+                    return new ActionResponse
+                    {
+                        IsSuccess = true,
+                        Message = "Successfully left community. Ownership moved to the next senior member."
+                    };
+                }
+
+                return new ActionResponse
+                {
+                    IsSuccess = true,
+                    Message = "Successfully left community. Community has no owner right now."
+                };
+            }
+
             return new ActionResponse { IsSuccess = true, Message = "Successfully left community." };
         }
 
@@ -305,11 +306,6 @@ namespace ForumApp.BusinessLayer.Structure
             return await _context.CommunityMembers
                 .AnyAsync(m => m.CommunityId == communityId && m.UserId == userId, ct);
         }
-
-
-
-
-
 
 
     }
