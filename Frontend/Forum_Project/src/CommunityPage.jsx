@@ -569,22 +569,34 @@ export function CommunityPage() {
                   <article key={post.id} className='post'>
                     <div className='post-main'>
                       <header className='post-header'>
-                        <Link
-                          to={`/user/${encodeURIComponent(post.authorName)}`}
-                        >
+                        {post.authorName === '[deleted]' ? (
                           <img
                             src={avatar}
-                            alt={post.authorName}
+                            alt='deleted user'
                             className='avatar'
                           />
-                        </Link>
-                        <div className='post-meta'>
+                        ) : (
                           <Link
                             to={`/user/${encodeURIComponent(post.authorName)}`}
-                            className='author author-link'
                           >
-                            u/{post.authorName}
+                            <img
+                              src={avatar}
+                              alt={post.authorName}
+                              className='avatar'
+                            />
                           </Link>
+                        )}
+                        <div className='post-meta'>
+                          {post.authorName === '[deleted]' ? (
+                            <span className='author'>u/[deleted]</span>
+                          ) : (
+                            <Link
+                              to={`/user/${encodeURIComponent(post.authorName)}`}
+                              className='author author-link'
+                            >
+                              u/{post.authorName}
+                            </Link>
+                          )}
                           <span className='meta-separator'>&middot;</span>
                           <span className='time-posted'>
                             {new Date(post.createdAt).toLocaleDateString()}

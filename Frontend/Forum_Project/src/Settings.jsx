@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   FaUserEdit,
   FaEnvelope,
@@ -28,7 +29,8 @@ const INITIAL_FORM_DATA = {
 }
 
 export const Settings = () => {
-  const { token, user, updateUser, updateAuthTokens } = useAuth()
+  const { token, user, updateUser, updateAuthTokens, logout } = useAuth()
+  const navigate = useNavigate()
   const [activeSection, setActiveSection] = useState('account')
   const [formData, setFormData] = useState(() => ({
     ...INITIAL_FORM_DATA,
@@ -44,6 +46,12 @@ export const Settings = () => {
   const [passwordSuccess, setPasswordSuccess] = useState('')
   const updateUserRef = useRef(updateUser)
   const updateAuthTokensRef = useRef(updateAuthTokens)
+
+  const [showDeleteForm, setShowDeleteForm] = useState(false)
+  const [deleteEmail, setDeleteEmail] = useState('')
+  const [deletePassword, setDeletePassword] = useState('')
+  const [deleteError, setDeleteError] = useState('')
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false)
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target
@@ -287,14 +295,46 @@ export const Settings = () => {
     alert('Notification settings saved!')
   }
 
-  const handleDeleteAccount = () => {
-    if (
-      window.confirm(
-        'Are you sure you want to delete your account? This action cannot be undone!',
+  const handleDeleteAccount = async (e) => {
+    e.preventDefault()
+    setDeleteError('')
+
+    if (!token) {
+      setDeleteError('Please login before deleting your account.')
+      return
+    }
+
+    setIsDeletingAccount(true)
+    try {
+      const response = await executeWithAuth((accessToken) =>
+        fetch('/api/auth/me', {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({ email: deleteEmail, password: deletePassword }),
+        }),
       )
-    ) {
-      console.log('Deleting account')
-      alert('Account deleted!')
+
+      if (!response) {
+        setDeleteError('Please login before deleting your account.')
+        setIsDeletingAccount(false)
+        return
+      }
+
+      if (!response.ok) {
+        const message = await readResponseError(response, 'Failed to delete account.')
+        setDeleteError(message)
+        setIsDeletingAccount(false)
+        return
+      }
+
+      logout()
+      navigate('/login')
+    } catch (error) {
+      setDeleteError(error?.message || 'Failed to delete account.')
+      setIsDeletingAccount(false)
     }
   }
 
@@ -714,19 +754,104 @@ export const Settings = () => {
                   <div className='settings-danger-content'>
                     <h3 className='settings-danger-title'>Delete Account</h3>
                     <p className='settings-danger-description'>
-                      Once you delete your account, there is no going back. All
-                      your posts, comments, and data will be permanently
-                      removed.
+                      Once you delete your account, there is no going back.
+                      Your posts and comments will remain but your name will
+                      become &quot;[deleted]&quot;.
                     </p>
                   </div>
-                  <button
-                    type='button'
-                    className='settings-btn settings-btn-danger'
-                    onClick={handleDeleteAccount}
-                  >
-                    Delete Account
-                  </button>
+                  {!showDeleteForm && (
+                    <button
+                      type='button'
+                      className='settings-btn settings-btn-danger'
+                      onClick={() => {
+                        setDeleteEmail('')
+                        setDeletePassword('')
+                        setDeleteError('')
+                        setShowDeleteForm(true)
+                      }}
+                    >
+                      Delete Account
+                    </button>
+                  )}
                 </div>
+
+                {showDeleteForm && (
+                  <form
+                    className='settings-delete-confirm-form'
+                    onSubmit={handleDeleteAccount}
+                  >
+                    <div className='settings-delete-warning'>
+                      <FaExclamationTriangle className='settings-delete-warning-icon' />
+                      <span>
+                        This action is permanent. All your data will be
+                        anonymized.
+                      </span>
+                    </div>
+
+                    {deleteError && (
+                      <p className='settings-status settings-status-error'>
+                        {deleteError}
+                      </p>
+                    )}
+
+                    <div className='settings-form-group'>
+                      <label htmlFor='deleteEmail' className='settings-label'>
+                        <FaEnvelope className='settings-label-icon' />
+                        Email
+                      </label>
+                      <input
+                        type='email'
+                        id='deleteEmail'
+                        className='settings-input'
+                        value={deleteEmail}
+                        onChange={(e) => setDeleteEmail(e.target.value)}
+                        placeholder='Your email address'
+                        disabled={isDeletingAccount}
+                        required
+                      />
+                    </div>
+
+                    <div className='settings-form-group'>
+                      <label
+                        htmlFor='deletePassword'
+                        className='settings-label'
+                      >
+                        <FaLock className='settings-label-icon' />
+                        Password
+                      </label>
+                      <input
+                        type='password'
+                        id='deletePassword'
+                        className='settings-input'
+                        value={deletePassword}
+                        onChange={(e) => setDeletePassword(e.target.value)}
+                        placeholder='Your password'
+                        disabled={isDeletingAccount}
+                        required
+                      />
+                    </div>
+
+                    <div className='settings-delete-confirm-actions'>
+                      <button
+                        type='submit'
+                        className='settings-btn settings-btn-danger'
+                        disabled={isDeletingAccount}
+                      >
+                        {isDeletingAccount
+                          ? 'Deleting...'
+                          : 'Confirm Delete'}
+                      </button>
+                      <button
+                        type='button'
+                        className='settings-btn settings-btn-primary'
+                        onClick={() => setShowDeleteForm(false)}
+                        disabled={isDeletingAccount}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </form>
+                )}
               </div>
             </div>
           )}

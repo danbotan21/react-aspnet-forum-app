@@ -108,6 +108,11 @@ export function UserProfile() {
   const [openMoreDownvotedId, setOpenMoreDownvotedId] = useState(null)
   const [downvotedMenuPos, setDownvotedMenuPos] = useState({ top: 0, right: 0 })
 
+  const [showDeletePostModal, setShowDeletePostModal] = useState(false)
+  const [postToDeleteId, setPostToDeleteId] = useState(null)
+  const [isDeletingPost, setIsDeletingPost] = useState(false)
+  const [deletePostError, setDeletePostError] = useState('')
+
   const postsLoadMoreRef = useRef(null)
 
   useEffect(() => {
@@ -610,6 +615,29 @@ export function UserProfile() {
     setOpenMoreDownvotedId(itemId)
   }
 
+  const handleDeletePost = async () => {
+    if (!authUser?.id || !postToDeleteId) return
+    setIsDeletingPost(true)
+    setDeletePostError('')
+    try {
+      const response = await fetch(
+        `/api/posts/${postToDeleteId}?requestingUserId=${authUser.id}`,
+        { method: 'DELETE' },
+      )
+      if (!response.ok) {
+        const text = await response.text()
+        throw new Error(text || 'Failed to delete post.')
+      }
+      setPosts((prev) => prev.filter((p) => p.id !== postToDeleteId))
+      setShowDeletePostModal(false)
+      setPostToDeleteId(null)
+    } catch (err) {
+      setDeletePostError(err.message)
+    } finally {
+      setIsDeletingPost(false)
+    }
+  }
+
   const renderTab = () => {
     if (activeTab === 'Overview')
       return (
@@ -789,6 +817,22 @@ export function UserProfile() {
     )
   }
 
+  if (profileUser.userName === '[deleted]') {
+    return (
+      <main className='user-profile-page'>
+        <section className='user-profile-shell'>
+          <div className='user-profile-main'>
+            <section className='user-feed-card'>
+              <p style={{ textAlign: 'center', padding: '2rem', color: '#7c7c7c' }}>
+                This account has been deleted.
+              </p>
+            </section>
+          </div>
+        </section>
+      </main>
+    )
+  }
+
   return (
     <main className='user-profile-page'>
       <section className='user-profile-shell'>
@@ -923,7 +967,12 @@ export function UserProfile() {
             <button
               className='pp-more-item pp-more-item-danger'
               role='menuitem'
-              onClick={() => setOpenMorePostId(null)}
+              onClick={() => {
+                setOpenMorePostId(null)
+                setDeletePostError('')
+                setPostToDeleteId(openMorePostId)
+                setShowDeletePostModal(true)
+              }}
             >
               Delete
             </button>
@@ -1035,6 +1084,43 @@ export function UserProfile() {
           >
             Save
           </button>
+        </div>
+      )}
+
+      {showDeletePostModal && (
+        <div className='post-delete-overlay'>
+          <div className='post-delete-modal'>
+            <h2 className='post-delete-modal-title'>Delete post?</h2>
+            <p className='post-delete-modal-body'>
+              Are you sure you want to delete this post? This cannot be undone.
+            </p>
+            {deletePostError && (
+              <p className='post-delete-modal-error'>{deletePostError}</p>
+            )}
+            <div className='post-delete-modal-actions'>
+              <button
+                type='button'
+                className='pp-more-item pp-more-item-danger'
+                onClick={handleDeletePost}
+                disabled={isDeletingPost}
+                style={{ borderRadius: '999px', padding: '6px 18px' }}
+              >
+                {isDeletingPost ? 'Deleting...' : 'Delete'}
+              </button>
+              <button
+                type='button'
+                className='pp-more-item'
+                onClick={() => {
+                  setShowDeletePostModal(false)
+                  setPostToDeleteId(null)
+                }}
+                disabled={isDeletingPost}
+                style={{ borderRadius: '999px', padding: '6px 18px' }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </main>

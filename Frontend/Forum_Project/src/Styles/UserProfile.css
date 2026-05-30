@@ -1031,3 +1031,55 @@
     font-size: 24px;
   }
 }
+
+/* ── Delete post confirmation modal ── */
+.post-delete-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.post-delete-modal {
+  background: #fff;
+  border-radius: 16px;
+  padding: 32px;
+  max-width: 420px;
+  width: 90%;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.post-delete-modal-title {
+  margin: 0;
+  font-size: 1.25rem;
+  color: #173464;
+}
+
+.post-delete-modal-body {
+  margin: 0;
+  color: #5f7394;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+.post-delete-modal-error {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 13px;
+  border: 1px solid #fecaca;
+}
+
+.post-delete-modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}

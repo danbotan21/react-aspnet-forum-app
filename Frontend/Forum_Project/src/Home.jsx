@@ -441,12 +441,16 @@ export const Home = () => {
                         {new Date(post.createdAt).toLocaleDateString()}
                       </span>
                       <span className='meta-separator'>&middot;</span>
-                      <Link
-                        to={`/user/${encodeURIComponent(post.authorName)}`}
-                        className='author author-link'
-                      >
-                        Posted by u/{post.authorName}
-                      </Link>
+                      {post.authorName === '[deleted]' ? (
+                        <span className='author'>Posted by u/[deleted]</span>
+                      ) : (
+                        <Link
+                          to={`/user/${encodeURIComponent(post.authorName)}`}
+                          className='author author-link'
+                        >
+                          Posted by u/{post.authorName}
+                        </Link>
+                      )}
                     </div>
 
                     <div className='post-header-actions'>

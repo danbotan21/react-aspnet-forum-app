@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useParams, useSearchParams } from 'react-router-dom'
-import { FaCaretDown, FaCaretUp, FaComment, FaEdit, FaShare } from 'react-icons/fa'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { FaCaretDown, FaCaretUp, FaComment, FaEdit, FaShare, FaTrash } from 'react-icons/fa'
 import './Styles/PostPage.css'
 import avatar from './img/avatar.webp'
 import { normalizeImageSrc } from './utils/media'
@@ -37,6 +37,7 @@ const parseErrorText = async (response, fallbackMessage) => {
 export function PostPage() {
   const { communityname, postId } = useParams()
   const [searchParams, setSearchParams] = useSearchParams()
+  const navigate = useNavigate()
   const { user } = useAuth()
 
   const [post, setPost] = useState(null)
@@ -63,6 +64,11 @@ export function PostPage() {
   const [isPostSavePending, setIsPostSavePending] = useState(false)
   const [isCommunityMember, setIsCommunityMember] = useState(false)
   const [isMembershipResolved, setIsMembershipResolved] = useState(false)
+  const [isCommunityOwner, setIsCommunityOwner] = useState(false)
+
+  const [showDeletePostModal, setShowDeletePostModal] = useState(false)
+  const [isDeletingPost, setIsDeletingPost] = useState(false)
+  const [deletePostError, setDeletePostError] = useState('')
 
   // ── Edit post state ───────────────────────────────────────────
   const [isEditing, setIsEditing] = useState(false)
@@ -223,31 +229,41 @@ export function PostPage() {
         if (!communityResponse.ok) {
           if (!cancelled) {
             setIsCommunityMember(false)
+            setIsCommunityOwner(false)
             setIsMembershipResolved(true)
           }
           return
         }
 
         const community = await communityResponse.json()
-        const memberResponse = await fetch(
-          `/api/communities/${community.id}/ismember?userId=${user.id}`,
-        )
-        if (!memberResponse.ok) {
+        const [memberResponse, ownerResponse] = await Promise.all([
+          fetch(`/api/communities/${community.id}/ismember?userId=${user.id}`),
+          fetch(`/api/communities/${community.id}/isowner?userId=${user.id}`),
+        ])
+
+        if (!memberResponse.ok || !ownerResponse.ok) {
           if (!cancelled) {
             setIsCommunityMember(false)
+            setIsCommunityOwner(false)
             setIsMembershipResolved(true)
           }
           return
         }
 
-        const membershipValue = await memberResponse.json()
+        const [membershipValue, ownerValue] = await Promise.all([
+          memberResponse.json(),
+          ownerResponse.json(),
+        ])
+
         if (!cancelled) {
           setIsCommunityMember(membershipValue === true)
+          setIsCommunityOwner(ownerValue === true)
           setIsMembershipResolved(true)
         }
       } catch {
         if (!cancelled) {
           setIsCommunityMember(false)
+          setIsCommunityOwner(false)
           setIsMembershipResolved(true)
         }
       }
@@ -591,6 +607,26 @@ export function PostPage() {
     }
   }
 
+  const handleDeletePost = async () => {
+    if (!user?.id || !post?.id) return
+    setIsDeletingPost(true)
+    setDeletePostError('')
+    try {
+      const response = await fetch(
+        `/api/posts/${post.id}?requestingUserId=${user.id}`,
+        { method: 'DELETE' },
+      )
+      if (!response.ok) {
+        const text = await response.text()
+        throw new Error(text || 'Failed to delete post.')
+      }
+      navigate(`/community/${encodeURIComponent(post.communitySlug)}`)
+    } catch (err) {
+      setDeletePostError(err.message)
+      setIsDeletingPost(false)
+    }
+  }
+
   const handleCreateComment = async (parentCommentId = null) => {
     if (!user?.id) {
       alert('Please login to comment.')
@@ -686,9 +722,13 @@ export function PostPage() {
       >
         <article className='post-comment-card'>
           <header>
-            <Link to={`/user/${encodeURIComponent(comment.authorName)}`}>
-              u/{comment.authorName}
-            </Link>
+            {comment.authorName === '[deleted]' ? (
+              <span>u/[deleted]</span>
+            ) : (
+              <Link to={`/user/${encodeURIComponent(comment.authorName)}`}>
+                u/{comment.authorName}
+              </Link>
+            )}
             <span>{new Date(comment.createdAt).toLocaleString()}</span>
           </header>
 
@@ -858,9 +898,13 @@ export function PostPage() {
                 <span>&middot;</span>
                 <span>{new Date(post.createdAt).toLocaleDateString()}</span>
                 <span>&middot;</span>
-                <Link to={`/user/${encodeURIComponent(post.authorName)}`}>
-                  Posted by u/{post.authorName}
-                </Link>
+                {post.authorName === '[deleted]' ? (
+                  <span>Posted by u/[deleted]</span>
+                ) : (
+                  <Link to={`/user/${encodeURIComponent(post.authorName)}`}>
+                    Posted by u/{post.authorName}
+                  </Link>
+                )}
               </div>
             </header>
 
@@ -1049,6 +1093,18 @@ export function PostPage() {
                   <FaEdit /> Edit
                 </button>
               )}
+              {(isAuthor || isCommunityOwner) && !isEditing && (
+                <button
+                  type='button'
+                  className='post-chip post-chip-delete'
+                  onClick={() => {
+                    setDeletePostError('')
+                    setShowDeletePostModal(true)
+                  }}
+                >
+                  <FaTrash /> Delete
+                </button>
+              )}
               <button type='button' className='post-chip'>
                 <FaShare /> Share
               </button>
@@ -1132,6 +1188,38 @@ export function PostPage() {
           </section>
         </aside>
       </section>
+
+      {showDeletePostModal && (
+        <div className='post-delete-overlay'>
+          <div className='post-delete-modal'>
+            <h2 className='post-delete-modal-title'>Delete post?</h2>
+            <p className='post-delete-modal-body'>
+              Are you sure you want to delete this post? This cannot be undone.
+            </p>
+            {deletePostError && (
+              <p className='post-delete-modal-error'>{deletePostError}</p>
+            )}
+            <div className='post-delete-modal-actions'>
+              <button
+                type='button'
+                className='post-chip post-chip-delete'
+                onClick={handleDeletePost}
+                disabled={isDeletingPost}
+              >
+                {isDeletingPost ? 'Deleting...' : 'Delete'}
+              </button>
+              <button
+                type='button'
+                className='post-chip'
+                onClick={() => setShowDeletePostModal(false)}
+                disabled={isDeletingPost}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   )
 }
