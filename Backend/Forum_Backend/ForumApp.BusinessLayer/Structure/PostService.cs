@@ -258,6 +258,24 @@ namespace ForumApp.BusinessLayer.Structure
                     return new ActionResponse { IsSuccess = false, Message = "You do not have permission to delete this post." };
             }
 
+            // Remove all dependent records before deleting the post
+            var savedItems = await _context.SavedItems.Where(s => s.PostId == postId).ToListAsync(ct);
+            _context.SavedItems.RemoveRange(savedItems);
+
+            var votes = await _context.Votes.Where(v => v.PostId == postId).ToListAsync(ct);
+            _context.Votes.RemoveRange(votes);
+
+            var comments = await _context.Comments.Where(c => c.PostId == postId).ToListAsync(ct);
+            _context.Comments.RemoveRange(comments);
+
+            var reports = await _context.Reports
+                .Where(r => r.ReportedItemId == postId && r.Type == Domain.Entities.Report.ReportType.Post)
+                .ToListAsync(ct);
+            _context.Reports.RemoveRange(reports);
+
+            var notifications = await _context.Notifications.Where(n => n.PostId == postId).ToListAsync(ct);
+            _context.Notifications.RemoveRange(notifications);
+
             _context.Posts.Remove(post);
 
             try

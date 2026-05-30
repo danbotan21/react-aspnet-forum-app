@@ -64,6 +64,20 @@ namespace ForumApp.API.Controller
             return Ok(new { token = result.Token, user = result.User });
         }
 
+        [HttpPost("google")]
+        public async Task<IActionResult> GoogleLogin([FromBody] GoogleLoginDto dto, CancellationToken ct)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var result = await _userService.GoogleLoginAsync(dto.AccessToken, ct);
+            if (result == null)
+                return Unauthorized(new { message = "Invalid Google token." });
+
+            SetRefreshTokenCookie(result.RefreshToken);
+            return Ok(new { token = result.Token, user = result.User });
+        }
+
         [HttpPost("logout")]
         public IActionResult Logout()
         {

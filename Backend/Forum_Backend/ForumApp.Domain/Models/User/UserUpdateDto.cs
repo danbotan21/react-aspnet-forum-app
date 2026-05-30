@@ -7,6 +7,12 @@ namespace ForumApp.Domain.Models.User
         [StringLength(50, MinimumLength = 6)]
         public string? UserName { get; set; }
 
+        [StringLength(50)]
+        [DataType(DataType.EmailAddress)]
+        public string? Email { get; set; }
+
+        public string? CurrentPassword { get; set; }
+
         [StringLength(200)]
         public string? Bio { get; set; }
 

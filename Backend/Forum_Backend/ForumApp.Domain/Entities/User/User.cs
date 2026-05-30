@@ -25,9 +25,11 @@ namespace ForumApp.Domain.Entities.User
         [DataType(DataType.EmailAddress)]
         public string Email { get; set; } = string.Empty;
 
-        [Required]
         [StringLength(256)]
-        public string PasswordHash { get; set; } = string.Empty;
+        public string? PasswordHash { get; set; }
+
+        // Set when the user authenticated via Google OAuth
+        public string? GoogleId { get; set; }
 
         [StringLength(200)]
         public string? Bio { get; set; }
