@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
-import { FaCaretDown, FaCaretUp, FaComment, FaShare } from 'react-icons/fa'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
+import { FaCaretDown, FaCaretUp, FaComment, FaEdit, FaShare } from 'react-icons/fa'
 import './Styles/PostPage.css'
 import avatar from './img/avatar.webp'
 import { normalizeImageSrc } from './utils/media'
@@ -15,6 +15,7 @@ import {
   voteValueFromDirection,
 } from './utils/voteApi'
 import { fetchUserSavedPosts, savePost, unsaveItem } from './utils/savedItemApi'
+import { uploadImage } from './utils/imageUpload'
 
 const normalizeComment = (rawComment) => ({
   id: rawComment.id ?? rawComment.ID,
@@ -35,6 +36,7 @@ const parseErrorText = async (response, fallbackMessage) => {
 
 export function PostPage() {
   const { communityname, postId } = useParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { user } = useAuth()
 
   const [post, setPost] = useState(null)
@@ -61,6 +63,45 @@ export function PostPage() {
   const [isPostSavePending, setIsPostSavePending] = useState(false)
   const [isCommunityMember, setIsCommunityMember] = useState(false)
   const [isMembershipResolved, setIsMembershipResolved] = useState(false)
+
+  // ── Edit post state ───────────────────────────────────────────
+  const [isEditing, setIsEditing] = useState(false)
+  const [editTitle, setEditTitle] = useState('')
+  const [editBody, setEditBody] = useState('')
+  const [editLinkUrl, setEditLinkUrl] = useState('')
+  const [editImageFile, setEditImageFile] = useState(null)
+  const [editImagePreview, setEditImagePreview] = useState('')
+  const [editImageRemoved, setEditImageRemoved] = useState(false)
+  const [isSavingEdit, setIsSavingEdit] = useState(false)
+  const [editError, setEditError] = useState('')
+  const editFileInputRef = useRef(null)
+
+  const isAuthor =
+    user?.userName &&
+    post?.authorName &&
+    user.userName.toLowerCase() === post.authorName.toLowerCase()
+
+  // Auto-enter edit mode when navigated with ?edit=true
+  useEffect(() => {
+    if (
+      searchParams.get('edit') === 'true' &&
+      isAuthor &&
+      post &&
+      !isEditing
+    ) {
+      setEditTitle(post.title || '')
+      setEditBody(post.body || '')
+      setEditLinkUrl(post.linkUrl || '')
+      setEditImageFile(null)
+      setEditImagePreview('')
+      setEditImageRemoved(false)
+      setEditError('')
+      setIsEditing(true)
+      // Remove ?edit=true from URL to avoid re-triggering
+      searchParams.delete('edit')
+      setSearchParams(searchParams, { replace: true })
+    }
+  }, [isAuthor, post, searchParams, setSearchParams, isEditing])
 
   useEffect(() => {
     setIsLoading(true)
@@ -454,6 +495,102 @@ export function PostPage() {
     }
   }
 
+  // ── Edit post handlers ──────────────────────────────────────
+  const handleStartEdit = () => {
+    setEditTitle(post.title || '')
+    setEditBody(post.body || '')
+    setEditLinkUrl(post.linkUrl || '')
+    setEditImageFile(null)
+    setEditImagePreview('')
+    setEditImageRemoved(false)
+    setEditError('')
+    setIsEditing(true)
+  }
+
+  const handleCancelEdit = () => {
+    setIsEditing(false)
+    setEditError('')
+    setEditImageFile(null)
+    if (editImagePreview) URL.revokeObjectURL(editImagePreview)
+    setEditImagePreview('')
+    setEditImageRemoved(false)
+  }
+
+  const handleEditImageChange = (e) => {
+    const file = e.target.files?.[0]
+    if (!file || !file.type.startsWith('image/')) {
+      setEditError('Please select a valid image file.')
+      return
+    }
+    if (editImagePreview) URL.revokeObjectURL(editImagePreview)
+    setEditImageFile(file)
+    setEditImagePreview(URL.createObjectURL(file))
+    setEditImageRemoved(false)
+    setEditError('')
+  }
+
+  const handleEditImageRemove = () => {
+    setEditImageFile(null)
+    if (editImagePreview) URL.revokeObjectURL(editImagePreview)
+    setEditImagePreview('')
+    setEditImageRemoved(true)
+    if (editFileInputRef.current) editFileInputRef.current.value = ''
+  }
+
+  const handleSaveEdit = async () => {
+    if (!user?.id || !post?.id) return
+
+    const trimmedTitle = editTitle.trim()
+    if (!trimmedTitle) {
+      setEditError('Title cannot be empty.')
+      return
+    }
+
+    setIsSavingEdit(true)
+    setEditError('')
+
+    try {
+      let finalImageUrl = post.imageUrl ?? post.ImageUrl ?? null
+
+      if (editImageFile) {
+        finalImageUrl = await uploadImage(editImageFile, 'posts')
+      } else if (editImageRemoved) {
+        finalImageUrl = null
+      }
+
+      const response = await fetch(
+        `/api/posts/${post.id}?requestingUserId=${user.id}`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: trimmedTitle,
+            body: editBody.trim() || null,
+            imageUrl: finalImageUrl,
+            linkUrl: editLinkUrl.trim() || null,
+          }),
+        },
+      )
+
+      if (!response.ok) {
+        const text = await response.text()
+        throw new Error(text || 'Failed to update post.')
+      }
+
+      const updatedPost = await response.json()
+      setPost(updatedPost)
+      setIsEditing(false)
+      setEditImageFile(null)
+      if (editImagePreview) URL.revokeObjectURL(editImagePreview)
+      setEditImagePreview('')
+      setEditImageRemoved(false)
+    } catch (saveEditError) {
+      setEditError(saveEditError.message)
+    } finally {
+      setIsSavingEdit(false)
+    }
+  }
+
   const handleCreateComment = async (parentCommentId = null) => {
     if (!user?.id) {
       alert('Please login to comment.')
@@ -727,27 +864,149 @@ export function PostPage() {
               </div>
             </header>
 
-            <h1>{post.title}</h1>
-            {post.body && <p>{post.body}</p>}
+            {isEditing ? (
+              <div className='post-edit-form'>
+                {editError && (
+                  <p className='post-edit-error'>{editError}</p>
+                )}
+                <label className='post-edit-label' htmlFor='edit-title'>
+                  Title
+                </label>
+                <input
+                  id='edit-title'
+                  type='text'
+                  className='post-edit-input'
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  placeholder='Post title'
+                  disabled={isSavingEdit}
+                />
 
-            {postImageSrc && (
-              <img src={postImageSrc} alt='Post media' className='post-page-image' />
-            )}
+                <label className='post-edit-label' htmlFor='edit-body'>
+                  Body
+                </label>
+                <textarea
+                  id='edit-body'
+                  className='post-edit-textarea'
+                  rows={6}
+                  value={editBody}
+                  onChange={(e) => setEditBody(e.target.value)}
+                  placeholder='Post body (optional)'
+                  disabled={isSavingEdit}
+                />
 
-            {post.linkUrl && (
-              <a
-                href={post.linkUrl}
-                target='_blank'
-                rel='noopener noreferrer'
-                style={{
-                  display: 'block',
-                  margin: '1rem 0',
-                  color: '#0066cc',
-                  textDecoration: 'underline',
-                }}
-              >
-                {post.linkUrl}
-              </a>
+                {(post.linkUrl || editLinkUrl) && (
+                  <>
+                    <label className='post-edit-label' htmlFor='edit-link'>
+                      Link URL
+                    </label>
+                    <input
+                      id='edit-link'
+                      type='url'
+                      className='post-edit-input'
+                      value={editLinkUrl}
+                      onChange={(e) => setEditLinkUrl(e.target.value)}
+                      placeholder='https://...'
+                      disabled={isSavingEdit}
+                    />
+                  </>
+                )}
+
+                <label className='post-edit-label'>Image</label>
+                <div className='post-edit-image-section'>
+                  {!editImageRemoved && (editImagePreview || postImageSrc) ? (
+                    <div className='post-edit-image-preview'>
+                      <img
+                        src={editImagePreview || postImageSrc}
+                        alt='Post media'
+                        className='post-page-image'
+                      />
+                      <div className='post-edit-image-overlay'>
+                        <button
+                          type='button'
+                          className='post-chip post-edit-img-btn'
+                          onClick={() => editFileInputRef.current?.click()}
+                          disabled={isSavingEdit}
+                        >
+                          Change Image
+                        </button>
+                        <button
+                          type='button'
+                          className='post-chip post-edit-img-btn post-edit-img-btn-remove'
+                          onClick={handleEditImageRemove}
+                          disabled={isSavingEdit}
+                        >
+                          Remove Image
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      type='button'
+                      className='post-chip post-edit-img-add'
+                      onClick={() => editFileInputRef.current?.click()}
+                      disabled={isSavingEdit}
+                    >
+                      + Add Image
+                    </button>
+                  )}
+                  <input
+                    ref={editFileInputRef}
+                    type='file'
+                    accept='image/*'
+                    onChange={handleEditImageChange}
+                    style={{ display: 'none' }}
+                  />
+                </div>
+
+                <div className='post-edit-actions'>
+                  <button
+                    type='button'
+                    className='post-chip post-edit-save'
+                    onClick={handleSaveEdit}
+                    disabled={isSavingEdit}
+                  >
+                    {isSavingEdit ? 'Saving...' : 'Save Edit'}
+                  </button>
+                  <button
+                    type='button'
+                    className='post-chip'
+                    onClick={handleCancelEdit}
+                    disabled={isSavingEdit}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <h1>{post.title}</h1>
+                {post.body && <p>{post.body}</p>}
+
+                {postImageSrc && (
+                  <img
+                    src={postImageSrc}
+                    alt='Post media'
+                    className='post-page-image'
+                  />
+                )}
+
+                {post.linkUrl && (
+                  <a
+                    href={post.linkUrl}
+                    target='_blank'
+                    rel='noopener noreferrer'
+                    style={{
+                      display: 'block',
+                      margin: '1rem 0',
+                      color: '#0066cc',
+                      textDecoration: 'underline',
+                    }}
+                  >
+                    {post.linkUrl}
+                  </a>
+                )}
+              </>
             )}
 
             <footer className='post-page-actions'>
@@ -781,12 +1040,22 @@ export function PostPage() {
               >
                 {savedPostEntry?.id ? 'Unsave' : 'Save'}
               </button>
+              {isAuthor && !isEditing && (
+                <button
+                  type='button'
+                  className='post-chip post-chip-edit'
+                  onClick={handleStartEdit}
+                >
+                  <FaEdit /> Edit
+                </button>
+              )}
               <button type='button' className='post-chip'>
                 <FaShare /> Share
               </button>
             </footer>
           </article>
 
+          {!isEditing && (
           <section className='post-comments'>
             <h2>Comments</h2>
             <div style={{ marginBottom: '12px' }}>
@@ -850,6 +1119,7 @@ export function PostPage() {
               )
             )}
           </section>
+          )}
         </div>
 
         <aside className='post-page-side'>

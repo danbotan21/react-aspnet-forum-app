@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import './Styles/UserProfile.css'
 import avatar from './img/avatar.webp'
 import nature from './img/nature.jpg'
@@ -68,6 +68,7 @@ const mapPostToVotedItem = (vote, post) => {
 
 export function UserProfile() {
   const { username } = useParams()
+  const navigate = useNavigate()
   const { user: authUser } = useAuth()
 
   const loggedUser = authUser?.userName?.trim() || ''
@@ -886,39 +887,49 @@ export function UserProfile() {
         </aside>
       </section>
 
-      {openMorePostId !== null && (
-        <div
-          className='pp-more-menu pp-global-menu'
-          role='menu'
-          style={{
-            position: 'fixed',
-            top: postMenuPos.top,
-            right: postMenuPos.right,
-          }}
-        >
-          <button
-            className='pp-more-item'
-            role='menuitem'
-            onClick={() => setOpenMorePostId(null)}
+      {openMorePostId !== null && (() => {
+        const targetPost = posts.find((p) => p.id === openMorePostId)
+        const postRoute = targetPost
+          ? `/community/${encodeURIComponent(getCommunitySlug(targetPost.community))}/post/${targetPost.id}`
+          : null
+
+        return (
+          <div
+            className='pp-more-menu pp-global-menu'
+            role='menu'
+            style={{
+              position: 'fixed',
+              top: postMenuPos.top,
+              right: postMenuPos.right,
+            }}
           >
-            Edit post
-          </button>
-          <button
-            className='pp-more-item'
-            role='menuitem'
-            onClick={() => setOpenMorePostId(null)}
-          >
-            Save
-          </button>
-          <button
-            className='pp-more-item pp-more-item-danger'
-            role='menuitem'
-            onClick={() => setOpenMorePostId(null)}
-          >
-            Delete
-          </button>
-        </div>
-      )}
+            <button
+              className='pp-more-item'
+              role='menuitem'
+              onClick={() => {
+                setOpenMorePostId(null)
+                if (postRoute) navigate(`${postRoute}?edit=true`)
+              }}
+            >
+              Edit post
+            </button>
+            <button
+              className='pp-more-item'
+              role='menuitem'
+              onClick={() => setOpenMorePostId(null)}
+            >
+              Save
+            </button>
+            <button
+              className='pp-more-item pp-more-item-danger'
+              role='menuitem'
+              onClick={() => setOpenMorePostId(null)}
+            >
+              Delete
+            </button>
+          </div>
+        )
+      })()}
 
       {openMoreCommentId !== null &&
         (() => {
