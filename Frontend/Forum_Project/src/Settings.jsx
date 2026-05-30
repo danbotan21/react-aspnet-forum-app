@@ -47,6 +47,9 @@ export const Settings = () => {
   const updateUserRef = useRef(updateUser)
   const updateAuthTokensRef = useRef(updateAuthTokens)
 
+  const [originalEmail, setOriginalEmail] = useState('')
+  const [confirmEmailPassword, setConfirmEmailPassword] = useState('')
+
   const [showDeleteForm, setShowDeleteForm] = useState(false)
   const [deleteEmail, setDeleteEmail] = useState('')
   const [deletePassword, setDeletePassword] = useState('')
@@ -118,6 +121,7 @@ export const Settings = () => {
         const profile = await response.json()
         if (!cancelled) {
           updateUserRef.current(profile)
+          setOriginalEmail(profile?.email || '')
           setFormData((prev) => ({
             ...prev,
             username: profile?.userName || prev.username,
@@ -154,8 +158,20 @@ export const Settings = () => {
       return
     }
 
+    const emailChanged = formData.email.trim().toLowerCase() !== originalEmail.toLowerCase()
+    if (emailChanged && user?.hasPassword && !confirmEmailPassword) {
+      setAccountError('Enter your current password to change email.')
+      return
+    }
+
     try {
       setIsSavingAccount(true)
+
+      const body = {
+        userName: trimmedUsername,
+        bio: formData.bio,
+        ...(emailChanged && { email: formData.email.trim(), currentPassword: confirmEmailPassword }),
+      }
 
       const response = await executeWithAuth((accessToken) =>
         fetch('/api/auth/me', {
@@ -164,10 +180,7 @@ export const Settings = () => {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${accessToken}`,
           },
-          body: JSON.stringify({
-            userName: trimmedUsername,
-            bio: formData.bio,
-          }),
+          body: JSON.stringify(body),
         }),
       )
 
@@ -189,9 +202,12 @@ export const Settings = () => {
 
       const updatedUser = await response.json()
       updateUser(updatedUser)
+      setOriginalEmail(updatedUser?.email || '')
+      setConfirmEmailPassword('')
       setFormData((prev) => ({
         ...prev,
         username: updatedUser?.userName || prev.username,
+        email: updatedUser?.email || prev.email,
         bio: updatedUser?.bio || '',
       }))
       setAccountSuccess('Account settings saved successfully.')
@@ -442,8 +458,28 @@ export const Settings = () => {
                     value={formData.email}
                     onChange={handleInputChange}
                     placeholder='Email address'
+                    disabled={isSavingAccount || !user?.hasPassword}
+                    title={!user?.hasPassword ? 'Google accounts cannot change email here.' : undefined}
                   />
                 </div>
+
+                {user?.hasPassword && formData.email.trim().toLowerCase() !== originalEmail.toLowerCase() && (
+                  <div className='settings-form-group'>
+                    <label htmlFor='confirmEmailPassword' className='settings-label'>
+                      <FaLock className='settings-label-icon' />
+                      Confirm with current password
+                    </label>
+                    <input
+                      type='password'
+                      id='confirmEmailPassword'
+                      className='settings-input'
+                      value={confirmEmailPassword}
+                      onChange={(e) => setConfirmEmailPassword(e.target.value)}
+                      placeholder='Enter your current password'
+                      disabled={isSavingAccount}
+                    />
+                  </div>
+                )}
 
                 <div className='settings-form-group'>
                   <label htmlFor='bio' className='settings-label'>
@@ -810,25 +846,27 @@ export const Settings = () => {
                       />
                     </div>
 
-                    <div className='settings-form-group'>
-                      <label
-                        htmlFor='deletePassword'
-                        className='settings-label'
-                      >
-                        <FaLock className='settings-label-icon' />
-                        Password
-                      </label>
-                      <input
-                        type='password'
-                        id='deletePassword'
-                        className='settings-input'
-                        value={deletePassword}
-                        onChange={(e) => setDeletePassword(e.target.value)}
-                        placeholder='Your password'
-                        disabled={isDeletingAccount}
-                        required
-                      />
-                    </div>
+                    {user?.hasPassword && (
+                      <div className='settings-form-group'>
+                        <label
+                          htmlFor='deletePassword'
+                          className='settings-label'
+                        >
+                          <FaLock className='settings-label-icon' />
+                          Password
+                        </label>
+                        <input
+                          type='password'
+                          id='deletePassword'
+                          className='settings-input'
+                          value={deletePassword}
+                          onChange={(e) => setDeletePassword(e.target.value)}
+                          placeholder='Your password'
+                          disabled={isDeletingAccount}
+                          required
+                        />
+                      </div>
+                    )}
 
                     <div className='settings-delete-confirm-actions'>
                       <button

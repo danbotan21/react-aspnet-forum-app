@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { FaGoogle, FaShieldAlt, FaUsers, FaBolt } from 'react-icons/fa'
+import { useGoogleLogin } from '@react-oauth/google'
 import { useAuth } from './AuthContext'
 import './Styles/Login.css'
 
@@ -12,6 +13,35 @@ export const Login = () => {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+
+  const handleGoogleLogin = useGoogleLogin({
+    flow: 'implicit',
+    onSuccess: async (tokenResponse) => {
+      setError('')
+      setLoading(true)
+      try {
+        const res = await fetch('/api/auth/google', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ accessToken: tokenResponse.access_token }),
+        })
+
+        if (res.ok) {
+          const data = await res.json()
+          login(data.token, data.user)
+          navigate('/home')
+        } else {
+          setError('Autentificarea cu Google a esuat. Incearca din nou.')
+        }
+      } catch {
+        setError('Nu s-a putut contacta serverul. Verifica conexiunea.')
+      } finally {
+        setLoading(false)
+      }
+    },
+    onError: () => setError('Autentificarea cu Google a esuat.'),
+  })
 
   const handleSubmit = async (event) => {
     event.preventDefault()
@@ -126,6 +156,8 @@ export const Login = () => {
               type='button'
               className='login-google-btn'
               aria-label='Autentificare cu Google'
+              onClick={() => handleGoogleLogin()}
+              disabled={loading}
             >
               <FaGoogle className='login-google-icon' />
               Google
