@@ -1,177 +1,263 @@
-import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import {
+  FaRegComment,
+  FaReply,
+  FaArrowUp,
+  FaBan,
+  FaTrash,
+  FaBell,
+} from 'react-icons/fa'
+import { useNotifications } from './NotificationContext'
 import './Styles/Notification.css'
-import avatar from './img/avatar.webp'
 
-const MOCK_NOTIFICATIONS = [
-  {
-    id: 1,
-    title: 'New comment on your post',
-    description: 'Someone replied to your thread in r/FrontendDesign.',
-    time: '2 min ago',
-    badge: 'New',
+const TYPE_CONFIG = {
+  NewComment: {
+    label: 'New Comment',
+    Icon: FaRegComment,
+    color: '#0f43c7',
+    bg: 'rgba(15, 67, 199, 0.11)',
   },
-  {
-    id: 2,
-    title: 'Your post is trending',
-    description:
-      '“Building a Reddit-style forum in React” is gaining more upvotes.',
-    time: '1 h ago',
-    badge: null,
+  NewReply: {
+    label: 'New Reply',
+    Icon: FaReply,
+    color: '#7c3aed',
+    bg: 'rgba(124, 58, 237, 0.11)',
   },
-  {
-    id: 3,
-    title: 'New follower',
-    description: 'JohnDoe started following you.',
-    time: '2 h ago',
-    badge: null,
+  PostUpvoted: {
+    label: 'Post Upvoted',
+    Icon: FaArrowUp,
+    color: '#16a34a',
+    bg: 'rgba(22, 163, 74, 0.11)',
   },
-  {
-    id: 4,
-    title: 'Post approved',
-    description: 'Your post in r/WebDev has been approved by moderators.',
-    time: '3 h ago',
-    badge: null,
+  CommentUpvoted: {
+    label: 'Comment Upvoted',
+    Icon: FaArrowUp,
+    color: '#0891b2',
+    bg: 'rgba(8, 145, 178, 0.11)',
   },
-  {
-    id: 5,
-    title: 'Comment upvoted',
-    description: 'Your comment received 10 upvotes.',
-    time: '4 h ago',
-    badge: null,
+  Banned: {
+    label: 'Banned from Community',
+    Icon: FaBan,
+    color: '#dc2626',
+    bg: 'rgba(220, 38, 38, 0.11)',
   },
-  {
-    id: 6,
-    title: 'Mention in post',
-    description: 'You were mentioned in a post by SarahTech.',
-    time: '5 h ago',
-    badge: null,
+  PostDeletedByMod: {
+    label: 'Post Removed',
+    Icon: FaTrash,
+    color: '#ea580c',
+    bg: 'rgba(234, 88, 12, 0.11)',
   },
-  {
-    id: 7,
-    title: 'Community update',
-    description: 'New rules have been posted in r/FrontendDesign.',
-    time: '6 h ago',
-    badge: null,
+  CommentDeletedByMod: {
+    label: 'Comment Removed',
+    Icon: FaTrash,
+    color: '#d97706',
+    bg: 'rgba(217, 119, 6, 0.11)',
   },
-  {
-    id: 8,
-    title: 'Post shared',
-    description: 'Your post was shared by 3 users.',
-    time: '1 day ago',
-    badge: null,
-  },
-  {
-    id: 9,
-    title: 'Achievement unlocked',
-    description: 'You reached 100 karma points!',
-    time: '1 day ago',
-    badge: 'New',
-  },
-  {
-    id: 10,
-    title: 'Weekly summary',
-    description: 'Your posts received 50 upvotes this week.',
-    time: '2 days ago',
-    badge: null,
-  },
-]
+}
+
+const FALLBACK_CONFIG = {
+  label: 'Notification',
+  Icon: FaBell,
+  color: '#566a89',
+  bg: 'rgba(86, 106, 137, 0.11)',
+}
+
+const formatTime = (dateString) => {
+  const diff = Date.now() - new Date(dateString)
+  const m = Math.floor(diff / 60000)
+  if (m < 1) return 'just now'
+  if (m < 60) return `${m}m ago`
+  const h = Math.floor(m / 60)
+  if (h < 24) return `${h}h ago`
+  const d = Math.floor(h / 24)
+  return d === 1 ? '1 day ago' : `${d} days ago`
+}
+
+const getNavigationPath = (n) => {
+  if (
+    n.communitySlug &&
+    n.postId &&
+    ['NewComment', 'NewReply', 'PostUpvoted', 'CommentUpvoted'].includes(n.type)
+  )
+    return `/community/${n.communitySlug}/post/${n.postId}`
+  if (n.communitySlug) return `/community/${n.communitySlug}`
+  return null
+}
+
+const ActorAvatar = ({ actorUsername, actorAvatarUrl, color }) => {
+  if (actorAvatarUrl) {
+    return (
+      <img
+        src={actorAvatarUrl}
+        alt={actorUsername}
+        className='notif-actor-avatar'
+      />
+    )
+  }
+  if (actorUsername) {
+    return (
+      <div className='notif-actor-initials' style={{ background: color }}>
+        {actorUsername[0].toUpperCase()}
+      </div>
+    )
+  }
+  return null
+}
 
 export const Notification = () => {
   const navigate = useNavigate()
-  const [hasNotifications, setHasNotifications] = useState(1) // 1 = are notificări, 0 = nu are
+  const {
+    notifications,
+    unreadCount,
+    loading,
+    markAsRead,
+    markAllAsRead,
+    removeNotification,
+  } = useNotifications()
+
+  if (loading) {
+    return (
+      <main className='notif-page'>
+        <div className='notif-container'>
+          <div className='notif-header'>
+            <h1 className='notif-title'>Notifications</h1>
+          </div>
+          <div className='notif-loading'>
+            <FaBell size={28} className='notif-loading-icon' />
+            <p>Loading notifications...</p>
+          </div>
+        </div>
+      </main>
+    )
+  }
 
   return (
-    <main className='notifications-page'>
-      <div className='notifications-container'>
-        <section className='notifications-header'>
-          <h1 className='notifications-title'>Notifications</h1>
-          <p className='notifications-subtitle'>
-            Stay up to date with new comments, votes and community activity.
-          </p>
-          <button
-            type='button'
-            className='notifications-toggle'
-            onClick={() => setHasNotifications(hasNotifications === 1 ? 0 : 1)}
-          >
-            Toggle View ({hasNotifications === 1 ? 'With' : 'Without'}{' '}
-            Notifications)
-          </button>
-        </section>
+    <main className='notif-page'>
+      <div className='notif-container'>
+        <div className='notif-header'>
+          <div className='notif-header-left'>
+            <h1 className='notif-title'>Notifications</h1>
+            <p className='notif-subtitle'>
+              Activity on your posts, comments and communities.
+            </p>
+          </div>
+          {unreadCount > 0 && (
+            <div className='notif-header-right'>
+              <span className='notif-unread-chip'>{unreadCount} unread</span>
+              <button className='notif-mark-all-btn' onClick={markAllAsRead}>
+                Mark all as read
+              </button>
+            </div>
+          )}
+        </div>
 
-        <section className='notifications-content'>
-          {hasNotifications === 1 ? (
-            /* Design cu notificări */
-            <div className='notifications-card'>
-              <div className='notifications-card-header'>
-                <h2 className='notifications-card-title'>Recent Activity</h2>
-                <span className='notifications-count'>
-                  {MOCK_NOTIFICATIONS.length} new
-                </span>
-              </div>
+        {notifications.length === 0 ? (
+          <div className='notif-empty'>
+            <div className='notif-empty-icon-wrap'>
+              <FaBell size={36} />
+            </div>
+            <h2 className='notif-empty-title'>No notifications yet</h2>
+            <p className='notif-empty-text'>
+              Explore communities and start posting to receive notifications here.
+            </p>
+            <button
+              className='notif-empty-btn'
+              onClick={() => navigate('/explore')}
+            >
+              Discover Communities
+            </button>
+          </div>
+        ) : (
+          <div className='notif-list'>
+            {notifications.map((n) => {
+              const cfg = TYPE_CONFIG[n.type] ?? FALLBACK_CONFIG
+              const { Icon, color, bg, label } = cfg
+              const navPath = getNavigationPath(n)
 
-              <ul className='notifications-list'>
-                {MOCK_NOTIFICATIONS.map((notification) => (
-                  <li key={notification.id} className='notification-item'>
-                    <div className='notification-icon'>
-                      <span className='notification-icon-dot' />
+              return (
+                <div
+                  key={n.id}
+                  className={`notif-item${!n.isRead ? ' notif-item--unread' : ''}`}
+                  style={!n.isRead ? { borderLeftColor: color } : {}}
+                >
+                  <div
+                    className='notif-type-icon'
+                    style={{ background: bg, color }}
+                  >
+                    <Icon size={15} />
+                  </div>
+
+                  <div className='notif-content'>
+                    <div className='notif-content-top'>
+                      <span
+                        className='notif-type-badge'
+                        style={{ background: bg, color }}
+                      >
+                        {label}
+                      </span>
+                      {!n.isRead && <span className='notif-new-dot' />}
+                      <span className='notif-time'>{formatTime(n.createdAt)}</span>
                     </div>
-                    <div className='notification-main'>
-                      <div className='notification-main-header'>
-                        <span className='notification-title'>
-                          {notification.title}
-                        </span>
-                        {notification.badge && (
-                          <span className='notification-badge'>
-                            {notification.badge}
+
+                    <p className='notif-message'>{n.message}</p>
+
+                    {(n.actorUsername || n.postTitle) && (
+                      <div className='notif-meta'>
+                        {n.actorUsername && (
+                          <div className='notif-actor'>
+                            <ActorAvatar
+                              actorUsername={n.actorUsername}
+                              actorAvatarUrl={n.actorAvatarUrl}
+                              color={color}
+                            />
+                            <span className='notif-actor-name'>
+                              u/{n.actorUsername}
+                            </span>
+                          </div>
+                        )}
+                        {n.postTitle && (
+                          <span className='notif-post-title'>
+                            &ldquo;{n.postTitle}&rdquo;
                           </span>
                         )}
                       </div>
-                      <p className='notification-description'>
-                        {notification.description}
-                      </p>
-                      <div className='notification-footer'>
-                        <span className='notification-time'>
-                          {notification.time}
-                        </span>
-                        <button
-                          type='button'
-                          className='notification-view-button'
-                          onClick={() => navigate('/home')}
-                        >
-                          View thread
-                        </button>
-                      </div>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : (
-            /* Design fără notificări */
-            <div className='notifications-empty-card'>
-              <div className='notifications-empty'>
-                <div className='notifications-empty-illustration'>
-                  <img
-                    src={avatar}
-                    alt='No notifications'
-                    className='notifications-empty-avatar'
-                  />
+                    )}
+                  </div>
+
+                  <div className='notif-actions'>
+                    {navPath && (
+                      <button
+                        className='notif-btn-view'
+                        style={{ color, borderColor: color }}
+                        onClick={() => {
+                          if (!n.isRead) markAsRead(n.id)
+                          navigate(navPath)
+                        }}
+                      >
+                        View
+                      </button>
+                    )}
+                    {!n.isRead && (
+                      <button
+                        className='notif-btn-read'
+                        onClick={() => markAsRead(n.id)}
+                      >
+                        Mark read
+                      </button>
+                    )}
+                    <button
+                      className='notif-btn-dismiss'
+                      onClick={() => removeNotification(n.id)}
+                      title='Dismiss'
+                    >
+                      ×
+                    </button>
+                  </div>
                 </div>
-                <h2 className='notifications-empty-title'>
-                  You don&apos;t have any activity yet
-                </h2>
-                <p className='notifications-empty-text'>
-                  That&apos;s okay, explore communities and start posting to see
-                  notifications here.
-                </p>
-                <button type='button' className='notifications-empty-button' onClick={() => navigate('/explore')}>
-                  Discover communities
-                </button>
-              </div>
-            </div>
-          )}
-        </section>
+              )
+            })}
+          </div>
+        )}
       </div>
     </main>
   )

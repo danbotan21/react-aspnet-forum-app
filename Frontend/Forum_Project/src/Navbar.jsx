@@ -11,6 +11,7 @@ import {
   FaSignOutAlt,
 } from 'react-icons/fa'
 import { useAuth } from './AuthContext'
+import { useNotifications } from './NotificationContext'
 import { normalizeImageSrc } from './utils/media'
 import './Styles/Navbar.css'
 import defaultAvatar from './img/avatar.webp'
@@ -21,6 +22,7 @@ export const Navbar = () => {
   const searchRef = useRef(null)
   const navigate = useNavigate()
   const { user, logout } = useAuth()
+  const { unreadCount } = useNotifications()
   const [searchTerm, setSearchTerm] = useState('')
   const [searchCommunities, setSearchCommunities] = useState([])
   const [searchPosts, setSearchPosts] = useState([])
@@ -189,8 +191,30 @@ export const Navbar = () => {
             <FaPlus />
           </Link>
 
-          <Link to='/notification' className='navbar-icon-btn'>
+          <Link to='/notification' className='navbar-icon-btn' style={{ position: 'relative' }}>
             <FaBell />
+            {unreadCount > 0 && (
+              <span style={{
+                position: 'absolute',
+                top: '-4px',
+                right: '-4px',
+                backgroundColor: '#e53e3e',
+                color: '#fff',
+                borderRadius: '50%',
+                minWidth: '16px',
+                height: '16px',
+                fontSize: '10px',
+                fontWeight: '700',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '0 2px',
+                lineHeight: 1,
+                pointerEvents: 'none',
+              }}>
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </span>
+            )}
           </Link>
 
           <div

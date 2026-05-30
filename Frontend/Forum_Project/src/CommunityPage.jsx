@@ -1,6 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { FaCaretUp, FaCaretDown, FaComment, FaShare, FaShieldAlt, FaLock, FaGlobe, FaUserShield, FaThumbtack, FaBan, FaTrash } from 'react-icons/fa'
+import {
+  FaCaretUp,
+  FaCaretDown,
+  FaComment,
+  FaShare,
+  FaShieldAlt,
+  FaLock,
+  FaGlobe,
+  FaUserShield,
+  FaThumbtack,
+  FaBan,
+  FaTrash,
+} from 'react-icons/fa'
 import { useAuth } from './AuthContext'
 import './Styles/CommunityPage.css'
 import avatar from './img/avatar.webp'
@@ -22,9 +34,12 @@ const SORT_OPTIONS = ['Popular', 'New', 'Top']
 // Returns icon, label and CSS modifier for each community type
 const communityTypeMeta = (type) => {
   switch ((type || '').toLowerCase()) {
-    case 'private':    return { icon: FaLock,       label: 'Private',    mod: 'private' }
-    case 'restricted': return { icon: FaUserShield,  label: 'Restricted', mod: 'restricted' }
-    default:           return { icon: FaGlobe,       label: 'Public',     mod: 'public' }
+    case 'private':
+      return { icon: FaLock, label: 'Private', mod: 'private' }
+    case 'restricted':
+      return { icon: FaUserShield, label: 'Restricted', mod: 'restricted' }
+    default:
+      return { icon: FaGlobe, label: 'Public', mod: 'public' }
   }
 }
 
@@ -67,7 +82,9 @@ export function CommunityPage() {
       try {
         setLoading(true)
         const headers = token ? { Authorization: `Bearer ${token}` } : {}
-        const response = await fetch(`/api/Communities/${communityname}`, { headers })
+        const response = await fetch(`/api/Communities/${communityname}`, {
+          headers,
+        })
         if (!response.ok) {
           throw new Error('Community not found')
         }
@@ -579,9 +596,15 @@ export function CommunityPage() {
                 <h1>
                   {community.title}
                   {(() => {
-                    const { icon: TypeIcon, label, mod } = communityTypeMeta(community.type)
+                    const {
+                      icon: TypeIcon,
+                      label,
+                      mod,
+                    } = communityTypeMeta(community.type)
                     return (
-                      <span className={`community-type-badge community-type-${mod}`}>
+                      <span
+                        className={`community-type-badge community-type-${mod}`}
+                      >
                         <TypeIcon className='community-type-icon' />
                         {label}
                       </span>
@@ -630,26 +653,31 @@ export function CommunityPage() {
               <FaBan className='community-banned-banner-icon' />
               <div>
                 <strong>You are banned from this community.</strong>
-                {banReason && <span className='community-banned-reason'> Reason: {banReason}</span>}
+                {banReason && (
+                  <span className='community-banned-reason'>
+                    {' '}
+                    Reason: {banReason}
+                  </span>
+                )}
               </div>
             </div>
           )}
 
           {!isBanned && (
-          <section className='community-sort-bar'>
-            <div className='community-sort-options'>
-              {SORT_OPTIONS.map((option) => (
-                <button
-                  key={option}
-                  type='button'
-                  className={`community-sort-option ${sortBy === option ? 'community-sort-option-active' : ''}`}
-                  onClick={() => setSortBy(option)}
-                >
-                  {option}
-                </button>
-              ))}
-            </div>
-          </section>
+            <section className='community-sort-bar'>
+              <div className='community-sort-options'>
+                {SORT_OPTIONS.map((option) => (
+                  <button
+                    key={option}
+                    type='button'
+                    className={`community-sort-option ${sortBy === option ? 'community-sort-option-active' : ''}`}
+                    onClick={() => setSortBy(option)}
+                  >
+                    {option}
+                  </button>
+                ))}
+              </div>
+            </section>
           )}
 
           <section className='community-feed' ref={postsWrapRef}>
@@ -658,235 +686,278 @@ export function CommunityPage() {
               <div className='community-banned-wall'>
                 <FaBan className='community-banned-wall-icon' />
                 <h2>You are banned</h2>
-                <p>You cannot view posts or interact with this community while banned.{banReason && <> Reason: {banReason}</>}</p>
+                <p>
+                  You cannot view posts or interact with this community while
+                  banned.{banReason && <> Reason: {banReason}</>}
+                </p>
                 <p style={{ fontSize: 13, color: '#6b7a93', marginTop: 8 }}>
                   You can still leave this community at any time.
                 </p>
               </div>
             )}
             {/* Restricted banner: anyone can see posts, but only mods can create */}
-            {!isBanned && community.type?.toLowerCase() === 'restricted' && myRole !== 'owner' && myRole !== 'moderator' && (
-              <div className='community-restricted-banner'>
-                <FaUserShield className='community-restricted-banner-icon' />
-                <span>
-                  <strong>Restricted community</strong> — Only moderators can post here. Members can comment on existing posts.
-                </span>
-              </div>
-            )}
+            {!isBanned &&
+              community.type?.toLowerCase() === 'restricted' &&
+              myRole !== 'owner' &&
+              myRole !== 'moderator' && (
+                <div className='community-restricted-banner'>
+                  <FaUserShield className='community-restricted-banner-icon' />
+                  <span>
+                    <strong>Restricted community</strong> — Only moderators can
+                    post here. Members can comment on existing posts.
+                  </span>
+                </div>
+              )}
             {/* Private wall: only members can view posts */}
-            {!isBanned && (community.type?.toLowerCase() === 'private' && !isMember ? (
-              <div className='community-private-wall'>
-                <FaLock className='community-private-wall-icon' />
-                <h2>Private Community</h2>
-                <p>This community is private. Only approved members can view posts and discussions.</p>
-              </div>
-            ) : isLoadingPosts ? (
-              <p style={{ textAlign: 'center', padding: '2rem' }}>
-                Loading posts...
-              </p>
-            ) : postsError ? (
-              <p style={{ textAlign: 'center', padding: '2rem', color: 'red' }}>
-                {postsError}
-              </p>
-            ) : posts.length === 0 ? (
-              <p style={{ textAlign: 'center', padding: '2rem' }}>
-                No posts found in this community.
-              </p>
-            ) : (
-              posts.map((post) => {
-                const postImageSrc = normalizeImageSrc(
-                  post.imageUrl ?? post.ImageUrl,
-                )
-                return (
-                  <article key={post.id} className={`post${post.isPinned ? ' post--pinned' : ''}`}>
-                    <div className='post-main'>
-                      <header className='post-header'>
-                        {post.authorName === '[deleted]' ? (
-                          <img
-                            src={avatar}
-                            alt='deleted user'
-                            className='avatar'
-                          />
-                        ) : (
-                          <Link
-                            to={`/user/${encodeURIComponent(post.authorName)}`}
-                          >
+            {!isBanned &&
+              (community.type?.toLowerCase() === 'private' && !isMember ? (
+                <div className='community-private-wall'>
+                  <FaLock className='community-private-wall-icon' />
+                  <h2>Private Community</h2>
+                  <p>
+                    This community is private. Only approved members can view
+                    posts and discussions.
+                  </p>
+                </div>
+              ) : isLoadingPosts ? (
+                <p style={{ textAlign: 'center', padding: '2rem' }}>
+                  Loading posts...
+                </p>
+              ) : postsError ? (
+                <p
+                  style={{ textAlign: 'center', padding: '2rem', color: 'red' }}
+                >
+                  {postsError}
+                </p>
+              ) : posts.length === 0 ? (
+                <p style={{ textAlign: 'center', padding: '2rem' }}>
+                  No posts found in this community.
+                </p>
+              ) : (
+                posts.map((post) => {
+                  const postImageSrc = normalizeImageSrc(
+                    post.imageUrl ?? post.ImageUrl,
+                  )
+                  return (
+                    <article
+                      key={post.id}
+                      className={`post${post.isPinned ? ' post--pinned' : ''}`}
+                    >
+                      <div className='post-main'>
+                        <header className='post-header'>
+                          {post.authorName === '[deleted]' ? (
                             <img
                               src={avatar}
-                              alt={post.authorName}
+                              alt='deleted user'
                               className='avatar'
                             />
-                          </Link>
-                        )}
-                        <div className='post-meta'>
-                          {post.isPinned && (
-                            <span className='post-pinned-badge'>
-                              <FaThumbtack className='post-pinned-icon' /> Pinned
-                            </span>
-                          )}
-                          {post.authorName === '[deleted]' ? (
-                            <span className='author'>u/[deleted]</span>
                           ) : (
                             <Link
                               to={`/user/${encodeURIComponent(post.authorName)}`}
-                              className='author author-link'
                             >
-                              u/{post.authorName}
+                              <img
+                                src={avatar}
+                                alt={post.authorName}
+                                className='avatar'
+                              />
                             </Link>
                           )}
-                          <span className='meta-separator'>&middot;</span>
-                          <span className='time-posted'>
-                            {new Date(post.createdAt).toLocaleDateString()}
-                          </span>
-                        </div>
-
-                        <div className='post-header-actions'>
-                          <button
-                            type='button'
-                            className='more-button'
-                            onClick={() =>
-                              setOpenMorePostId((prev) =>
-                                prev === post.id ? null : post.id,
-                              )
-                            }
-                            aria-expanded={openMorePostId === post.id}
-                            aria-haspopup='menu'
-                            aria-label='Open post options'
-                          >
-                            ...
-                          </button>
-                          {openMorePostId === post.id && (
-                            <div className='more-menu' role='menu'>
+                          <div className='post-meta'>
+                            {post.isPinned && (
+                              <span className='post-pinned-badge'>
+                                <FaThumbtack className='post-pinned-icon' />{' '}
+                                Pinned
+                              </span>
+                            )}
+                            {post.authorName === '[deleted]' ? (
+                              <span className='author'>u/[deleted]</span>
+                            ) : (
                               <Link
-                                to={getPostRoute(community.slug, post.id)}
-                                className='more-menu-item more-menu-link'
-                                role='menuitem'
-                                onClick={() => setOpenMorePostId(null)}
+                                to={`/user/${encodeURIComponent(post.authorName)}`}
+                                className='author author-link'
                               >
-                                Open post
+                                u/{post.authorName}
                               </Link>
-                              <button
-                                className='more-menu-item'
-                                role='menuitem'
-                                onClick={() => handleToggleSavePost(post.id)}
-                                disabled={pendingSavedPosts[post.id]}
-                              >
-                                {savedPostsById[post.id]?.id
-                                  ? 'Unsave'
-                                  : 'Save'}
-                              </button>
-                              {post.authorName !== user?.userName && !isBanned && (
-                                <button
-                                  className='more-menu-item more-menu-danger'
+                            )}
+                            <span className='meta-separator'>&middot;</span>
+                            <span className='time-posted'>
+                              {new Date(post.createdAt).toLocaleDateString()}
+                            </span>
+                          </div>
+
+                          <div className='post-header-actions'>
+                            <button
+                              type='button'
+                              className='more-button'
+                              onClick={() =>
+                                setOpenMorePostId((prev) =>
+                                  prev === post.id ? null : post.id,
+                                )
+                              }
+                              aria-expanded={openMorePostId === post.id}
+                              aria-haspopup='menu'
+                              aria-label='Open post options'
+                            >
+                              ...
+                            </button>
+                            {openMorePostId === post.id && (
+                              <div className='more-menu' role='menu'>
+                                <Link
+                                  to={getPostRoute(community.slug, post.id)}
+                                  className='more-menu-item more-menu-link'
                                   role='menuitem'
-                                  onClick={() => {
-                                    setOpenMorePostId(null)
-                                    if (!token) { alert('Please log in to report.'); return }
-                                    setReportingPost({ id: post.id })
-                                  }}
+                                  onClick={() => setOpenMorePostId(null)}
                                 >
-                                  Report
+                                  Open post
+                                </Link>
+                                <button
+                                  className='more-menu-item'
+                                  role='menuitem'
+                                  onClick={() => handleToggleSavePost(post.id)}
+                                  disabled={pendingSavedPosts[post.id]}
+                                >
+                                  {savedPostsById[post.id]?.id
+                                    ? 'Unsave'
+                                    : 'Save'}
                                 </button>
+                                {post.authorName !== user?.userName &&
+                                  !isBanned && (
+                                    <button
+                                      className='more-menu-item more-menu-danger'
+                                      role='menuitem'
+                                      onClick={() => {
+                                        setOpenMorePostId(null)
+                                        if (!token) {
+                                          alert('Please log in to report.')
+                                          return
+                                        }
+                                        setReportingPost({ id: post.id })
+                                      }}
+                                    >
+                                      Report
+                                    </button>
+                                  )}
+                                {(myRole === 'owner' ||
+                                  myRole === 'moderator' ||
+                                  post.authorName === user?.userName) && (
+                                  <button
+                                    className='more-menu-item more-menu-danger'
+                                    role='menuitem'
+                                    onClick={() => handleDeletePost(post.id)}
+                                    disabled={pendingDeletePosts[post.id]}
+                                  >
+                                    <FaTrash style={{ marginRight: 4 }} />{' '}
+                                    Delete post
+                                  </button>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </header>
+
+                        <div className='post-body'>
+                          <h3 className='post-title'>
+                            <Link
+                              to={getPostRoute(community.slug, post.id)}
+                              className='post-title-link'
+                            >
+                              {post.title}
+                            </Link>
+                          </h3>
+                          {post.body && (
+                            <p className='post-text'>{post.body}</p>
+                          )}
+
+                          {(postImageSrc || post.linkUrl) && (
+                            <div className='post-media'>
+                              {postImageSrc && (
+                                <Link
+                                  to={getPostRoute(community.slug, post.id)}
+                                  className='post-media-link'
+                                >
+                                  <div className='media-placeholder'>
+                                    <img
+                                      src={postImageSrc}
+                                      alt='Post content'
+                                    />
+                                  </div>
+                                </Link>
                               )}
-                              {(myRole === 'owner' || myRole === 'moderator' || post.authorName === user?.userName) && (
-                                <button
-                                  className='more-menu-item more-menu-danger'
-                                  role='menuitem'
-                                  onClick={() => handleDeletePost(post.id)}
-                                  disabled={pendingDeletePosts[post.id]}
-                                >
-                                  <FaTrash style={{ marginRight: 4 }} /> Delete post
-                                </button>
+                              {post.linkUrl && (
+                                <div className='media-placeholder'>
+                                  <a
+                                    href={post.linkUrl}
+                                    target='_blank'
+                                    rel='noopener noreferrer'
+                                    style={{
+                                      color: '#0066cc',
+                                      textDecoration: 'underline',
+                                    }}
+                                  >
+                                    {post.linkUrl}
+                                  </a>
+                                </div>
                               )}
                             </div>
                           )}
                         </div>
-                      </header>
 
-                      <div className='post-body'>
-                        <h3 className='post-title'>
-                          <Link
-                            to={getPostRoute(community.slug, post.id)}
-                            className='post-title-link'
+                        <footer className='post-footer'>
+                          <div
+                            className={`action-chip vote-chip${isBanned ? ' vote-disabled' : ''}`}
+                            title={
+                              isBanned
+                                ? 'You are banned from this community'
+                                : ''
+                            }
                           >
-                            {post.title}
-                          </Link>
-                        </h3>
-                        {post.body && <p className='post-text'>{post.body}</p>}
-
-                        {(postImageSrc || post.linkUrl) && (
-                          <div className='post-media'>
-                            {postImageSrc && (
-                              <Link
-                                to={getPostRoute(community.slug, post.id)}
-                                className='post-media-link'
-                              >
-                                <div className='media-placeholder'>
-                                  <img src={postImageSrc} alt='Post content' />
-                                </div>
-                              </Link>
-                            )}
-                            {post.linkUrl && (
-                              <div className='media-placeholder'>
-                                <a
-                                  href={post.linkUrl}
-                                  target='_blank'
-                                  rel='noopener noreferrer'
-                                  style={{
-                                    color: '#0066cc',
-                                    textDecoration: 'underline',
-                                  }}
-                                >
-                                  {post.linkUrl}
-                                </a>
-                              </div>
-                            )}
+                            <FaCaretUp
+                              className={`vote-icon upvote ${postVotesById[post.id]?.type === 1 ? 'active' : ''}`}
+                              onClick={() => handlePostVote(post.id, 'up')}
+                              style={{
+                                pointerEvents:
+                                  pendingPostVotes[post.id] || isBanned
+                                    ? 'none'
+                                    : 'auto',
+                                opacity:
+                                  pendingPostVotes[post.id] || isBanned
+                                    ? 0.4
+                                    : 1,
+                              }}
+                            />
+                            <span className='vote-count'>{post.votes}</span>
+                            <FaCaretDown
+                              className={`vote-icon downvote ${postVotesById[post.id]?.type === -1 ? 'active' : ''}`}
+                              onClick={() => handlePostVote(post.id, 'down')}
+                              style={{
+                                pointerEvents:
+                                  pendingPostVotes[post.id] || isBanned
+                                    ? 'none'
+                                    : 'auto',
+                                opacity:
+                                  pendingPostVotes[post.id] || isBanned
+                                    ? 0.4
+                                    : 1,
+                              }}
+                            />
                           </div>
-                        )}
+
+                          <button type='button' className='action-chip'>
+                            <FaComment className='comment-icon' />
+                            <span className='comment-count'>
+                              {post.commentsCount}
+                            </span>
+                          </button>
+
+                          <button type='button' className='action-chip'>
+                            <FaShare className='share-icon' />
+                          </button>
+                        </footer>
                       </div>
-
-                      <footer className='post-footer'>
-                        <div className={`action-chip vote-chip${isBanned ? ' vote-disabled' : ''}`}
-                             title={isBanned ? 'You are banned from this community' : ''}>
-                          <FaCaretUp
-                            className={`vote-icon upvote ${postVotesById[post.id]?.type === 1 ? 'active' : ''}`}
-                            onClick={() => handlePostVote(post.id, 'up')}
-                            style={{
-                              pointerEvents: pendingPostVotes[post.id] || isBanned
-                                ? 'none'
-                                : 'auto',
-                              opacity: pendingPostVotes[post.id] || isBanned ? 0.4 : 1,
-                            }}
-                          />
-                          <span className='vote-count'>{post.votes}</span>
-                          <FaCaretDown
-                            className={`vote-icon downvote ${postVotesById[post.id]?.type === -1 ? 'active' : ''}`}
-                            onClick={() => handlePostVote(post.id, 'down')}
-                            style={{
-                              pointerEvents: pendingPostVotes[post.id] || isBanned
-                                ? 'none'
-                                : 'auto',
-                              opacity: pendingPostVotes[post.id] || isBanned ? 0.4 : 1,
-                            }}
-                          />
-                        </div>
-
-                        <button type='button' className='action-chip'>
-                          <FaComment className='comment-icon' />
-                          <span className='comment-count'>
-                            {post.commentsCount}
-                          </span>
-                        </button>
-
-                        <button type='button' className='action-chip'>
-                          <FaShare className='share-icon' />
-                        </button>
-                      </footer>
-                    </div>
-                  </article>
-                )
-              })
-            ))}
+                    </article>
+                  )
+                })
+              ))}
             {!isLoadingPosts && !postsError && posts.length > 0 && (
               <>
                 <div ref={loadMoreTriggerRef} style={{ height: '1px' }} />
