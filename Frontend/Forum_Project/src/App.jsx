@@ -19,6 +19,7 @@ import { UserProfile } from './UserProfile'
 import { CommunityPage } from './CommunityPage'
 import { PostPage } from './PostPage'
 import { Settings } from './Settings'
+import { SearchResults } from './SearchResults'
 
 function AppLayout({ children }) {
   return (
@@ -141,6 +142,14 @@ function App() {
           element={
             <AppLayout>
               <Settings />
+            </AppLayout>
+          }
+        />
+        <Route
+          path='/search'
+          element={
+            <AppLayout>
+              <SearchResults />
             </AppLayout>
           }
         />

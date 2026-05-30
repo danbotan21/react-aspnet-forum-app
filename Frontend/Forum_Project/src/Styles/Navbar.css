@@ -122,6 +122,66 @@
   color: #7c7c7c;
 }
 
+/* Search dropdown */
+.navbar-search-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  background: #fff;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  z-index: 100;
+  overflow: hidden;
+}
+
+.navbar-search-dropdown-label {
+  padding: 6px 12px 4px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #adb5bd;
+}
+
+.navbar-search-dropdown-item {
+  padding: 8px 12px;
+  cursor: pointer;
+  border-bottom: 1px solid #f1f3f5;
+  transition: background 0.1s;
+}
+
+.navbar-search-dropdown-item:last-child {
+  border-bottom: none;
+}
+
+.navbar-search-dropdown-item:hover {
+  background: #f8f9fa;
+}
+
+.navbar-search-dropdown-item strong {
+  display: block;
+  font-size: 0.875rem;
+  color: #212529;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.navbar-search-dropdown-item span {
+  font-size: 0.75rem;
+  color: #6c757d;
+}
+
+.navbar-search-dropdown-all {
+  text-align: center;
+  color: #0f43c7 !important;
+  font-size: 0.85rem;
+  font-weight: 500;
+  padding: 10px 12px;
+}
+
 /* Right: icon buttons + profile */
 .navbar-actions {
   display: flex;

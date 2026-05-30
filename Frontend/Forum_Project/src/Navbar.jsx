@@ -22,7 +22,8 @@ export const Navbar = () => {
   const navigate = useNavigate()
   const { user, logout } = useAuth()
   const [searchTerm, setSearchTerm] = useState('')
-  const [searchResults, setSearchResults] = useState([])
+  const [searchCommunities, setSearchCommunities] = useState([])
+  const [searchPosts, setSearchPosts] = useState([])
   const [showSearchDropdown, setShowSearchDropdown] = useState(false)
 
   // Folosim username-ul real din context, sau fallback
@@ -45,26 +46,36 @@ export const Navbar = () => {
 
   useEffect(() => {
     const delayDebounceFn = setTimeout(async () => {
-      if (searchTerm.trim() !== '') {
+      const term = searchTerm.trim()
+      if (term !== '') {
         try {
-          const res = await fetch(
-            `/api/Communities/search?term=${encodeURIComponent(searchTerm)}`,
-          )
-          if (res.ok) {
-            const data = await res.json()
-            setSearchResults(data)
-            setShowSearchDropdown(true)
-          }
+          const [commRes, postRes] = await Promise.all([
+            fetch(`/api/Communities/search?term=${encodeURIComponent(term)}`),
+            fetch(`/api/Posts/search?term=${encodeURIComponent(term)}&limit=3`),
+          ])
+          const communities = commRes.ok ? await commRes.json() : []
+          const posts = postRes.ok ? await postRes.json() : []
+          setSearchCommunities(communities.slice(0, 3))
+          setSearchPosts(posts)
+          setShowSearchDropdown(communities.length > 0 || posts.length > 0)
         } catch (err) {
-          console.error('Error searching communities:', err)
+          console.error('Search error:', err)
         }
       } else {
-        setSearchResults([])
+        setSearchCommunities([])
+        setSearchPosts([])
         setShowSearchDropdown(false)
       }
     }, 300)
     return () => clearTimeout(delayDebounceFn)
   }, [searchTerm])
+
+  const handleSearchKeyDown = (e) => {
+    if (e.key === 'Enter' && searchTerm.trim() !== '') {
+      setShowSearchDropdown(false)
+      navigate(`/search?q=${encodeURIComponent(searchTerm.trim())}`)
+    }
+  }
 
   const handleLogout = () => {
     setIsOpen(false)
@@ -98,44 +109,62 @@ export const Navbar = () => {
             aria-label='Search'
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
+            onKeyDown={handleSearchKeyDown}
             onFocus={() => {
               if (searchTerm.trim() !== '') setShowSearchDropdown(true)
             }}
           />
-          {showSearchDropdown && searchResults.length > 0 && (
-            <div
-              style={{
-                position: 'absolute',
-                top: '100%',
-                left: 0,
-                right: 0,
-                backgroundColor: 'white',
-                borderRadius: '4px',
-                boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-                zIndex: 10,
-              }}
-            >
-              {searchResults.map((c) => (
+          {showSearchDropdown && (
+            <div className='navbar-search-dropdown'>
+              {searchCommunities.length > 0 && (
+                <>
+                  <div className='navbar-search-dropdown-label'>Communities</div>
+                  {searchCommunities.map((c) => (
+                    <div
+                      key={c.id}
+                      className='navbar-search-dropdown-item'
+                      onClick={() => {
+                        setShowSearchDropdown(false)
+                        setSearchTerm('')
+                        navigate(`/community/${c.slug}`)
+                      }}
+                    >
+                      <strong>{c.title}</strong>
+                      <span>c/{c.slug} · {c.membersCount} members</span>
+                    </div>
+                  ))}
+                </>
+              )}
+              {searchPosts.length > 0 && (
+                <>
+                  <div className='navbar-search-dropdown-label'>Posts</div>
+                  {searchPosts.map((p) => (
+                    <div
+                      key={p.id}
+                      className='navbar-search-dropdown-item'
+                      onClick={() => {
+                        setShowSearchDropdown(false)
+                        setSearchTerm('')
+                        navigate(`/community/${p.communitySlug}/post/${p.id}`)
+                      }}
+                    >
+                      <strong>{p.title}</strong>
+                      <span>c/{p.communitySlug} · by u/{p.authorName}</span>
+                    </div>
+                  ))}
+                </>
+              )}
+              {searchTerm.trim() !== '' && (
                 <div
-                  key={c.id}
-                  style={{
-                    padding: '10px',
-                    cursor: 'pointer',
-                    borderBottom: '1px solid #eee',
-                    color: 'black',
-                  }}
+                  className='navbar-search-dropdown-item navbar-search-dropdown-all'
                   onClick={() => {
                     setShowSearchDropdown(false)
-                    setSearchTerm('')
-                    navigate(`/community/${c.slug}`)
+                    navigate(`/search?q=${encodeURIComponent(searchTerm.trim())}`)
                   }}
                 >
-                  <strong style={{ display: 'block' }}>{c.title}</strong>
-                  <span style={{ fontSize: '0.8em', color: 'gray' }}>
-                    c/{c.slug} - {c.membersCount} members
-                  </span>
+                  See all results for &quot;{searchTerm}&quot;
                 </div>
-              ))}
+              )}
             </div>
           )}
         </div>

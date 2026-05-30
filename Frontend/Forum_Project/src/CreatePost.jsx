@@ -568,7 +568,11 @@ export const CreatePost = () => {
               onClick={handleSaveDraft}
               disabled={isSavingDraft}
             >
-              {isSavingDraft ? 'Saving...' : currentDraftId ? 'Update Draft' : 'Save Draft'}
+              {isSavingDraft
+                ? 'Saving...'
+                : currentDraftId
+                  ? 'Update Draft'
+                  : 'Save Draft'}
             </button>
             <button
               type='button'
