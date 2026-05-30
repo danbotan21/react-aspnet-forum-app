@@ -53,7 +53,7 @@ namespace ForumApp.API.Controller
             var created = await _commentService.CreateCommentAsync(commentData, authorId, ct);
 
             if (created == null)
-                return BadRequest("Post not found, parent comment invalid, or comment could not be saved.");
+                return BadRequest("Comment could not be created. Ensure post exists, parent comment is valid, and user is a member of the community.");
 
             return CreatedAtAction(nameof(GetById), new { id = created.ID }, created);
         }

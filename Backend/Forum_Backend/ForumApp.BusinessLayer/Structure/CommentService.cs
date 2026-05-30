@@ -62,10 +62,20 @@ namespace ForumApp.BusinessLayer.Structure
 
         public async Task<CommentResponseDto?> CreateCommentAsync(CommentCreateDto commentData, int authorId, CancellationToken ct = default)
         {
-            var postExists = await _context.Posts
-                .AnyAsync(p => p.Id == commentData.PostId, ct);
+            var normalizedBody = commentData.Body?.Trim();
+            if (string.IsNullOrWhiteSpace(normalizedBody)) return null;
 
-            if (!postExists) return null;
+            var postInfo = await _context.Posts
+                .Where(p => p.Id == commentData.PostId)
+                .Select(p => new { p.Id, p.CommunityId })
+                .FirstOrDefaultAsync(ct);
+
+            if (postInfo == null) return null;
+
+            var isCommunityMember = await _context.CommunityMembers
+                .AnyAsync(m => m.CommunityId == postInfo.CommunityId && m.UserId == authorId, ct);
+
+            if (!isCommunityMember) return null;
 
             // Daca este reply, verifica ca comentariul parinte exista si apartine aceluiasi post
             if (commentData.ParentCommentId.HasValue)
@@ -78,7 +88,7 @@ namespace ForumApp.BusinessLayer.Structure
 
             var comment = new CommentData
             {
-                Body = commentData.Body,
+                Body = normalizedBody,
                 PostId = commentData.PostId,
                 AuthorId = authorId,
                 ParentCommentId = commentData.ParentCommentId,
@@ -116,7 +126,10 @@ namespace ForumApp.BusinessLayer.Structure
 
             if (comment.AuthorId != requestingUserId) return null;
 
-            comment.Body = commentData.Body;
+            var normalizedBody = commentData.Body?.Trim();
+            if (string.IsNullOrWhiteSpace(normalizedBody)) return null;
+
+            comment.Body = normalizedBody;
 
             try
             {

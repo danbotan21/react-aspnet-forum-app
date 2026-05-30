@@ -23,7 +23,7 @@ namespace ForumApp.DataAccess
 
 
 
-        public DbSet<UserData> Users { get; set; } // DbSet este reprezentarea unui tabel in C#. EF Core vede aceasta linie si stie: "trebuie sa existe un tabel Users in DB cu coloanele din clasa User". Numele proprietatii (Users) devine numele tabelului.
+        public DbSet<UserData> Users { get; set; }
         public DbSet<CommunityData> Communities { get; set; }
         public DbSet<PostData> Posts { get; set; }
         public DbSet<CommentData> Comments { get; set; }
@@ -56,6 +56,40 @@ namespace ForumApp.DataAccess
                 .WithMany(u => u.Comments)
                 .HasForeignKey(c => c.AuthorId)
                 .OnDelete(DeleteBehavior.NoAction);
+
+            modelBuilder.Entity<CommunityMemberData>()
+                .HasIndex(m => new { m.CommunityId, m.UserId })
+                .IsUnique();
+
+            modelBuilder.Entity<VoteData>()
+                .ToTable(t => t.HasCheckConstraint(
+                    "CK_Votes_ExactlyOneTarget",
+                    "([PostId] IS NOT NULL AND [CommentId] IS NULL) OR ([PostId] IS NULL AND [CommentId] IS NOT NULL)"));
+
+            modelBuilder.Entity<VoteData>()
+                .HasIndex(v => new { v.AuthorId, v.PostId })
+                .IsUnique()
+                .HasFilter("[PostId] IS NOT NULL");
+
+            modelBuilder.Entity<VoteData>()
+                .HasIndex(v => new { v.AuthorId, v.CommentId })
+                .IsUnique()
+                .HasFilter("[CommentId] IS NOT NULL");
+
+            modelBuilder.Entity<SavedItemData>()
+                .ToTable(t => t.HasCheckConstraint(
+                    "CK_SavedItems_ExactlyOneTarget",
+                    "([PostId] IS NOT NULL AND [CommentId] IS NULL) OR ([PostId] IS NULL AND [CommentId] IS NOT NULL)"));
+
+            modelBuilder.Entity<SavedItemData>()
+                .HasIndex(s => new { s.AuthorId, s.PostId })
+                .IsUnique()
+                .HasFilter("[PostId] IS NOT NULL");
+
+            modelBuilder.Entity<SavedItemData>()
+                .HasIndex(s => new { s.AuthorId, s.CommentId })
+                .IsUnique()
+                .HasFilter("[CommentId] IS NOT NULL");
         }
     }
 }

@@ -1,8 +1,8 @@
 using ForumApp.BusinessLayer.Interfaces;
 using ForumApp.DataAccess;
 using ForumApp.Domain.Entities.Vote;
-using ForumApp.Domain.Models.Vote;
 using ForumApp.Domain.Models.Responses;
+using ForumApp.Domain.Models.Vote;
 using Microsoft.EntityFrameworkCore;
 
 namespace ForumApp.BusinessLayer.Structure
@@ -18,43 +18,29 @@ namespace ForumApp.BusinessLayer.Structure
 
         public async Task<VoteResponseDTO?> VoteAsync(CreateVoteRequestDTO voteData, int userId, CancellationToken ct = default)
         {
-            // Validare: trebuie să fie fie PostId fie CommentId, dar nu ambele
-            if ((voteData.PostId == null && voteData.CommentId == null) || 
+            if ((voteData.PostId == null && voteData.CommentId == null) ||
                 (voteData.PostId != null && voteData.CommentId != null))
             {
-                return null; // Invalid: trebuie exact unul dintre cele două
+                return null;
             }
 
-            // Verifică dacă Post sau Comment există
-            if (voteData.PostId.HasValue)
-            {
-                var postExists = await _context.Posts.AnyAsync(p => p.Id == voteData.PostId.Value, ct);
-                if (!postExists) return null;
-            }
+            var targetAuthorId = await GetTargetAuthorIdAsync(voteData.PostId, voteData.CommentId, ct);
+            if (!targetAuthorId.HasValue) return null;
 
-            if (voteData.CommentId.HasValue)
-            {
-                var commentExists = await _context.Comments.AnyAsync(c => c.ID == voteData.CommentId.Value, ct);
-                if (!commentExists) return null;
-            }
-
-            // Verifică dacă user-ul a votat deja
             var existingVote = await _context.Votes
                 .Include(v => v.Author)
-                .FirstOrDefaultAsync(v => 
-                    v.AuthorId == userId && 
-                    v.PostId == voteData.PostId && 
+                .FirstOrDefaultAsync(v =>
+                    v.AuthorId == userId &&
+                    v.PostId == voteData.PostId &&
                     v.CommentId == voteData.CommentId, ct);
 
             if (existingVote != null)
             {
-                // Dacă votul este același tip, nu face nimic
                 if (existingVote.Type == voteData.Type)
                 {
                     return MapToResponseDTO(existingVote);
                 }
 
-                // Altfel, actualizează votul (de la Upvote la Downvote sau invers)
                 var oldVoteValue = (int)existingVote.Type;
                 var newVoteValue = (int)voteData.Type;
                 var voteDifference = newVoteValue - oldVoteValue;
@@ -62,14 +48,18 @@ namespace ForumApp.BusinessLayer.Structure
                 existingVote.Type = voteData.Type;
                 existingVote.VotedAt = DateTime.UtcNow;
 
-                // Actualizează contorul de voturi
-                await UpdateVoteCounter(voteData.PostId, voteData.CommentId, voteDifference, ct);
+                await ApplyVoteDeltaAsync(
+                    voteData.PostId,
+                    voteData.CommentId,
+                    voteDifference,
+                    userId,
+                    targetAuthorId.Value,
+                    ct);
 
                 await _context.SaveChangesAsync(ct);
                 return MapToResponseDTO(existingVote);
             }
 
-            // Creează un vot nou
             var newVote = new VoteData
             {
                 Type = voteData.Type,
@@ -81,12 +71,15 @@ namespace ForumApp.BusinessLayer.Structure
 
             _context.Votes.Add(newVote);
 
-            // Actualizează contorul de voturi
-            await UpdateVoteCounter(voteData.PostId, voteData.CommentId, (int)voteData.Type, ct);
+            await ApplyVoteDeltaAsync(
+                voteData.PostId,
+                voteData.CommentId,
+                (int)voteData.Type,
+                userId,
+                targetAuthorId.Value,
+                ct);
 
             await _context.SaveChangesAsync(ct);
-
-            // Reîncarcă cu Author pentru a returna username
             await _context.Entry(newVote).Reference(v => v.Author).LoadAsync(ct);
 
             return MapToResponseDTO(newVote);
@@ -99,17 +92,16 @@ namespace ForumApp.BusinessLayer.Structure
                 .FirstOrDefaultAsync(v => v.Id == voteId, ct);
 
             if (vote == null) return null;
-
-            // Validare: doar autorul votului poate să-l modifice
             if (vote.AuthorId != userId) return null;
 
-            // Dacă tipul de vot este același, nu face nimic
             if (vote.Type == voteData.Type)
             {
                 return MapToResponseDTO(vote);
             }
 
-            // Calculează diferența pentru actualizarea contorului
+            var targetAuthorId = await GetTargetAuthorIdAsync(vote.PostId, vote.CommentId, ct);
+            if (!targetAuthorId.HasValue) return null;
+
             var oldVoteValue = (int)vote.Type;
             var newVoteValue = (int)voteData.Type;
             var voteDifference = newVoteValue - oldVoteValue;
@@ -117,11 +109,15 @@ namespace ForumApp.BusinessLayer.Structure
             vote.Type = voteData.Type;
             vote.VotedAt = DateTime.UtcNow;
 
-            // Actualizează contorul
-            await UpdateVoteCounter(vote.PostId, vote.CommentId, voteDifference, ct);
+            await ApplyVoteDeltaAsync(
+                vote.PostId,
+                vote.CommentId,
+                voteDifference,
+                userId,
+                targetAuthorId.Value,
+                ct);
 
             await _context.SaveChangesAsync(ct);
-
             return MapToResponseDTO(vote);
         }
 
@@ -139,7 +135,6 @@ namespace ForumApp.BusinessLayer.Structure
                 };
             }
 
-            // Validare: doar autorul votului poate să-l șteargă
             if (vote.AuthorId != userId)
             {
                 return new ActionResponse
@@ -149,8 +144,23 @@ namespace ForumApp.BusinessLayer.Structure
                 };
             }
 
-            // Actualizează contorul (scade votul)
-            await UpdateVoteCounter(vote.PostId, vote.CommentId, -(int)vote.Type, ct);
+            var targetAuthorId = await GetTargetAuthorIdAsync(vote.PostId, vote.CommentId, ct);
+            if (!targetAuthorId.HasValue)
+            {
+                return new ActionResponse
+                {
+                    IsSuccess = false,
+                    Message = "Target content not found."
+                };
+            }
+
+            await ApplyVoteDeltaAsync(
+                vote.PostId,
+                vote.CommentId,
+                -(int)vote.Type,
+                userId,
+                targetAuthorId.Value,
+                ct);
 
             _context.Votes.Remove(vote);
             await _context.SaveChangesAsync(ct);
@@ -199,8 +209,34 @@ namespace ForumApp.BusinessLayer.Structure
             return vote != null ? MapToResponseDTO(vote) : null;
         }
 
-        // Metodă helper pentru actualizarea contorului de voturi
-        private async Task UpdateVoteCounter(int? postId, int? commentId, int voteChange, CancellationToken ct)
+        private async Task<int?> GetTargetAuthorIdAsync(int? postId, int? commentId, CancellationToken ct)
+        {
+            if (postId.HasValue)
+            {
+                return await _context.Posts
+                    .Where(p => p.Id == postId.Value)
+                    .Select(p => (int?)p.AuthorId)
+                    .FirstOrDefaultAsync(ct);
+            }
+
+            if (commentId.HasValue)
+            {
+                return await _context.Comments
+                    .Where(c => c.ID == commentId.Value)
+                    .Select(c => (int?)c.AuthorId)
+                    .FirstOrDefaultAsync(ct);
+            }
+
+            return null;
+        }
+
+        private async Task ApplyVoteDeltaAsync(
+            int? postId,
+            int? commentId,
+            int voteChange,
+            int voterUserId,
+            int targetAuthorId,
+            CancellationToken ct)
         {
             if (postId.HasValue)
             {
@@ -219,10 +255,18 @@ namespace ForumApp.BusinessLayer.Structure
                     comment.Votes += voteChange;
                 }
             }
+
+            if (targetAuthorId != voterUserId)
+            {
+                var author = await _context.Users.FindAsync(new object[] { targetAuthorId }, ct);
+                if (author != null)
+                {
+                    author.Karma += voteChange;
+                }
+            }
         }
 
-        // Metodă helper pentru mapare la DTO
-        private VoteResponseDTO MapToResponseDTO(VoteData vote)
+        private static VoteResponseDTO MapToResponseDTO(VoteData vote)
         {
             return new VoteResponseDTO
             {
