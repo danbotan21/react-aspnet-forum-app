@@ -17,6 +17,7 @@ import { StartCommunity } from './StartCommunity'
 import { EditAvatar } from './EditAvatar'
 import { UserProfile } from './UserProfile'
 import { CommunityPage } from './CommunityPage'
+import { CommunityModPage } from './CommunityModPage'
 import { PostPage } from './PostPage'
 import { Settings } from './Settings'
 import { SearchResults } from './SearchResults'
@@ -158,6 +159,14 @@ function App() {
           element={
             <AppLayout>
               <UserProfile />
+            </AppLayout>
+          }
+        />
+        <Route
+          path='/community/:communityname/mod'
+          element={
+            <AppLayout>
+              <CommunityModPage />
             </AppLayout>
           }
         />

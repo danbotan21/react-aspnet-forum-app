@@ -395,6 +395,38 @@
   align-content: start;
 }
 
+.community-mod-tools-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 11px 16px;
+  background: linear-gradient(135deg, #0e4ad2, #1a68ff);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  border-radius: 12px;
+  text-decoration: none;
+  box-shadow: 0 2px 10px rgba(15, 67, 199, 0.30);
+  transition: box-shadow 0.2s ease, background 0.2s ease, transform 0.1s ease;
+  box-sizing: border-box;
+}
+
+.community-mod-tools-btn:hover {
+  background: linear-gradient(135deg, #0b3cb5, #155ee0);
+  box-shadow: 0 4px 18px rgba(15, 67, 199, 0.45);
+  transform: translateY(-1px);
+}
+
+.community-mod-tools-btn:active {
+  transform: scale(0.98);
+}
+
+.community-mod-tools-icon {
+  font-size: 15px;
+}
+
 .community-side-card {
   border: 1px solid #d7e1ef;
   border-radius: 14px;

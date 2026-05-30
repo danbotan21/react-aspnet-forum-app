@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { FaCaretUp, FaCaretDown, FaComment, FaShare } from 'react-icons/fa'
+import { FaCaretUp, FaCaretDown, FaComment, FaShare, FaShieldAlt } from 'react-icons/fa'
 import { useAuth } from './AuthContext'
 import './Styles/CommunityPage.css'
 import avatar from './img/avatar.webp'
@@ -751,6 +751,17 @@ export function CommunityPage() {
         </div>
 
         <aside className='community-side'>
+          {/* TODO: replace `true` with real role check once backend roles are implemented */}
+          {true && (
+            <Link
+              to={`/community/${community.slug}/mod`}
+              className='community-mod-tools-btn'
+            >
+              <FaShieldAlt className='community-mod-tools-icon' />
+              Mod Tools
+            </Link>
+          )}
+
           <section className='community-side-card'>
             <h2>About community</h2>
             <p>{community.description}</p>
