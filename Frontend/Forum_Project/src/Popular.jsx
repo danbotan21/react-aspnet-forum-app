@@ -19,7 +19,7 @@ const getPostRoute = (post) =>
 
 export const Popular = () => {
   const PAGE_SIZE = 15
-  const { user } = useAuth()
+  const { user, token } = useAuth()
   const [openMorePostId, setOpenMorePostId] = useState(null)
   const [posts, setPosts] = useState([])
   const [loading, setLoading] = useState(true)
@@ -107,7 +107,7 @@ export const Popular = () => {
   }, [error, hasMore, isLoadingMore, loadNextPage, loading])
 
   useEffect(() => {
-    if (!user?.id) {
+    if (!token) {
       setPostVotesById({})
       return
     }
@@ -123,7 +123,7 @@ export const Popular = () => {
 
       if (missingPostIds.length === 0) return currentVotes
 
-      fetchUserPostVotes(missingPostIds, user.id).then((votesMap) => {
+      fetchUserPostVotes(missingPostIds, token).then((votesMap) => {
         if (!cancelled) {
           setPostVotesById((prev) => ({ ...prev, ...votesMap }))
         }
@@ -138,10 +138,10 @@ export const Popular = () => {
     return () => {
       cancelled = true
     }
-  }, [posts, user?.id])
+  }, [posts, token])
 
   useEffect(() => {
-    if (!user?.id) {
+    if (!token) {
       setSavedPostsById({})
       return
     }
@@ -157,7 +157,7 @@ export const Popular = () => {
 
       if (missingPostIds.length === 0) return currentSaved
 
-      fetchUserSavedPosts(missingPostIds, user.id).then((savedMap) => {
+      fetchUserSavedPosts(missingPostIds, token).then((savedMap) => {
         if (!cancelled) {
           setSavedPostsById((prev) => ({ ...prev, ...savedMap }))
         }
@@ -172,7 +172,7 @@ export const Popular = () => {
     return () => {
       cancelled = true
     }
-  }, [posts, user?.id])
+  }, [posts, token])
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -191,7 +191,7 @@ export const Popular = () => {
   }, [])
 
   const handlePostVote = async (postId, direction) => {
-    if (!user?.id) {
+    if (!token) {
       alert('Please login to vote.')
       return
     }
@@ -222,7 +222,7 @@ export const Popular = () => {
       }))
 
       try {
-        await deletePostVote({ voteId: previousVote.id, userId: user.id })
+        await deletePostVote({ voteId: previousVote.id, token })
       } catch (voteError) {
         setPosts((currentPosts) =>
           currentPosts.map((post) =>
@@ -263,7 +263,7 @@ export const Popular = () => {
       const vote = await submitPostVote({
         postId,
         voteType: nextVoteType,
-        userId: user.id,
+        token,
       })
 
       setPostVotesById((currentVotes) => ({
@@ -292,7 +292,7 @@ export const Popular = () => {
   }
 
   const handleToggleSavePost = async (postId) => {
-    if (!user?.id) {
+    if (!token) {
       alert('Please login to save posts.')
       return
     }
@@ -311,9 +311,9 @@ export const Popular = () => {
           ...currentSaved,
           [postId]: null,
         }))
-        await unsaveItem({ savedItemId: previousSavedItem.id, userId: user.id })
+        await unsaveItem({ savedItemId: previousSavedItem.id, token })
       } else {
-        const createdSavedItem = await savePost({ postId, userId: user.id })
+        const createdSavedItem = await savePost({ postId, token })
         setSavedPostsById((currentSaved) => ({
           ...currentSaved,
           [postId]: {

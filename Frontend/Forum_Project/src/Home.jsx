@@ -22,7 +22,7 @@ const SORT_OPTIONS = [
 
 export const Home = () => {
   const PAGE_SIZE = 15
-  const { user } = useAuth()
+  const { user, token } = useAuth()
   const [openMorePostId, setOpenMorePostId] = useState(null)
   const [sortBy, setSortBy] = useState('popular')
   const [isSortOpen, setIsSortOpen] = useState(false)
@@ -123,7 +123,7 @@ export const Home = () => {
   }, [feedError, hasMore, isLoading, isLoadingMore, loadNextPage])
 
   useEffect(() => {
-    if (!user?.id) {
+    if (!token) {
       setPostVotesById({})
       return
     }
@@ -139,7 +139,7 @@ export const Home = () => {
 
       if (missingPostIds.length === 0) return currentVotes
 
-      fetchUserPostVotes(missingPostIds, user.id).then((votesMap) => {
+      fetchUserPostVotes(missingPostIds, token).then((votesMap) => {
         if (!cancelled) {
           setPostVotesById((prev) => ({ ...prev, ...votesMap }))
         }
@@ -155,10 +155,10 @@ export const Home = () => {
     return () => {
       cancelled = true
     }
-  }, [posts, user?.id])
+  }, [posts, token])
 
   useEffect(() => {
-    if (!user?.id) {
+    if (!token) {
       setSavedPostsById({})
       return
     }
@@ -174,7 +174,7 @@ export const Home = () => {
 
       if (missingPostIds.length === 0) return currentSaved
 
-      fetchUserSavedPosts(missingPostIds, user.id).then((savedMap) => {
+      fetchUserSavedPosts(missingPostIds, token).then((savedMap) => {
         if (!cancelled) {
           setSavedPostsById((prev) => ({ ...prev, ...savedMap }))
         }
@@ -190,7 +190,7 @@ export const Home = () => {
     return () => {
       cancelled = true
     }
-  }, [posts, user?.id])
+  }, [posts, token])
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -216,7 +216,7 @@ export const Home = () => {
     SORT_OPTIONS.find((option) => option.id === sortBy)?.label ?? 'Popular'
 
   const handlePostVote = async (postId, direction) => {
-    if (!user?.id) {
+    if (!token) {
       alert('Please login to vote.')
       return
     }
@@ -247,7 +247,7 @@ export const Home = () => {
       }))
 
       try {
-        await deletePostVote({ voteId: previousVote.id, userId: user.id })
+        await deletePostVote({ voteId: previousVote.id, token })
       } catch (error) {
         setPosts((currentPosts) =>
           currentPosts.map((post) =>
@@ -288,7 +288,7 @@ export const Home = () => {
       const vote = await submitPostVote({
         postId,
         voteType: nextVoteType,
-        userId: user.id,
+        token,
       })
 
       setPostVotesById((currentVotes) => ({
@@ -317,7 +317,7 @@ export const Home = () => {
   }
 
   const handleToggleSavePost = async (postId) => {
-    if (!user?.id) {
+    if (!token) {
       alert('Please login to save posts.')
       return
     }
@@ -336,9 +336,9 @@ export const Home = () => {
           ...currentSaved,
           [postId]: null,
         }))
-        await unsaveItem({ savedItemId: previousSavedItem.id, userId: user.id })
+        await unsaveItem({ savedItemId: previousSavedItem.id, token })
       } else {
-        const createdSavedItem = await savePost({ postId, userId: user.id })
+        const createdSavedItem = await savePost({ postId, token })
         setSavedPostsById((currentSaved) => ({
           ...currentSaved,
           [postId]: {

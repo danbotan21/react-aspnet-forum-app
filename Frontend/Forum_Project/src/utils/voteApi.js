@@ -10,13 +10,16 @@ const safeJson = async (response) => {
 export const voteValueFromDirection = (direction) =>
   direction === 'up' ? VOTE_UP : VOTE_DOWN
 
-export const fetchUserPostVotes = async (postIds, userId) => {
-  if (!userId || postIds.length === 0) return {}
+// Returns a map of postId → { id, type } for the authenticated user's votes on the given posts.
+export const fetchUserPostVotes = async (postIds, token) => {
+  if (!token || postIds.length === 0) return {}
 
   const entries = await Promise.all(
     postIds.map(async (postId) => {
       try {
-        const response = await fetch(`/api/vote/post/${postId}?userId=${userId}`)
+        const response = await fetch(`/api/vote/post/${postId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
         if (!response.ok) return [postId, { id: null, type: 0 }]
         const vote = await response.json()
         return [postId, { id: vote.id, type: vote.type }]
@@ -29,15 +32,16 @@ export const fetchUserPostVotes = async (postIds, userId) => {
   return Object.fromEntries(entries)
 }
 
-export const fetchUserCommentVotes = async (commentIds, userId) => {
-  if (!userId || commentIds.length === 0) return {}
+// Returns a map of commentId → { id, type } for the authenticated user's votes on the given comments.
+export const fetchUserCommentVotes = async (commentIds, token) => {
+  if (!token || commentIds.length === 0) return {}
 
   const entries = await Promise.all(
     commentIds.map(async (commentId) => {
       try {
-        const response = await fetch(
-          `/api/vote/comment/${commentId}?userId=${userId}`,
-        )
+        const response = await fetch(`/api/vote/comment/${commentId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
         if (!response.ok) return [commentId, { id: null, type: 0 }]
         const vote = await response.json()
         return [commentId, { id: vote.id, type: vote.type }]
@@ -50,10 +54,27 @@ export const fetchUserCommentVotes = async (commentIds, userId) => {
   return Object.fromEntries(entries)
 }
 
-export const submitPostVote = async ({ postId, voteType, userId }) => {
-  const response = await fetch(`/api/vote?userId=${userId}`, {
+// Returns all votes cast by the authenticated user (used for profile upvoted/downvoted tabs).
+export const fetchMyVotes = async (token) => {
+  if (!token) return []
+  try {
+    const response = await fetch('/api/vote/mine', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    if (!response.ok) return []
+    return response.json()
+  } catch {
+    return []
+  }
+}
+
+export const submitPostVote = async ({ postId, voteType, token }) => {
+  const response = await fetch('/api/vote', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
     body: JSON.stringify({
       postId,
       commentId: null,
@@ -69,9 +90,10 @@ export const submitPostVote = async ({ postId, voteType, userId }) => {
   return response.json()
 }
 
-export const deletePostVote = async ({ voteId, userId }) => {
-  const response = await fetch(`/api/vote/${voteId}?userId=${userId}`, {
+export const deletePostVote = async ({ voteId, token }) => {
+  const response = await fetch(`/api/vote/${voteId}`, {
     method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
   })
 
   if (!response.ok) {
@@ -80,10 +102,13 @@ export const deletePostVote = async ({ voteId, userId }) => {
   }
 }
 
-export const submitCommentVote = async ({ commentId, voteType, userId }) => {
-  const response = await fetch(`/api/vote?userId=${userId}`, {
+export const submitCommentVote = async ({ commentId, voteType, token }) => {
+  const response = await fetch('/api/vote', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
     body: JSON.stringify({
       postId: null,
       commentId,
@@ -99,9 +124,10 @@ export const submitCommentVote = async ({ commentId, voteType, userId }) => {
   return response.json()
 }
 
-export const deleteCommentVote = async ({ voteId, userId }) => {
-  const response = await fetch(`/api/vote/${voteId}?userId=${userId}`, {
+export const deleteCommentVote = async ({ voteId, token }) => {
+  const response = await fetch(`/api/vote/${voteId}`, {
     method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
   })
 
   if (!response.ok) {

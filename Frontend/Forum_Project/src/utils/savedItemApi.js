@@ -4,15 +4,16 @@ const safeJson = async (response) => {
   return JSON.parse(text)
 }
 
-export const fetchUserSavedPosts = async (postIds, userId) => {
-  if (!userId || postIds.length === 0) return {}
+// Returns a map of postId → { id, postId } for the authenticated user's saved posts.
+export const fetchUserSavedPosts = async (postIds, token) => {
+  if (!token || postIds.length === 0) return {}
 
   const entries = await Promise.all(
     postIds.map(async (postId) => {
       try {
-        const response = await fetch(
-          `/api/saveditem/post/${postId}?userId=${userId}`,
-        )
+        const response = await fetch(`/api/saveditem/post/${postId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
         if (!response.ok) return [postId, null]
         const savedItem = await response.json()
         return [postId, { id: savedItem.id, postId: savedItem.postId }]
@@ -25,10 +26,27 @@ export const fetchUserSavedPosts = async (postIds, userId) => {
   return Object.fromEntries(entries)
 }
 
-export const savePost = async ({ postId, userId }) => {
-  const response = await fetch(`/api/saveditem?userId=${userId}`, {
+// Returns all saved items for the authenticated user (used in the profile Saved tab).
+export const fetchMySavedItems = async (token) => {
+  if (!token) return []
+  try {
+    const response = await fetch('/api/saveditem/user', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    if (!response.ok) return []
+    return response.json()
+  } catch {
+    return []
+  }
+}
+
+export const savePost = async ({ postId, token }) => {
+  const response = await fetch('/api/saveditem', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
     body: JSON.stringify({
       postId,
       commentId: null,
@@ -43,13 +61,11 @@ export const savePost = async ({ postId, userId }) => {
   return response.json()
 }
 
-export const unsaveItem = async ({ savedItemId, userId }) => {
-  const response = await fetch(
-    `/api/saveditem/${savedItemId}?userId=${userId}`,
-    {
-      method: 'DELETE',
-    },
-  )
+export const unsaveItem = async ({ savedItemId, token }) => {
+  const response = await fetch(`/api/saveditem/${savedItemId}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  })
 
   if (!response.ok) {
     const payload = await safeJson(response)

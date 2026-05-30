@@ -36,8 +36,7 @@ export const Login = () => {
 
       if (response.ok) {
         const data = await response.json()
-        // Salvam token-ul si datele userului in context + localStorage
-        login(data.token, data.refreshToken, data.user)
+        login(data.token, data.user)
         // Redirect la home
         navigate('/home')
       } else if (response.status === 401) {

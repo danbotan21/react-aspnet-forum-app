@@ -72,13 +72,10 @@ export const Settings = () => {
     let response = await requestFactory(token)
     if (response.status !== 401) return response
 
-    const refreshToken = localStorage.getItem('refreshToken')
-    if (!refreshToken) return response
-
+    // Access token expired — use the httpOnly refresh token cookie to get a new one
     const refreshResponse = await fetch('/api/auth/refresh', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refreshToken }),
+      credentials: 'include',
     })
 
     if (!refreshResponse.ok) return response
@@ -86,11 +83,7 @@ export const Settings = () => {
     const refreshData = await refreshResponse.json()
     if (!refreshData?.token) return response
 
-    updateAuthTokensRef.current(
-      refreshData.token,
-      refreshData.refreshToken,
-      refreshData.user,
-    )
+    updateAuthTokensRef.current(refreshData.token, null, refreshData.user)
 
     return requestFactory(refreshData.token)
   }
@@ -313,7 +306,10 @@ export const Settings = () => {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${accessToken}`,
           },
-          body: JSON.stringify({ email: deleteEmail, password: deletePassword }),
+          body: JSON.stringify({
+            email: deleteEmail,
+            password: deletePassword,
+          }),
         }),
       )
 
@@ -324,7 +320,10 @@ export const Settings = () => {
       }
 
       if (!response.ok) {
-        const message = await readResponseError(response, 'Failed to delete account.')
+        const message = await readResponseError(
+          response,
+          'Failed to delete account.',
+        )
         setDeleteError(message)
         setIsDeletingAccount(false)
         return
@@ -754,9 +753,9 @@ export const Settings = () => {
                   <div className='settings-danger-content'>
                     <h3 className='settings-danger-title'>Delete Account</h3>
                     <p className='settings-danger-description'>
-                      Once you delete your account, there is no going back.
-                      Your posts and comments will remain but your name will
-                      become &quot;[deleted]&quot;.
+                      Once you delete your account, there is no going back. Your
+                      posts and comments will remain but your name will become
+                      &quot;[deleted]&quot;.
                     </p>
                   </div>
                   {!showDeleteForm && (
@@ -837,9 +836,7 @@ export const Settings = () => {
                         className='settings-btn settings-btn-danger'
                         disabled={isDeletingAccount}
                       >
-                        {isDeletingAccount
-                          ? 'Deleting...'
-                          : 'Confirm Delete'}
+                        {isDeletingAccount ? 'Deleting...' : 'Confirm Delete'}
                       </button>
                       <button
                         type='button'

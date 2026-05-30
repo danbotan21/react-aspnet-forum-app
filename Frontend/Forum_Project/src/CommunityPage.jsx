@@ -23,7 +23,7 @@ const getPostRoute = (communitySlug, postId) =>
 export function CommunityPage() {
   const PAGE_SIZE = 15
   const { communityname } = useParams()
-  const { user } = useAuth()
+  const { user, token } = useAuth()
   const [sortBy, setSortBy] = useState('Popular')
   const [openMorePostId, setOpenMorePostId] = useState(null)
 
@@ -175,7 +175,7 @@ export function CommunityPage() {
   ])
 
   useEffect(() => {
-    if (!user?.id) {
+    if (!token) {
       setPostVotesById({})
       return
     }
@@ -191,7 +191,7 @@ export function CommunityPage() {
 
       if (missingPostIds.length === 0) return currentVotes
 
-      fetchUserPostVotes(missingPostIds, user.id).then((votesMap) => {
+      fetchUserPostVotes(missingPostIds, token).then((votesMap) => {
         if (!cancelled) {
           setPostVotesById((prev) => ({ ...prev, ...votesMap }))
         }
@@ -206,10 +206,10 @@ export function CommunityPage() {
     return () => {
       cancelled = true
     }
-  }, [posts, user?.id])
+  }, [posts, token])
 
   useEffect(() => {
-    if (!user?.id) {
+    if (!token) {
       setSavedPostsById({})
       return
     }
@@ -225,7 +225,7 @@ export function CommunityPage() {
 
       if (missingPostIds.length === 0) return currentSaved
 
-      fetchUserSavedPosts(missingPostIds, user.id).then((savedMap) => {
+      fetchUserSavedPosts(missingPostIds, token).then((savedMap) => {
         if (!cancelled) {
           setSavedPostsById((prev) => ({ ...prev, ...savedMap }))
         }
@@ -240,7 +240,7 @@ export function CommunityPage() {
     return () => {
       cancelled = true
     }
-  }, [posts, user?.id])
+  }, [posts, token])
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -259,7 +259,7 @@ export function CommunityPage() {
   }, [])
 
   const handleToggleMembership = async () => {
-    if (!user?.id || !community?.id) {
+    if (!token || !community?.id) {
       alert(
         'Trebuie sa fii logat pentru a putea intra sau iesi dintr-o comunitate.',
       )
@@ -268,11 +268,10 @@ export function CommunityPage() {
 
     try {
       if (isMember) {
-        // Leave
-        const response = await fetch(
-          `/api/Communities/${community.id}/leave?userId=${user.id}`,
-          { method: 'DELETE' },
-        )
+        const response = await fetch(`/api/Communities/${community.id}/leave`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${token}` },
+        })
         if (response.ok) {
           const text = await response.text()
           setIsMember(false)
@@ -281,19 +280,16 @@ export function CommunityPage() {
             membersCount: Math.max(0, prev.membersCount - 1),
           }))
           window.dispatchEvent(new Event('communities-membership-updated'))
-          if (text) {
-            alert(text)
-          }
+          if (text) alert(text)
         } else {
           const errorMessage = await response.text()
           alert(errorMessage || 'Failed to leave community.')
         }
       } else {
-        // Join
-        const response = await fetch(
-          `/api/Communities/${community.id}/join?userId=${user.id}`,
-          { method: 'POST' },
-        )
+        const response = await fetch(`/api/Communities/${community.id}/join`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+        })
         if (response.ok) {
           const text = await response.text()
           setIsMember(true)
@@ -302,9 +298,7 @@ export function CommunityPage() {
             membersCount: prev.membersCount + 1,
           }))
           window.dispatchEvent(new Event('communities-membership-updated'))
-          if (text) {
-            alert(text)
-          }
+          if (text) alert(text)
         } else {
           const errorMessage = await response.text()
           alert(errorMessage || 'Failed to join community.')
@@ -335,7 +329,7 @@ export function CommunityPage() {
   const communityAvatarSrc = normalizeImageSrc(community.avatarUrl)
 
   const handlePostVote = async (postId, direction) => {
-    if (!user?.id) {
+    if (!token) {
       alert('Please login to vote.')
       return
     }
@@ -366,7 +360,7 @@ export function CommunityPage() {
       }))
 
       try {
-        await deletePostVote({ voteId: previousVote.id, userId: user.id })
+        await deletePostVote({ voteId: previousVote.id, token })
       } catch (voteError) {
         setPosts((currentPosts) =>
           currentPosts.map((post) =>
@@ -407,7 +401,7 @@ export function CommunityPage() {
       const vote = await submitPostVote({
         postId,
         voteType: nextVoteType,
-        userId: user.id,
+        token,
       })
 
       setPostVotesById((currentVotes) => ({
@@ -436,7 +430,7 @@ export function CommunityPage() {
   }
 
   const handleToggleSavePost = async (postId) => {
-    if (!user?.id) {
+    if (!token) {
       alert('Please login to save posts.')
       return
     }
@@ -455,9 +449,9 @@ export function CommunityPage() {
           ...currentSaved,
           [postId]: null,
         }))
-        await unsaveItem({ savedItemId: previousSavedItem.id, userId: user.id })
+        await unsaveItem({ savedItemId: previousSavedItem.id, token })
       } else {
-        const createdSavedItem = await savePost({ postId, userId: user.id })
+        const createdSavedItem = await savePost({ postId, token })
         setSavedPostsById((currentSaved) => ({
           ...currentSaved,
           [postId]: {

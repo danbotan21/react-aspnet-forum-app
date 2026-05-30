@@ -11,6 +11,8 @@ import { ProfileVotedTab } from './ProfileVotedTab'
 import { useAuth } from './AuthContext'
 import { normalizeImageSrc } from './utils/media'
 import { fetchUserPostsPage } from './utils/postFeedApi'
+import { fetchMySavedItems } from './utils/savedItemApi'
+import { fetchMyVotes } from './utils/voteApi'
 
 const PROFILE_TABS = [
   'Overview',
@@ -69,7 +71,7 @@ const mapPostToVotedItem = (vote, post) => {
 export function UserProfile() {
   const { username } = useParams()
   const navigate = useNavigate()
-  const { user: authUser } = useAuth()
+  const { user: authUser, token } = useAuth()
 
   const loggedUser = authUser?.userName?.trim() || ''
   const displayName = decodeURIComponent(username ?? 'guest').trim() || 'guest'
@@ -77,7 +79,11 @@ export function UserProfile() {
     loggedUser.length > 0 &&
     displayName.toLowerCase() === loggedUser.toLowerCase()
 
-  const tabs = PROFILE_TABS
+  const tabs = isOwnProfile
+    ? PROFILE_TABS
+    : PROFILE_TABS.filter(
+        (tab) => !['Saved', 'Upvoted', 'Downvoted'].includes(tab),
+      )
 
   const [activeTab, setActiveTab] = useState('Overview')
   const [profileUser, setProfileUser] = useState(null)
@@ -365,7 +371,7 @@ export function UserProfile() {
   ])
 
   useEffect(() => {
-    if (!profileUser?.id) {
+    if (!isOwnProfile || !token) {
       setSavedItems([])
       setUpvotedPosts([])
       setDownvotedPosts([])
@@ -379,17 +385,12 @@ export function UserProfile() {
       setIsProfileDataLoading(true)
 
       try {
-        const [savedResponse, votesResponse] = await Promise.all([
-          fetch(`/api/saveditem/user?userId=${profileUser.id}`),
-          fetch('/api/vote'),
+        const [fetchedSaved, allMyVotes] = await Promise.all([
+          fetchMySavedItems(token),
+          fetchMyVotes(token),
         ])
 
-        const fetchedSaved = savedResponse.ok ? await savedResponse.json() : []
-        const allVotes = votesResponse.ok ? await votesResponse.json() : []
-
-        const userPostVotes = allVotes.filter(
-          (vote) => vote.authorId === profileUser.id && Boolean(vote.postId),
-        )
+        const userPostVotes = allMyVotes.filter((vote) => Boolean(vote.postId))
 
         const savedCommentIds = [
           ...new Set(
@@ -532,7 +533,7 @@ export function UserProfile() {
     return () => {
       cancelled = true
     }
-  }, [profileUser?.id])
+  }, [isOwnProfile, token])
 
   const hasPosts = totalPostsCount > 0
   const hasComments = comments.length > 0
@@ -616,14 +617,14 @@ export function UserProfile() {
   }
 
   const handleDeletePost = async () => {
-    if (!authUser?.id || !postToDeleteId) return
+    if (!token || !postToDeleteId) return
     setIsDeletingPost(true)
     setDeletePostError('')
     try {
-      const response = await fetch(
-        `/api/posts/${postToDeleteId}?requestingUserId=${authUser.id}`,
-        { method: 'DELETE' },
-      )
+      const response = await fetch(`/api/posts/${postToDeleteId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      })
       if (!response.ok) {
         const text = await response.text()
         throw new Error(text || 'Failed to delete post.')
@@ -823,7 +824,13 @@ export function UserProfile() {
         <section className='user-profile-shell'>
           <div className='user-profile-main'>
             <section className='user-feed-card'>
-              <p style={{ textAlign: 'center', padding: '2rem', color: '#7c7c7c' }}>
+              <p
+                style={{
+                  textAlign: 'center',
+                  padding: '2rem',
+                  color: '#7c7c7c',
+                }}
+              >
                 This account has been deleted.
               </p>
             </section>
@@ -931,54 +938,55 @@ export function UserProfile() {
         </aside>
       </section>
 
-      {openMorePostId !== null && (() => {
-        const targetPost = posts.find((p) => p.id === openMorePostId)
-        const postRoute = targetPost
-          ? `/community/${encodeURIComponent(getCommunitySlug(targetPost.community))}/post/${targetPost.id}`
-          : null
+      {openMorePostId !== null &&
+        (() => {
+          const targetPost = posts.find((p) => p.id === openMorePostId)
+          const postRoute = targetPost
+            ? `/community/${encodeURIComponent(getCommunitySlug(targetPost.community))}/post/${targetPost.id}`
+            : null
 
-        return (
-          <div
-            className='pp-more-menu pp-global-menu'
-            role='menu'
-            style={{
-              position: 'fixed',
-              top: postMenuPos.top,
-              right: postMenuPos.right,
-            }}
-          >
-            <button
-              className='pp-more-item'
-              role='menuitem'
-              onClick={() => {
-                setOpenMorePostId(null)
-                if (postRoute) navigate(`${postRoute}?edit=true`)
+          return (
+            <div
+              className='pp-more-menu pp-global-menu'
+              role='menu'
+              style={{
+                position: 'fixed',
+                top: postMenuPos.top,
+                right: postMenuPos.right,
               }}
             >
-              Edit post
-            </button>
-            <button
-              className='pp-more-item'
-              role='menuitem'
-              onClick={() => setOpenMorePostId(null)}
-            >
-              Save
-            </button>
-            <button
-              className='pp-more-item pp-more-item-danger'
-              role='menuitem'
-              onClick={() => {
-                setOpenMorePostId(null)
-                setDeletePostError('')
-                setPostToDeleteId(openMorePostId)
-                setShowDeletePostModal(true)
-              }}
-            >
-              Delete
-            </button>
-          </div>
-        )
-      })()}
+              <button
+                className='pp-more-item'
+                role='menuitem'
+                onClick={() => {
+                  setOpenMorePostId(null)
+                  if (postRoute) navigate(`${postRoute}?edit=true`)
+                }}
+              >
+                Edit post
+              </button>
+              <button
+                className='pp-more-item'
+                role='menuitem'
+                onClick={() => setOpenMorePostId(null)}
+              >
+                Save
+              </button>
+              <button
+                className='pp-more-item pp-more-item-danger'
+                role='menuitem'
+                onClick={() => {
+                  setOpenMorePostId(null)
+                  setDeletePostError('')
+                  setPostToDeleteId(openMorePostId)
+                  setShowDeletePostModal(true)
+                }}
+              >
+                Delete
+              </button>
+            </div>
+          )
+        })()}
 
       {openMoreCommentId !== null &&
         (() => {

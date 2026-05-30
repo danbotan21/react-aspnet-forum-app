@@ -36,7 +36,7 @@ export const StartCommunity = () => {
   ]
 
   const navigate = useNavigate()
-  const { user } = useAuth()
+  const { user, token } = useAuth()
   const [selectedCategory, setSelectedCategory] = useState('Technology')
   const [selectedType, setSelectedType] = useState('public')
   const [selectedAvatarImageName, setSelectedAvatarImageName] = useState('')
@@ -173,10 +173,11 @@ export const StartCommunity = () => {
     }
 
     try {
-      const response = await fetch(`/api/communities?authorId=${user.id}`, {
+      const response = await fetch('/api/communities', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(payload),
       })
@@ -206,11 +207,12 @@ export const StartCommunity = () => {
 
       if (Object.keys(imageUpdatePayload).length > 0 && createdCommunity?.id) {
         const imageUpdateResponse = await fetch(
-          `/api/communities/${createdCommunity.id}?requestingUserId=${user.id}`,
+          `/api/communities/${createdCommunity.id}`,
           {
             method: 'PUT',
             headers: {
               'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
             },
             body: JSON.stringify(imageUpdatePayload),
           },

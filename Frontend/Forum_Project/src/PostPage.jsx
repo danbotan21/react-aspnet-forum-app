@@ -1,6 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { FaCaretDown, FaCaretUp, FaComment, FaEdit, FaShare, FaTrash } from 'react-icons/fa'
+import {
+  FaCaretDown,
+  FaCaretUp,
+  FaComment,
+  FaEdit,
+  FaShare,
+  FaTrash,
+} from 'react-icons/fa'
 import './Styles/PostPage.css'
 import avatar from './img/avatar.webp'
 import { normalizeImageSrc } from './utils/media'
@@ -38,7 +45,7 @@ export function PostPage() {
   const { communityname, postId } = useParams()
   const [searchParams, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
-  const { user } = useAuth()
+  const { user, token } = useAuth()
 
   const [post, setPost] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -89,12 +96,7 @@ export function PostPage() {
 
   // Auto-enter edit mode when navigated with ?edit=true
   useEffect(() => {
-    if (
-      searchParams.get('edit') === 'true' &&
-      isAuthor &&
-      post &&
-      !isEditing
-    ) {
+    if (searchParams.get('edit') === 'true' && isAuthor && post && !isEditing) {
       setEditTitle(post.title || '')
       setEditBody(post.body || '')
       setEditLinkUrl(post.linkUrl || '')
@@ -138,7 +140,8 @@ export function PostPage() {
           .map(normalizeComment)
           .sort(
             (left, right) =>
-              new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime(),
+              new Date(left.createdAt).getTime() -
+              new Date(right.createdAt).getTime(),
           )
         setComments(normalizedComments)
         setIsLoadingComments(false)
@@ -150,14 +153,14 @@ export function PostPage() {
   }, [postId])
 
   useEffect(() => {
-    if (!user?.id || !post?.id) {
+    if (!token || !post?.id) {
       setPostVote({ id: null, type: 0 })
       return
     }
 
     let cancelled = false
 
-    fetchUserPostVotes([post.id], user.id).then((votesMap) => {
+    fetchUserPostVotes([post.id], token).then((votesMap) => {
       if (!cancelled) {
         setPostVote(votesMap[post.id] || { id: null, type: 0 })
       }
@@ -166,17 +169,17 @@ export function PostPage() {
     return () => {
       cancelled = true
     }
-  }, [post?.id, user?.id])
+  }, [post?.id, token])
 
   useEffect(() => {
-    if (!user?.id || !post?.id) {
+    if (!token || !post?.id) {
       setSavedPostEntry(null)
       return
     }
 
     let cancelled = false
 
-    fetchUserSavedPosts([post.id], user.id).then((savedMap) => {
+    fetchUserSavedPosts([post.id], token).then((savedMap) => {
       if (!cancelled) {
         setSavedPostEntry(savedMap[post.id] ?? null)
       }
@@ -185,10 +188,10 @@ export function PostPage() {
     return () => {
       cancelled = true
     }
-  }, [post?.id, user?.id])
+  }, [post?.id, token])
 
   useEffect(() => {
-    if (!user?.id || comments.length === 0) {
+    if (!token || comments.length === 0) {
       setCommentVotesById({})
       return
     }
@@ -197,7 +200,7 @@ export function PostPage() {
 
     fetchUserCommentVotes(
       comments.map((comment) => comment.id),
-      user.id,
+      token,
     ).then((votesMap) => {
       if (!cancelled) {
         setCommentVotesById(votesMap)
@@ -207,7 +210,7 @@ export function PostPage() {
     return () => {
       cancelled = true
     }
-  }, [comments, user?.id])
+  }, [comments, token])
 
   useEffect(() => {
     if (!post?.communitySlug) return
@@ -282,7 +285,8 @@ export function PostPage() {
 
     for (const comment of comments) {
       const validParentId =
-        comment.parentCommentId && existingCommentIds.has(comment.parentCommentId)
+        comment.parentCommentId &&
+        existingCommentIds.has(comment.parentCommentId)
           ? comment.parentCommentId
           : 0
 
@@ -296,7 +300,8 @@ export function PostPage() {
         key,
         [...value].sort(
           (left, right) =>
-            new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime(),
+            new Date(left.createdAt).getTime() -
+            new Date(right.createdAt).getTime(),
         ),
       )
     }
@@ -312,7 +317,7 @@ export function PostPage() {
   const postImageSrc = normalizeImageSrc(post?.imageUrl ?? post?.ImageUrl)
 
   const handlePostVote = async (direction) => {
-    if (!user?.id || !post?.id) {
+    if (!token || !post?.id) {
       alert('Please login to vote.')
       return
     }
@@ -329,17 +334,23 @@ export function PostPage() {
     if (previousVoteType === nextVoteType && previousVote.id) {
       setPost((currentPost) =>
         currentPost
-          ? { ...currentPost, votes: (currentPost.votes ?? 0) - previousVoteType }
+          ? {
+              ...currentPost,
+              votes: (currentPost.votes ?? 0) - previousVoteType,
+            }
           : currentPost,
       )
       setPostVote({ id: null, type: 0 })
 
       try {
-        await deletePostVote({ voteId: previousVote.id, userId: user.id })
+        await deletePostVote({ voteId: previousVote.id, token })
       } catch (voteError) {
         setPost((currentPost) =>
           currentPost
-            ? { ...currentPost, votes: (currentPost.votes ?? 0) + previousVoteType }
+            ? {
+                ...currentPost,
+                votes: (currentPost.votes ?? 0) + previousVoteType,
+              }
             : currentPost,
         )
         setPostVote(previousVote)
@@ -363,7 +374,7 @@ export function PostPage() {
       const vote = await submitPostVote({
         postId: post.id,
         voteType: nextVoteType,
-        userId: user.id,
+        token,
       })
       setPostVote({ id: vote.id, type: vote.type })
     } catch (voteError) {
@@ -380,7 +391,7 @@ export function PostPage() {
   }
 
   const handleCommentVote = async (commentId, direction) => {
-    if (!user?.id) {
+    if (!token) {
       alert('Please login to vote.')
       return
     }
@@ -411,7 +422,7 @@ export function PostPage() {
       }))
 
       try {
-        await deleteCommentVote({ voteId: previousVote.id, userId: user.id })
+        await deleteCommentVote({ voteId: previousVote.id, token })
       } catch (voteError) {
         setComments((currentComments) =>
           currentComments.map((comment) =>
@@ -452,7 +463,7 @@ export function PostPage() {
       const vote = await submitCommentVote({
         commentId,
         voteType: nextVoteType,
-        userId: user.id,
+        token,
       })
       setCommentVotesById((currentVotes) => ({
         ...currentVotes,
@@ -483,7 +494,7 @@ export function PostPage() {
   }
 
   const handleToggleSavePost = async () => {
-    if (!user?.id || !post?.id) {
+    if (!token || !post?.id) {
       alert('Please login to save posts.')
       return
     }
@@ -495,9 +506,9 @@ export function PostPage() {
     try {
       if (previousSavedEntry?.id) {
         setSavedPostEntry(null)
-        await unsaveItem({ savedItemId: previousSavedEntry.id, userId: user.id })
+        await unsaveItem({ savedItemId: previousSavedEntry.id, token })
       } else {
-        const createdSavedItem = await savePost({ postId: post.id, userId: user.id })
+        const createdSavedItem = await savePost({ postId: post.id, token })
         setSavedPostEntry({
           id: createdSavedItem.id,
           postId: createdSavedItem.postId,
@@ -554,7 +565,7 @@ export function PostPage() {
   }
 
   const handleSaveEdit = async () => {
-    if (!user?.id || !post?.id) return
+    if (!token || !post?.id) return
 
     const trimmedTitle = editTitle.trim()
     if (!trimmedTitle) {
@@ -574,19 +585,19 @@ export function PostPage() {
         finalImageUrl = null
       }
 
-      const response = await fetch(
-        `/api/posts/${post.id}?requestingUserId=${user.id}`,
-        {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            title: trimmedTitle,
-            body: editBody.trim() || null,
-            imageUrl: finalImageUrl,
-            linkUrl: editLinkUrl.trim() || null,
-          }),
+      const response = await fetch(`/api/posts/${post.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
         },
-      )
+        body: JSON.stringify({
+          title: trimmedTitle,
+          body: editBody.trim() || null,
+          imageUrl: finalImageUrl,
+          linkUrl: editLinkUrl.trim() || null,
+        }),
+      })
 
       if (!response.ok) {
         const text = await response.text()
@@ -608,14 +619,14 @@ export function PostPage() {
   }
 
   const handleDeletePost = async () => {
-    if (!user?.id || !post?.id) return
+    if (!token || !post?.id) return
     setIsDeletingPost(true)
     setDeletePostError('')
     try {
-      const response = await fetch(
-        `/api/posts/${post.id}?requestingUserId=${user.id}`,
-        { method: 'DELETE' },
-      )
+      const response = await fetch(`/api/posts/${post.id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      })
       if (!response.ok) {
         const text = await response.text()
         throw new Error(text || 'Failed to delete post.')
@@ -628,7 +639,7 @@ export function PostPage() {
   }
 
   const handleCreateComment = async (parentCommentId = null) => {
-    if (!user?.id) {
+    if (!token) {
       alert('Please login to comment.')
       return
     }
@@ -639,7 +650,7 @@ export function PostPage() {
     }
 
     const draft = parentCommentId
-      ? replyDraftByCommentId[parentCommentId] ?? ''
+      ? (replyDraftByCommentId[parentCommentId] ?? '')
       : newCommentText
     const trimmedComment = draft.trim()
     if (!trimmedComment) return
@@ -654,10 +665,11 @@ export function PostPage() {
     }
 
     try {
-      const response = await fetch(`/api/comments?authorId=${user.id}`, {
+      const response = await fetch('/api/comments', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           body: trimmedComment,
@@ -667,7 +679,10 @@ export function PostPage() {
       })
 
       if (!response.ok) {
-        const message = await parseErrorText(response, 'Failed to create comment')
+        const message = await parseErrorText(
+          response,
+          'Failed to create comment',
+        )
         throw new Error(message)
       }
 
@@ -683,12 +698,18 @@ export function PostPage() {
       )
 
       if (parentCommentId) {
-        setReplyDraftByCommentId((current) => ({ ...current, [parentCommentId]: '' }))
+        setReplyDraftByCommentId((current) => ({
+          ...current,
+          [parentCommentId]: '',
+        }))
         setOpenReplyBoxByCommentId((current) => ({
           ...current,
           [parentCommentId]: false,
         }))
-        setExpandedCommentIds((current) => ({ ...current, [parentCommentId]: true }))
+        setExpandedCommentIds((current) => ({
+          ...current,
+          [parentCommentId]: true,
+        }))
       } else {
         setNewCommentText('')
       }
@@ -785,7 +806,9 @@ export function PostPage() {
                   [comment.id]: !current[comment.id],
                 }))
               }
-              disabled={!user?.id || (isMembershipResolved && !isCommunityMember)}
+              disabled={
+                !user?.id || (isMembershipResolved && !isCommunityMember)
+              }
             >
               Reply
             </button>
@@ -892,7 +915,9 @@ export function PostPage() {
                 className='post-page-avatar'
               />
               <div className='post-page-meta'>
-                <Link to={`/community/${encodeURIComponent(post.communitySlug)}`}>
+                <Link
+                  to={`/community/${encodeURIComponent(post.communitySlug)}`}
+                >
                   r/{post.communitySlug}
                 </Link>
                 <span>&middot;</span>
@@ -910,9 +935,7 @@ export function PostPage() {
 
             {isEditing ? (
               <div className='post-edit-form'>
-                {editError && (
-                  <p className='post-edit-error'>{editError}</p>
-                )}
+                {editError && <p className='post-edit-error'>{editError}</p>}
                 <label className='post-edit-label' htmlFor='edit-title'>
                   Title
                 </label>
@@ -1112,69 +1135,71 @@ export function PostPage() {
           </article>
 
           {!isEditing && (
-          <section className='post-comments'>
-            <h2>Comments</h2>
-            <div style={{ marginBottom: '12px' }}>
-              <textarea
-                rows={3}
-                placeholder={
-                  !user?.id
-                    ? 'Login to comment...'
-                    : isMembershipResolved && !isCommunityMember
-                      ? 'Join community to comment...'
-                      : 'Write a comment...'
-                }
-                value={newCommentText}
-                onChange={(event) => setNewCommentText(event.target.value)}
-                disabled={!user?.id || (isMembershipResolved && !isCommunityMember)}
-                style={{
-                  width: '100%',
-                  maxWidth: '100%',
-                  boxSizing: 'border-box',
-                  borderRadius: '8px',
-                  border: '1px solid #d7e1ef',
-                  padding: '10px',
-                  resize: 'vertical',
-                }}
-              />
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'flex-end',
-                  marginTop: '8px',
-                }}
-              >
-                <button
-                  type='button'
-                  className='post-chip post-comment-submit'
-                  onClick={() => handleCreateComment(null)}
-                  disabled={
-                    isSubmittingComment ||
-                    !user?.id ||
-                    (isMembershipResolved && !isCommunityMember)
+            <section className='post-comments'>
+              <h2>Comments</h2>
+              <div style={{ marginBottom: '12px' }}>
+                <textarea
+                  rows={3}
+                  placeholder={
+                    !user?.id
+                      ? 'Login to comment...'
+                      : isMembershipResolved && !isCommunityMember
+                        ? 'Join community to comment...'
+                        : 'Write a comment...'
                   }
+                  value={newCommentText}
+                  onChange={(event) => setNewCommentText(event.target.value)}
+                  disabled={
+                    !user?.id || (isMembershipResolved && !isCommunityMember)
+                  }
+                  style={{
+                    width: '100%',
+                    maxWidth: '100%',
+                    boxSizing: 'border-box',
+                    borderRadius: '8px',
+                    border: '1px solid #d7e1ef',
+                    padding: '10px',
+                    resize: 'vertical',
+                  }}
+                />
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'flex-end',
+                    marginTop: '8px',
+                  }}
                 >
-                  {!user?.id
-                    ? 'Login to comment'
-                    : isMembershipResolved && !isCommunityMember
-                      ? 'Join to comment'
-                      : isSubmittingComment
-                        ? 'Posting...'
-                        : 'Comment'}
-                </button>
+                  <button
+                    type='button'
+                    className='post-chip post-comment-submit'
+                    onClick={() => handleCreateComment(null)}
+                    disabled={
+                      isSubmittingComment ||
+                      !user?.id ||
+                      (isMembershipResolved && !isCommunityMember)
+                    }
+                  >
+                    {!user?.id
+                      ? 'Login to comment'
+                      : isMembershipResolved && !isCommunityMember
+                        ? 'Join to comment'
+                        : isSubmittingComment
+                          ? 'Posting...'
+                          : 'Comment'}
+                  </button>
+                </div>
               </div>
-            </div>
 
-            {isLoadingComments ? (
-              <p>Loading comments...</p>
-            ) : comments.length === 0 ? (
-              <p>No comments yet.</p>
-            ) : (
-              topLevelComments.map((topLevelComment) =>
-                renderCommentThread(topLevelComment, 0),
-              )
-            )}
-          </section>
+              {isLoadingComments ? (
+                <p>Loading comments...</p>
+              ) : comments.length === 0 ? (
+                <p>No comments yet.</p>
+              ) : (
+                topLevelComments.map((topLevelComment) =>
+                  renderCommentThread(topLevelComment, 0),
+                )
+              )}
+            </section>
           )}
         </div>
 

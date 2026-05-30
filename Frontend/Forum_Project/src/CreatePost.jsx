@@ -7,7 +7,7 @@ import './Styles/CreatePost.css'
 
 export const CreatePost = () => {
   const navigate = useNavigate()
-  const { user } = useAuth()
+  const { user, token } = useAuth()
   const [activeTab, setActiveTab] = useState('Text')
   const [isDraftsOpen, setIsDraftsOpen] = useState(false)
   const [dragActive, setDragActive] = useState(false)
@@ -127,7 +127,9 @@ export const CreatePost = () => {
     setIsLoadingDrafts(true)
     setDraftsError('')
 
-    fetch(`/api/draft/user?authorId=${user.id}`)
+    fetch('/api/draft/user', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
       .then((res) => {
         if (!res.ok) throw new Error('Failed to load drafts')
         return res.json()
@@ -141,7 +143,7 @@ export const CreatePost = () => {
       .finally(() => {
         setIsLoadingDrafts(false)
       })
-  }, [isDraftsOpen, user?.id])
+  }, [isDraftsOpen, token])
 
   // Fetch only communities where the current user is a member
   useEffect(() => {
@@ -162,7 +164,7 @@ export const CreatePost = () => {
   }, [user?.id])
 
   const handleSaveDraft = async () => {
-    if (!user?.id) {
+    if (!token) {
       alert('Please login to save drafts.')
       return
     }
@@ -199,18 +201,16 @@ export const CreatePost = () => {
         return
       }
 
-      const createDraftResponse = await fetch(
-        `/api/draft?authorId=${user.id}`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            postId: matchingPost.id,
-          }),
+      const createDraftResponse = await fetch('/api/draft', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
         },
-      )
+        body: JSON.stringify({
+          postId: matchingPost.id,
+        }),
+      })
 
       if (!createDraftResponse.ok) {
         throw new Error('Failed to save draft')
@@ -231,15 +231,13 @@ export const CreatePost = () => {
   }
 
   const handleDeleteDraft = async (draftId) => {
-    if (!user?.id) return
+    if (!token) return
 
     try {
-      const response = await fetch(
-        `/api/draft/${draftId}?authorId=${user.id}`,
-        {
-          method: 'DELETE',
-        },
-      )
+      const response = await fetch(`/api/draft/${draftId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      })
 
       if (!response.ok) {
         throw new Error('Failed to delete draft')
@@ -268,7 +266,7 @@ export const CreatePost = () => {
   }
 
   const handleSubmit = async () => {
-    if (!user?.id) {
+    if (!token) {
       alert('Please login to create a post.')
       return
     }
@@ -313,10 +311,11 @@ export const CreatePost = () => {
     }
 
     try {
-      const response = await fetch(`/api/posts?authorId=${user.id}`, {
+      const response = await fetch('/api/posts', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(postData),
       })
