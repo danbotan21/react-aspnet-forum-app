@@ -15,6 +15,7 @@ import {
 import { fetchUserSavedPosts, savePost, unsaveItem } from './utils/savedItemApi'
 import { fetchCommunityPostsPage } from './utils/postFeedApi'
 import { fetchMyRole } from './utils/modApi'
+import { ReportModal } from './ReportModal'
 
 const SORT_OPTIONS = ['Popular', 'New', 'Top']
 
@@ -33,6 +34,7 @@ export function CommunityPage() {
   const [error, setError] = useState(null)
   const [isMember, setIsMember] = useState(false)
   const [myRole, setMyRole] = useState(null)
+  const [reportingPost, setReportingPost] = useState(null)
 
   const [posts, setPosts] = useState([])
   const [isLoadingPosts, setIsLoadingPosts] = useState(true)
@@ -640,12 +642,19 @@ export function CommunityPage() {
                                   ? 'Unsave'
                                   : 'Save'}
                               </button>
-                              <button
-                                className='more-menu-item more-menu-danger'
-                                role='menuitem'
-                              >
-                                Report
-                              </button>
+                              {post.authorName !== user?.userName && (
+                                <button
+                                  className='more-menu-item more-menu-danger'
+                                  role='menuitem'
+                                  onClick={() => {
+                                    setOpenMorePostId(null)
+                                    if (!token) { alert('Please log in to report.'); return }
+                                    setReportingPost({ id: post.id })
+                                  }}
+                                >
+                                  Report
+                                </button>
+                              )}
                             </div>
                           )}
                         </div>
@@ -790,6 +799,16 @@ export function CommunityPage() {
           </section>
         </aside>
       </section>
+
+      {reportingPost && (
+        <ReportModal
+          type={0}
+          reportedItemId={reportingPost.id}
+          label='Post'
+          token={token}
+          onClose={() => setReportingPost(null)}
+        />
+      )}
     </main>
   )
 }

@@ -5,6 +5,7 @@ import {
   FaCaretUp,
   FaComment,
   FaEdit,
+  FaFlag,
   FaShare,
   FaTrash,
 } from 'react-icons/fa'
@@ -23,6 +24,7 @@ import {
 } from './utils/voteApi'
 import { fetchUserSavedPosts, savePost, unsaveItem } from './utils/savedItemApi'
 import { uploadImage } from './utils/imageUpload'
+import { ReportModal } from './ReportModal'
 
 const normalizeComment = (rawComment) => ({
   id: rawComment.id ?? rawComment.ID,
@@ -71,6 +73,7 @@ export function PostPage() {
   const [isPostSavePending, setIsPostSavePending] = useState(false)
   const [isCommunityMember, setIsCommunityMember] = useState(false)
   const [isMembershipResolved, setIsMembershipResolved] = useState(false)
+  const [reportTarget, setReportTarget] = useState(null) // { type: 0|1, id, label }
   const [isCommunityOwner, setIsCommunityOwner] = useState(false)
 
   const [showDeletePostModal, setShowDeletePostModal] = useState(false)
@@ -865,6 +868,18 @@ export function PostPage() {
               </button>
             )}
 
+            {user && !isOwnComment && (
+              <button
+                type='button'
+                className='post-chip post-comment-inline-btn post-chip-danger'
+                onClick={() =>
+                  setReportTarget({ type: 1, id: comment.id, label: 'Comment' })
+                }
+              >
+                <FaFlag /> Report
+              </button>
+            )}
+
             {isOwnComment &&
               (confirmDeleteCommentId === comment.id ? (
                 <span className='post-comment-delete-confirm'>
@@ -1197,6 +1212,15 @@ export function PostPage() {
               <button type='button' className='post-chip'>
                 <FaShare /> Share
               </button>
+              {user && post?.authorName !== user?.userName && (
+                <button
+                  type='button'
+                  className='post-chip post-chip-danger'
+                  onClick={() => setReportTarget({ type: 0, id: post.id, label: 'Post' })}
+                >
+                  <FaFlag /> Report
+                </button>
+              )}
             </footer>
           </article>
 
@@ -1310,6 +1334,16 @@ export function PostPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {reportTarget && (
+        <ReportModal
+          type={reportTarget.type}
+          reportedItemId={reportTarget.id}
+          label={reportTarget.label}
+          token={token}
+          onClose={() => setReportTarget(null)}
+        />
       )}
     </main>
   )

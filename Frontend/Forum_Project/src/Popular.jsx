@@ -13,6 +13,7 @@ import {
 } from './utils/voteApi'
 import { fetchUserSavedPosts, savePost, unsaveItem } from './utils/savedItemApi'
 import { fetchPostsPage } from './utils/postFeedApi'
+import { ReportModal } from './ReportModal'
 
 const getPostRoute = (post) =>
   `/community/${encodeURIComponent(post.communitySlug)}/post/${post.id}`
@@ -21,6 +22,7 @@ export const Popular = () => {
   const PAGE_SIZE = 15
   const { user, token } = useAuth()
   const [openMorePostId, setOpenMorePostId] = useState(null)
+  const [reportingPost, setReportingPost] = useState(null)
   const [posts, setPosts] = useState([])
   const [loading, setLoading] = useState(true)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
@@ -415,12 +417,19 @@ export const Popular = () => {
                           >
                             {savedPostsById[post.id]?.id ? 'Unsave' : 'Save'}
                           </button>
-                          <button
-                            className='more-menu-item more-menu-danger'
-                            role='menuitem'
-                          >
-                            Report
-                          </button>
+                          {post.authorName !== user?.userName && (
+                            <button
+                              className='more-menu-item more-menu-danger'
+                              role='menuitem'
+                              onClick={() => {
+                                setOpenMorePostId(null)
+                                if (!token) { alert('Please log in to report.'); return }
+                                setReportingPost({ id: post.id })
+                              }}
+                            >
+                              Report
+                            </button>
+                          )}
                         </div>
                       )}
                     </div>
@@ -520,6 +529,16 @@ export const Popular = () => {
           </>
         )}
       </div>
+
+      {reportingPost && (
+        <ReportModal
+          type={0}
+          reportedItemId={reportingPost.id}
+          label='Post'
+          token={token}
+          onClose={() => setReportingPost(null)}
+        />
+      )}
     </div>
   )
 }

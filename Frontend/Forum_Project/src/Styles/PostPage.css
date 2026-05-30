@@ -432,6 +432,16 @@
   cursor: not-allowed;
 }
 
+.post-chip-danger {
+  color: #e74c3c;
+}
+
+.post-chip-danger:hover {
+  background: #fff0ef;
+  border-color: #f5a9a3;
+  color: #c0392b;
+}
+
 .post-comment-delete-btn {
   color: #b91c1c;
   opacity: 0.75;

@@ -35,6 +35,11 @@ import {
   unbanMember,
   transferOwnership,
 } from './utils/modApi'
+import {
+  fetchCommunityReports,
+  dismissReport,
+  removeReportedContent,
+} from './utils/reportApi'
 import './Styles/CommunityModPage.css'
 
 // ─── MOCK DATA (Reports, Pinned, ModLog — backend pending) ───────────────────
@@ -108,7 +113,7 @@ const MAX_PINS = 3
 
 const NAV_ITEMS = [
   { id: 'overview',  label: 'Overview',           icon: FaChartBar },
-  { id: 'reports',   label: 'Reports',             icon: FaFlag, badge: MOCK_REPORTS.length },
+  { id: 'reports',   label: 'Reports',             icon: FaFlag },
   { id: 'members',   label: 'Members',             icon: FaUsers },
   { id: 'banned',    label: 'Banned Members',      icon: FaBan },
   { id: 'pinned',    label: 'Pinned Posts',        icon: FaThumbtack },
@@ -179,7 +184,7 @@ function ErrorState({ message }) {
 
 // ─── OVERVIEW TAB ────────────────────────────────────────────────────────────
 
-function OverviewTab({ communityId, token, onNavigate }) {
+function OverviewTab({ communityId, token, onNavigate, pendingReportsCount }) {
   const [stats, setStats] = useState(null)
   const [loadingStats, setLoadingStats] = useState(true)
 
@@ -191,7 +196,7 @@ function OverviewTab({ communityId, token, onNavigate }) {
       .finally(() => setLoadingStats(false))
   }, [communityId, token])
 
-  const pendingReports = MOCK_REPORTS.length
+  const pendingReports = pendingReportsCount
 
   return (
     <div className='mod-tab-content'>
@@ -281,15 +286,52 @@ function OverviewTab({ communityId, token, onNavigate }) {
   )
 }
 
-// ─── REPORTS TAB (mock — backend integration pending) ────────────────────────
+// ─── REPORTS TAB ─────────────────────────────────────────────────────────────
 
-function ReportsTab() {
-  const [filter, setFilter] = useState('All')
-  const [reports, setReports] = useState(MOCK_REPORTS)
+function ReportsTab({ communityId, token, communityname, onCountChange }) {
+  const [reports, setReports]   = useState([])
+  const [loading, setLoading]   = useState(true)
+  const [error, setError]       = useState(null)
+  const [filter, setFilter]     = useState('All')
+  const [pending, setPending]   = useState({})
 
-  const filtered = filter === 'All' ? reports : reports.filter((r) => r.type === filter)
-  const handleDismiss = (id) => setReports((prev) => prev.filter((r) => r.id !== id))
-  const handleRemove  = (id) => setReports((prev) => prev.filter((r) => r.id !== id))
+  const load = async () => {
+    try {
+      setLoading(true); setError(null)
+      const data = await fetchCommunityReports(communityId, token)
+      setReports(data)
+      onCountChange?.(data.length)
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (communityId && token) load()
+  }, [communityId, token])
+
+  const withPending = async (id, fn) => {
+    if (pending[id]) return
+    setPending((p) => ({ ...p, [id]: true }))
+    try { await fn(); await load() }
+    catch (e) { alert(e.message) }
+    finally { setPending((p) => ({ ...p, [id]: false })) }
+  }
+
+  const handleDismiss = (id) => withPending(id, () => dismissReport(id, token))
+  const handleRemove  = (id) => {
+    if (!window.confirm('Remove this content permanently? This cannot be undone.')) return
+    withPending(id, () => removeReportedContent(id, token))
+  }
+
+  const filtered = filter === 'All' ? reports : reports.filter((r) => r.typeName === filter)
+
+  const viewUrl = (r) => {
+    const base = `/community/${communityname}/post/${r.postId ?? r.reportedItemId}`
+    return r.typeName === 'Comment' ? `${base}` : base
+  }
 
   return (
     <div className='mod-tab-content'>
@@ -300,69 +342,82 @@ function ReportsTab() {
         </p>
       </div>
 
-      <div className='mod-filter-bar'>
-        {['All', 'Post', 'Comment'].map((f) => (
-          <button
-            key={f}
-            className={`mod-filter-btn ${filter === f ? 'mod-filter-active' : ''}`}
-            onClick={() => setFilter(f)}
-          >
-            {f}
-            {f === 'All' && reports.length > 0 && (
-              <span className='mod-filter-count'>{reports.length}</span>
-            )}
-          </button>
-        ))}
-      </div>
-
-      {filtered.length === 0 ? (
-        <div className='mod-empty-state'>
-          <FaCheck className='mod-empty-icon' />
-          <p>No pending reports. The community is clean!</p>
-        </div>
-      ) : (
-        <div className='mod-report-list'>
-          {filtered.map((report) => (
-            <div key={report.id} className='mod-report-card'>
-              <div className='mod-report-header'>
-                <TypeBadge type={report.type} />
-                <span className='mod-report-reason'>
-                  <FaExclamationTriangle className='mod-reason-icon' /> {report.reason}
-                </span>
-                <span className='mod-report-date'>{report.createdAt}</span>
-              </div>
-              {report.title && <h4 className='mod-report-title'>{report.title}</h4>}
-              <div className='mod-report-body'>
-                <p className='mod-report-preview'>{report.contentPreview}</p>
-                {report.type === 'Post' && report.hasImage && (
-                  <div className='mod-report-image-thumb'>
-                    <div className='mod-report-image-placeholder' />
-                    <span className='mod-report-image-label'>Post contains an image</span>
-                  </div>
+      {loading ? <LoadingState /> : error ? <ErrorState message={error} /> : (
+        <>
+          <div className='mod-filter-bar'>
+            {['All', 'Post', 'Comment'].map((f) => (
+              <button
+                key={f}
+                className={`mod-filter-btn ${filter === f ? 'mod-filter-active' : ''}`}
+                onClick={() => setFilter(f)}
+              >
+                {f}
+                {f === 'All' && reports.length > 0 && (
+                  <span className='mod-filter-count'>{reports.length}</span>
                 )}
-              </div>
-              <div className='mod-report-meta'>
-                <span>Reported by: <strong>u/{report.reporter}</strong></span>
-                <span className='mod-meta-sep'>·</span>
-                <span>Author: <strong>u/{report.reportedUser}</strong></span>
-              </div>
-              <div className='mod-report-actions'>
-                <Link to={report.viewUrl} className='mod-btn mod-btn-ghost mod-btn-sm'>
-                  {report.type === 'Post' ? 'View Post →' : 'View Comment →'}
-                </Link>
-                <button className='mod-btn mod-btn-ghost' onClick={() => handleDismiss(report.id)}>
-                  <FaTimes /> Dismiss
-                </button>
-                <button className='mod-btn mod-btn-warning'>
-                  <FaExclamationTriangle /> Warn User
-                </button>
-                <button className='mod-btn mod-btn-danger' onClick={() => handleRemove(report.id)}>
-                  <FaTrash /> Remove Content
-                </button>
-              </div>
+              </button>
+            ))}
+          </div>
+
+          {filtered.length === 0 ? (
+            <div className='mod-empty-state'>
+              <FaCheck className='mod-empty-icon' />
+              <p>No pending reports. The community is clean!</p>
             </div>
-          ))}
-        </div>
+          ) : (
+            <div className='mod-report-list'>
+              {filtered.map((report) => (
+                <div key={report.id} className='mod-report-card'>
+                  <div className='mod-report-header'>
+                    <TypeBadge type={report.typeName} />
+                    <span className='mod-report-reason'>
+                      <FaExclamationTriangle className='mod-reason-icon' /> {report.reason}
+                    </span>
+                    <span className='mod-report-date'>
+                      {new Date(report.createdAt).toLocaleDateString()}
+                    </span>
+                  </div>
+                  {report.postTitle && <h4 className='mod-report-title'>{report.postTitle}</h4>}
+                  <div className='mod-report-body'>
+                    {report.contentPreview && (
+                      <p className='mod-report-preview'>{report.contentPreview}</p>
+                    )}
+                    {report.typeName === 'Post' && report.hasImage && (
+                      <div className='mod-report-image-thumb'>
+                        <div className='mod-report-image-placeholder' />
+                        <span className='mod-report-image-label'>Post contains an image</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className='mod-report-meta'>
+                    <span>Reported by: <strong>u/{report.reporterUserName}</strong></span>
+                    <span className='mod-meta-sep'>·</span>
+                    <span>Author: <strong>u/{report.contentAuthorUserName}</strong></span>
+                  </div>
+                  <div className='mod-report-actions'>
+                    <Link to={viewUrl(report)} className='mod-btn mod-btn-ghost mod-btn-sm'>
+                      {report.typeName === 'Post' ? 'View Post →' : 'View Comment →'}
+                    </Link>
+                    <button
+                      className='mod-btn mod-btn-ghost'
+                      onClick={() => handleDismiss(report.id)}
+                      disabled={pending[report.id]}
+                    >
+                      <FaTimes /> Dismiss
+                    </button>
+                    <button
+                      className='mod-btn mod-btn-danger'
+                      onClick={() => handleRemove(report.id)}
+                      disabled={pending[report.id]}
+                    >
+                      <FaTrash /> Remove Content
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
       )}
     </div>
   )
@@ -1172,6 +1227,7 @@ export function CommunityModPage() {
   const [communityId, setCommunityId] = useState(null)
   const [myRole, setMyRole] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [pendingReportsCount, setPendingReportsCount] = useState(0)
 
   useEffect(() => {
     const load = async () => {
@@ -1185,6 +1241,10 @@ export function CommunityModPage() {
           setMyRole(role)
           if (role !== 'owner' && role !== 'moderator') {
             navigate(`/community/${communityname}`)
+          } else {
+            fetchCommunityReports(data.id, token)
+              .then((reps) => setPendingReportsCount(reps.length))
+              .catch(() => {})
           }
         } else {
           navigate(`/community/${communityname}`)
@@ -1205,8 +1265,8 @@ export function CommunityModPage() {
   const renderContent = () => {
     if (loading) return <LoadingState />
     switch (activeTab) {
-      case 'overview': return <OverviewTab communityId={communityId} token={token} onNavigate={setActiveTab} />
-      case 'reports':  return <ReportsTab />
+      case 'overview': return <OverviewTab communityId={communityId} token={token} onNavigate={setActiveTab} pendingReportsCount={pendingReportsCount} />
+      case 'reports':  return <ReportsTab communityId={communityId} token={token} communityname={communityname} onCountChange={setPendingReportsCount} />
       case 'members':  return <MembersTab communityId={communityId} token={token} myRole={myRole} />
       case 'banned':   return <BannedMembersTab communityId={communityId} token={token} />
       case 'pinned':   return <PinnedTab />
@@ -1220,7 +1280,7 @@ export function CommunityModPage() {
         />
       )
       case 'modlog':   return <ModLogTab />
-      default:         return <OverviewTab communityId={communityId} token={token} onNavigate={setActiveTab} />
+      default:         return <OverviewTab communityId={communityId} token={token} onNavigate={setActiveTab} pendingReportsCount={pendingReportsCount} />
     }
   }
 
@@ -1251,7 +1311,9 @@ export function CommunityModPage() {
               >
                 <Icon className='mod-nav-icon' />
                 <span>{item.label}</span>
-                {item.badge && <span className='mod-nav-badge'>{item.badge}</span>}
+                {item.id === 'reports' && pendingReportsCount > 0 && (
+                  <span className='mod-nav-badge'>{pendingReportsCount}</span>
+                )}
               </button>
             )
           })}
