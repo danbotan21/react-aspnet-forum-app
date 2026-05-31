@@ -9,6 +9,7 @@ import {
   FaEnvelopeOpenText,
 } from 'react-icons/fa'
 import { useNotifications } from './NotificationContext'
+import { normalizeImageSrc } from './utils/media'
 import './Styles/Notification.css'
 
 const TYPE_CONFIG = {
@@ -60,6 +61,12 @@ const TYPE_CONFIG = {
     color: '#0f43c7',
     bg: 'rgba(15, 67, 199, 0.11)',
   },
+  KickedFromCommunity: {
+    label: 'Kicked from Community',
+    Icon: FaBan,
+    color: '#dc2626',
+    bg: 'rgba(220, 38, 38, 0.11)',
+  },
 }
 
 const FALLBACK_CONFIG = {
@@ -95,7 +102,7 @@ const ActorAvatar = ({ actorUsername, actorAvatarUrl, color }) => {
   if (actorAvatarUrl) {
     return (
       <img
-        src={actorAvatarUrl}
+        src={normalizeImageSrc(actorAvatarUrl) || actorAvatarUrl}
         alt={actorUsername}
         className='notif-actor-avatar'
       />

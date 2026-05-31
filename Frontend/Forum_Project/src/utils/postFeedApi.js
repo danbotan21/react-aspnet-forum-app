@@ -1,3 +1,5 @@
+import { apiFetch } from '../AuthContext'
+
 const buildQueryString = (params) => {
   const searchParams = new URLSearchParams()
   Object.entries(params).forEach(([key, value]) => {
@@ -32,8 +34,7 @@ const parsePostBatch = (payload, fallbackPage, fallbackPageSize) => {
 
 export const fetchPostsPage = async ({ sortBy, page, pageSize, token }) => {
   const query = buildQueryString({ sortBy, page, pageSize })
-  const headers = token ? { Authorization: `Bearer ${token}` } : {}
-  const response = await fetch(`/api/posts?${query}`, { headers })
+  const response = await apiFetch(`/api/posts?${query}`)
   if (!response.ok) {
     throw new Error(`Failed to load posts (${response.status})`)
   }
@@ -49,8 +50,7 @@ export const fetchCommunityPostsPage = async ({
   token,
 }) => {
   const query = buildQueryString({ sortBy, page, pageSize })
-  const headers = token ? { Authorization: `Bearer ${token}` } : {}
-  const response = await fetch(`/api/posts/community/${communityId}?${query}`, { headers })
+  const response = await apiFetch(`/api/posts/community/${communityId}?${query}`)
   if (!response.ok) {
     throw new Error(`Failed to load community posts (${response.status})`)
   }
@@ -58,9 +58,9 @@ export const fetchCommunityPostsPage = async ({
   return parsePostBatch(payload, page, pageSize)
 }
 
-export const fetchUserPostsPage = async ({ userId, page, pageSize }) => {
+export const fetchUserPostsPage = async ({ userId, page, pageSize, token }) => {
   const query = buildQueryString({ page, pageSize })
-  const response = await fetch(`/api/posts/user/${userId}?${query}`)
+  const response = await apiFetch(`/api/posts/user/${userId}?${query}`)
   if (!response.ok) {
     throw new Error(`Failed to load user posts (${response.status})`)
   }

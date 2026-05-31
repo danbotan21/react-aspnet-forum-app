@@ -416,11 +416,13 @@ export const Popular = () => {
               <article className='post' key={post.id}>
                 <div className='post-main'>
                   <header className='post-header'>
-                    <img
-                      src={avatar}
-                      alt='Community Avatar'
-                      className='avatar'
-                    />
+                    <Link to={`/community/${encodeURIComponent(post.communitySlug)}`}>
+                      <img
+                        src={normalizeImageSrc(post.communityAvatarUrl) || avatar}
+                        alt='Community Avatar'
+                        className='avatar'
+                      />
+                    </Link>
                     <div className='post-meta'>
                       <Link
                         to={`/community/${encodeURIComponent(post.communitySlug)}`}

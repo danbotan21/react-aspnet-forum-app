@@ -756,7 +756,7 @@ export function CommunityPage() {
                               to={`/user/${encodeURIComponent(post.authorName)}`}
                             >
                               <img
-                                src={avatar}
+                                src={normalizeImageSrc(post.authorAvatarUrl) || avatar}
                                 alt={post.authorName}
                                 className='avatar'
                               />
@@ -943,12 +943,15 @@ export function CommunityPage() {
                             />
                           </div>
 
-                          <button type='button' className='action-chip'>
+                          <Link
+                            to={getPostRoute(community.slug, post.id)}
+                            className='action-chip'
+                          >
                             <FaComment className='comment-icon' />
                             <span className='comment-count'>
                               {post.commentsCount}
                             </span>
-                          </button>
+                          </Link>
 
                           <button type='button' className='action-chip'>
                             <FaShare className='share-icon' />

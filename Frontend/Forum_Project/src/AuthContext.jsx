@@ -3,29 +3,82 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
 } from 'react'
 
 const AuthContext = createContext(null)
 
+let _tokenRef = null
+let _userRef = null
+let _refreshFn = null
+let _logoutFn = null
+
+export const apiFetch = async (url, options = {}) => {
+  const headers = new Headers(options.headers || {})
+
+  if (_tokenRef) {
+    headers.set('Authorization', `Bearer ${_tokenRef}`)
+  }
+
+  if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(options.method?.toUpperCase() || '')) {
+    if (!headers.has('Content-Type') && options.body && typeof options.body === 'string') {
+      headers.set('Content-Type', 'application/json')
+    }
+  }
+
+  let response = await fetch(url, {
+    ...options,
+    headers,
+    credentials: options.credentials ?? 'include',
+  })
+
+  if (response.status === 401 && _tokenRef && _refreshFn) {
+    const newToken = await _refreshFn()
+    if (newToken) {
+      headers.set('Authorization', `Bearer ${newToken}`)
+      response = await fetch(url, {
+        ...options,
+        headers,
+        credentials: options.credentials ?? 'include',
+      })
+    } else if (_logoutFn) {
+      _logoutFn()
+    }
+  }
+
+  return response
+}
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null)
   const [token, setToken] = useState(null) // In-memory only — never stored in localStorage
   const [loading, setLoading] = useState(true)
+  const userRef = useRef(null)
+  const tokenRef = useRef(null)
+  const logoutRef = useRef(null)
 
   // On mount: attempt silent re-auth using the httpOnly refresh token cookie.
   // If the cookie is valid the backend returns a fresh access token.
   useEffect(() => {
+    const applyAuth = (data) => {
+      if (data?.token && data?.user) {
+        setToken(data.token)
+        setUser(data.user)
+        tokenRef.current = data.token
+        userRef.current = data.user
+        _tokenRef = data.token
+        _userRef = data.user
+        localStorage.setItem('user', JSON.stringify(data.user))
+      } else {
+        localStorage.removeItem('user')
+      }
+    }
+
     const silentRefresh = () => {
       fetch('/api/auth/refresh', { method: 'POST', credentials: 'include' })
         .then((res) => (res.ok ? res.json() : null))
-        .then((data) => {
-          if (data?.token && data?.user) {
-            setToken(data.token)
-            setUser(data.user)
-            localStorage.setItem('user', JSON.stringify(data.user))
-          }
-        })
+        .then(applyAuth)
         .catch(() => {})
     }
 
@@ -34,15 +87,7 @@ export const AuthProvider = ({ children }) => {
       credentials: 'include',
     })
       .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (data?.token && data?.user) {
-          setToken(data.token)
-          setUser(data.user)
-          localStorage.setItem('user', JSON.stringify(data.user))
-        } else {
-          localStorage.removeItem('user')
-        }
-      })
+      .then(applyAuth)
       .catch(() => {
         localStorage.removeItem('user')
       })
@@ -58,12 +103,20 @@ export const AuthProvider = ({ children }) => {
   const login = useCallback((tokenValue, userData) => {
     setToken(tokenValue) // Access token lives in memory only
     setUser(userData)
+    userRef.current = userData
+    tokenRef.current = tokenValue
+    _tokenRef = tokenValue
+    _userRef = userData
     localStorage.setItem('user', JSON.stringify(userData)) // Non-sensitive display data
   }, [])
 
   const logout = useCallback(async () => {
     setToken(null)
     setUser(null)
+    userRef.current = null
+    tokenRef.current = null
+    _tokenRef = null
+    _userRef = null
     localStorage.removeItem('user')
     try {
       // Ask the backend to clear the httpOnly refresh token cookie
@@ -80,6 +133,33 @@ export const AuthProvider = ({ children }) => {
     setUser(userData)
     localStorage.setItem('user', JSON.stringify(userData))
   }, [])
+
+  const refreshToken = useCallback(async () => {
+    try {
+      const res = await fetch('/api/auth/refresh', {
+        method: 'POST',
+        credentials: 'include',
+      })
+      if (!res.ok) return null
+      const data = await res.json()
+      if (data?.token && data?.user) {
+        setToken(data.token)
+        setUser(data.user)
+        tokenRef.current = data.token
+        userRef.current = data.user
+        _tokenRef = data.token
+        _userRef = data.user
+        localStorage.setItem('user', JSON.stringify(data.user))
+        return data.token
+      }
+      return null
+    } catch {
+      return null
+    }
+  }, [])
+
+  _refreshFn = refreshToken
+  _logoutFn = logout
 
   // Used after a token refresh to update the in-memory access token.
   // The refreshTokenValue parameter is kept for call-site compatibility but ignored
@@ -105,6 +185,7 @@ export const AuthProvider = ({ children }) => {
         logout,
         updateUser,
         updateAuthTokens,
+        refreshToken,
       }}
     >
       {children}

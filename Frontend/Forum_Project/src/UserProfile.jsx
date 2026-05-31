@@ -18,7 +18,13 @@ import { useAuth } from './AuthContext'
 import { normalizeImageSrc } from './utils/media'
 import { fetchUserPostsPage } from './utils/postFeedApi'
 import { fetchMySavedItems, unsaveItem, savePost } from './utils/savedItemApi'
-import { fetchMyVotes } from './utils/voteApi'
+import {
+  fetchMyVotes,
+  fetchUserPostVotes,
+  submitPostVote,
+  deletePostVote,
+  voteValueFromDirection,
+} from './utils/voteApi'
 import { fetchMyCommunities } from './utils/modApi'
 
 const PROFILE_TABS = [
@@ -51,6 +57,7 @@ const formatCakeDay = (value) => {
 const mapPostToProfilePost = (post) => ({
   id: post.id,
   community: `r/${post.communitySlug}`,
+  communityAvatarUrl: post.communityAvatarUrl,
   time: formatDate(post.createdAt),
   title: post.title,
   text: post.body || '',
@@ -64,6 +71,7 @@ const mapPostToVotedItem = (vote, post) => {
   return {
     id: `vote-${vote.id}`,
     community: `r/${post.communitySlug}`,
+    communityAvatarUrl: post.communityAvatarUrl,
     author: `u/${post.authorName}`,
     time: formatDate(vote.votedAt),
     title: post.title,
@@ -130,6 +138,9 @@ export function UserProfile() {
   const [myCommunities, setMyCommunities] = useState([])
   const [communitiesLoading, setCommunitiesLoading] = useState(false)
   const [communitiesError, setCommunitiesError] = useState('')
+
+  const [postVotesById, setPostVotesById] = useState({})
+  const [pendingPostVotes, setPendingPostVotes] = useState({})
 
   const postsLoadMoreRef = useRef(null)
 
@@ -304,6 +315,7 @@ export function UserProfile() {
           userId: profileUser.id,
           page: postsPage,
           pageSize: 15,
+          token,
         })
 
         if (cancelled) return
@@ -566,6 +578,26 @@ export function UserProfile() {
   }, [profileUser?.id, isOwnProfile, token])
 
   useEffect(() => {
+    if (!token || posts.length === 0) {
+      setPostVotesById({})
+      return
+    }
+    let cancelled = false
+    setPostVotesById((currentVotes) => {
+      const missingIds = posts
+        .map((post) => post.id)
+        .filter((id) => currentVotes[id] === undefined)
+      if (missingIds.length === 0) return currentVotes
+      fetchUserPostVotes(missingIds, token).then((votesMap) => {
+        if (!cancelled) setPostVotesById((prev) => ({ ...prev, ...votesMap }))
+      })
+      const loadingEntries = Object.fromEntries(missingIds.map((id) => [id, null]))
+      return { ...currentVotes, ...loadingEntries }
+    })
+    return () => { cancelled = true }
+  }, [posts, token])
+
+  useEffect(() => {
     if (activeTab !== 'Communities' || !token || !isOwnProfile) return
     let cancelled = false
     setCommunitiesLoading(true)
@@ -656,6 +688,82 @@ export function UserProfile() {
       right: window.innerWidth - rect.right,
     })
     setOpenMoreDownvotedId(itemId)
+  }
+
+  const handlePostVote = async (postId, direction) => {
+    if (!token) {
+      alert('Please login to vote.')
+      return
+    }
+    if (pendingPostVotes[postId]) return
+
+    const nextVoteType = voteValueFromDirection(direction)
+    const previousVote = postVotesById[postId] || { id: null, type: 0 }
+    const previousVoteType = previousVote.type ?? 0
+
+    if (previousVoteType === nextVoteType && !previousVote.id) return
+
+    setPendingPostVotes((prev) => ({ ...prev, [postId]: true }))
+
+    if (previousVoteType === nextVoteType && previousVote.id) {
+      setPosts((prev) =>
+        prev.map((p) =>
+          p.id === postId
+            ? { ...p, votes: (p.votes ?? 0) - previousVoteType }
+            : p,
+        ),
+      )
+      setPostVotesById((prev) => ({ ...prev, [postId]: { id: null, type: 0 } }))
+
+      try {
+        await deletePostVote({ voteId: previousVote.id, token })
+      } catch (err) {
+        setPosts((prev) =>
+          prev.map((p) =>
+            p.id === postId
+              ? { ...p, votes: (p.votes ?? 0) + previousVoteType }
+              : p,
+          ),
+        )
+        setPostVotesById((prev) => ({ ...prev, [postId]: previousVote }))
+        alert(err.message)
+      } finally {
+        setPendingPostVotes((prev) => ({ ...prev, [postId]: false }))
+      }
+      return
+    }
+
+    const voteDelta = nextVoteType - previousVoteType
+
+    setPosts((prev) =>
+      prev.map((p) =>
+        p.id === postId ? { ...p, votes: (p.votes ?? 0) + voteDelta } : p,
+      ),
+    )
+    setPostVotesById((prev) => ({
+      ...prev,
+      [postId]: { ...(prev[postId] || {}), type: nextVoteType },
+    }))
+
+    try {
+      const vote = await submitPostVote({ postId, voteType: nextVoteType, token })
+      setPostVotesById((prev) => ({ ...prev, [postId]: { id: vote.id, type: vote.type } }))
+    } catch (err) {
+      setPosts((prev) =>
+        prev.map((p) =>
+          p.id === postId
+            ? { ...p, votes: (p.votes ?? 0) - voteDelta }
+            : p,
+        ),
+      )
+      setPostVotesById((prev) => ({
+        ...prev,
+        [postId]: { ...(prev[postId] || {}), type: previousVoteType },
+      }))
+      alert(err.message)
+    } finally {
+      setPendingPostVotes((prev) => ({ ...prev, [postId]: false }))
+    }
   }
 
   const handleDeletePost = async () => {
@@ -809,6 +917,10 @@ export function UserProfile() {
               openMorePostId={openMorePostId}
               onMenuOpen={handlePostMenu}
               isOwnProfile={isOwnProfile}
+              token={token}
+              postVotesById={postVotesById}
+              pendingPostVotes={pendingPostVotes}
+              onVote={handlePostVote}
             />
             {postsError && (
               <p

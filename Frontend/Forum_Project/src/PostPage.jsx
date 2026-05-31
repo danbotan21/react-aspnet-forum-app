@@ -1047,11 +1047,21 @@ export function PostPage() {
         <div className='post-page-main'>
           <article className='post-page-card'>
             <header className='post-page-header'>
-              <img
-                src={avatar}
-                alt='Community avatar'
-                className='post-page-avatar'
-              />
+              {post.authorName === '[deleted]' ? (
+                <img
+                  src={avatar}
+                  alt='deleted user'
+                  className='post-page-avatar'
+                />
+              ) : (
+                <Link to={`/user/${encodeURIComponent(post.authorName)}`}>
+                  <img
+                    src={normalizeImageSrc(post.authorAvatarUrl) || avatar}
+                    alt={post.authorName}
+                    className='post-page-avatar'
+                  />
+                </Link>
+              )}
               <div className='post-page-meta'>
                 <Link
                   to={`/community/${encodeURIComponent(post.communitySlug)}`}

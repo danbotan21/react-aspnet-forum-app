@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { FaCaretUp, FaCaretDown, FaComment } from 'react-icons/fa'
 import avatar from './img/avatar.webp'
+import { normalizeImageSrc } from './utils/media'
 
 const getCommunitySlug = (community) => community.replace(/^r\//, '')
 const getVotedPostRoute = (item) =>
@@ -50,7 +51,9 @@ export function ProfileVotedTab({
           <article className='profile-post' key={item.id}>
             <div className='pp-post-main'>
               <header className='pp-post-header'>
-                <img src={avatar} alt='Avatar' className='pp-avatar' />
+                <Link to={`/community/${encodeURIComponent(getCommunitySlug(item.community))}`}>
+                  <img src={normalizeImageSrc(item.communityAvatarUrl) || avatar} alt='Community' className='pp-avatar' />
+                </Link>
                 <div className='pp-post-meta'>
                   <Link
                     to={`/community/${encodeURIComponent(getCommunitySlug(item.community))}`}

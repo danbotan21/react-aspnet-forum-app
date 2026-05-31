@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { FaCaretUp, FaCaretDown, FaComment } from 'react-icons/fa'
 import avatar from './img/avatar.webp'
+import { normalizeImageSrc } from './utils/media'
 
 const getCommunitySlug = (community) => community.replace(/^r\//, '')
 const getPostRoute = (post) =>
@@ -12,6 +13,10 @@ export function ProfilePostsTab({
   openMorePostId,
   onMenuOpen,
   isOwnProfile,
+  token,
+  postVotesById,
+  pendingPostVotes,
+  onVote,
 }) {
   if (isOwnProfile && !hasPosts) {
     return (
@@ -57,7 +62,9 @@ export function ProfilePostsTab({
           <article className='profile-post' key={post.id}>
             <div className='pp-post-main'>
               <header className='pp-post-header'>
-                <img src={avatar} alt='Avatar' className='pp-avatar' />
+                <Link to={`/community/${encodeURIComponent(getCommunitySlug(post.community))}`}>
+                  <img src={normalizeImageSrc(post.communityAvatarUrl) || avatar} alt='Community' className='pp-avatar' />
+                </Link>
                 <div className='pp-post-meta'>
                   <Link
                     to={`/community/${encodeURIComponent(getCommunitySlug(post.community))}`}
@@ -109,9 +116,25 @@ export function ProfilePostsTab({
 
               <footer className='pp-post-footer'>
                 <div className='pp-action-chip pp-vote-chip'>
-                  <FaCaretUp className='pp-vote-icon pp-upvote' />
+                  <FaCaretUp
+                    className={`pp-vote-icon pp-upvote ${postVotesById?.[post.id]?.type === 1 ? 'pp-upvote-active' : ''}`}
+                    onClick={() => token && onVote?.(post.id, 'up')}
+                    style={{
+                      pointerEvents: pendingPostVotes?.[post.id] ? 'none' : 'auto',
+                      opacity: pendingPostVotes?.[post.id] ? 0.4 : 1,
+                      cursor: token ? 'pointer' : 'default',
+                    }}
+                  />
                   <span className='pp-vote-count'>{post.votes}</span>
-                  <FaCaretDown className='pp-vote-icon pp-downvote' />
+                  <FaCaretDown
+                    className={`pp-vote-icon pp-downvote ${postVotesById?.[post.id]?.type === -1 ? 'pp-downvote-active' : ''}`}
+                    onClick={() => token && onVote?.(post.id, 'down')}
+                    style={{
+                      pointerEvents: pendingPostVotes?.[post.id] ? 'none' : 'auto',
+                      opacity: pendingPostVotes?.[post.id] ? 0.4 : 1,
+                      cursor: token ? 'pointer' : 'default',
+                    }}
+                  />
                 </div>
                 <Link to={getPostRoute(post)} className='pp-action-chip'>
                   <FaComment className='pp-comment-icon' />
