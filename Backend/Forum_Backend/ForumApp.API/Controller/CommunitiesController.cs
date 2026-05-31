@@ -196,10 +196,8 @@ namespace ForumApp.API.Controller
         public async Task<IActionResult> GetMembers(int id, CancellationToken ct)
         {
             var userId = GetCurrentUserId();
-            var isMod = await _communityService.IsOwnerAsync(id, userId, ct)
-                        || (await _communityService.GetUserRoleAsync(id, userId, ct)) == "moderator";
-
-            if (!isMod) return Forbid();
+            var role = await _communityService.GetUserRoleAsync(id, userId, ct);
+            if (role != "owner" && role != "moderator") return Forbid();
 
             var members = await _communityService.GetMembersAsync(id, ct);
             return Ok(members);
@@ -211,10 +209,8 @@ namespace ForumApp.API.Controller
         public async Task<IActionResult> GetBanned(int id, CancellationToken ct)
         {
             var userId = GetCurrentUserId();
-            var isMod = await _communityService.IsOwnerAsync(id, userId, ct)
-                        || (await _communityService.GetUserRoleAsync(id, userId, ct)) == "moderator";
-
-            if (!isMod) return Forbid();
+            var role = await _communityService.GetUserRoleAsync(id, userId, ct);
+            if (role != "owner" && role != "moderator") return Forbid();
 
             var banned = await _communityService.GetBannedMembersAsync(id, ct);
             return Ok(banned);
@@ -226,10 +222,8 @@ namespace ForumApp.API.Controller
         public async Task<IActionResult> GetStats(int id, CancellationToken ct)
         {
             var userId = GetCurrentUserId();
-            var isMod = await _communityService.IsOwnerAsync(id, userId, ct)
-                        || (await _communityService.GetUserRoleAsync(id, userId, ct)) == "moderator";
-
-            if (!isMod) return Forbid();
+            var role = await _communityService.GetUserRoleAsync(id, userId, ct);
+            if (role != "owner" && role != "moderator") return Forbid();
 
             var stats = await _communityService.GetCommunityStatsAsync(id, ct);
             return Ok(stats);

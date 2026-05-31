@@ -249,14 +249,68 @@ namespace ForumApp.BusinessLayer.Core
             if (report.Type == ReportType.Post)
             {
                 var post = await _context.Posts.FirstOrDefaultAsync(p => p.Id == report.ReportedItemId, ct);
-                if (post != null) _context.Posts.Remove(post);
+                if (post != null)
+                {
+                    // Clean up all dependent data before removing the post
+                    var savedItems = await _context.SavedItems.Where(s => s.PostId == post.Id).ToListAsync(ct);
+                    _context.SavedItems.RemoveRange(savedItems);
+
+                    var votes = await _context.Votes.Where(v => v.PostId == post.Id).ToListAsync(ct);
+                    _context.Votes.RemoveRange(votes);
+
+                    var commentIds = await _context.Comments
+                        .Where(c => c.PostId == post.Id)
+                        .Select(c => c.ID)
+                        .ToListAsync(ct);
+
+                    if (commentIds.Count > 0)
+                    {
+                        var commentNotifications = await _context.Notifications
+                            .Where(n => n.CommentId != null && commentIds.Contains(n.CommentId!.Value))
+                            .ToListAsync(ct);
+                        _context.Notifications.RemoveRange(commentNotifications);
+
+                        var commentSavedItems = await _context.SavedItems
+                            .Where(s => s.CommentId != null && commentIds.Contains(s.CommentId!.Value))
+                            .ToListAsync(ct);
+                        _context.SavedItems.RemoveRange(commentSavedItems);
+
+                        var comments = await _context.Comments.Where(c => c.PostId == post.Id).ToListAsync(ct);
+                        _context.Comments.RemoveRange(comments);
+                    }
+
+                    var postNotifications = await _context.Notifications.Where(n => n.PostId == post.Id).ToListAsync(ct);
+                    _context.Notifications.RemoveRange(postNotifications);
+
+                    _context.Posts.Remove(post);
+                }
             }
             else if (report.Type == ReportType.Comment)
             {
-                var comment = await _context.Comments.FirstOrDefaultAsync(c => c.ID == report.ReportedItemId, ct);
-                if (comment != null) _context.Comments.Remove(comment);
+                var comment = await _context.Comments
+                    .Include(c => c.Post)
+                    .FirstOrDefaultAsync(c => c.ID == report.ReportedItemId, ct);
+
+                if (comment != null)
+                {
+                    var commentNotifications = await _context.Notifications
+                        .Where(n => n.CommentId == comment.ID)
+                        .ToListAsync(ct);
+                    _context.Notifications.RemoveRange(commentNotifications);
+
+                    var commentSavedItems = await _context.SavedItems
+                        .Where(s => s.CommentId == comment.ID)
+                        .ToListAsync(ct);
+                    _context.SavedItems.RemoveRange(commentSavedItems);
+
+                    if (comment.Post != null && comment.Post.CommentsCount > 0)
+                        comment.Post.CommentsCount--;
+
+                    _context.Comments.Remove(comment);
+                }
             }
 
+            // Mark all related pending reports as actioned
             var relatedReports = await _context.Reports
                 .Where(r => r.Type == report.Type && r.ReportedItemId == report.ReportedItemId && r.Status == "pending")
                 .ToListAsync(ct);

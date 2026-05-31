@@ -22,7 +22,7 @@ namespace ForumApp.Domain.Entities.User
 
         [Required]
         [StringLength(50)]
-        [DataType(DataType.EmailAddress)]
+        [EmailAddress]
         public string Email { get; set; } = string.Empty;
 
         [StringLength(256)]

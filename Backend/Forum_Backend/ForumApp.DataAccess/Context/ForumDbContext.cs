@@ -103,6 +103,19 @@ namespace ForumApp.DataAccess
                 .HasForeignKey(l => l.ActorId)
                 .OnDelete(DeleteBehavior.NoAction);
 
+            // Mod log — preserve audit trail when actor or community is deleted.
+            modelBuilder.Entity<ModLogEntryData>()
+                .HasOne(l => l.Actor)
+                .WithMany()
+                .HasForeignKey(l => l.ActorId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            modelBuilder.Entity<ModLogEntryData>()
+                .HasOne(l => l.Community)
+                .WithMany()
+                .HasForeignKey(l => l.CommunityId)
+                .OnDelete(DeleteBehavior.NoAction);
+
             modelBuilder.Entity<VoteData>()
                 .ToTable(t => t.HasCheckConstraint(
                     "CK_Votes_ExactlyOneTarget",

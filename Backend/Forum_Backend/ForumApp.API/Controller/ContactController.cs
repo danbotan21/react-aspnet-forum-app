@@ -48,19 +48,10 @@ namespace ForumApp.API.Controller
         [Authorize(Roles = "Admin")]
         [HttpGet]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetAllMessages(CancellationToken ct = default)
         {
-            try
-            {
-                var messages = await _contactService.GetAllMessagesAsync(ct);
-                return Ok(messages);
-            }
-            catch (Exception ex)
-            {
-                // Log error in production
-                return StatusCode(500, new { message = "Failed to retrieve contact messages." });
-            }
+            var messages = await _contactService.GetAllMessagesAsync(ct);
+            return Ok(messages);
         }
     }
 }

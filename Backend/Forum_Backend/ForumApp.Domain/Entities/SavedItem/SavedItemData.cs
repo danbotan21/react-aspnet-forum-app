@@ -14,10 +14,10 @@ namespace ForumApp.Domain.Entities.SavedItem{
             public UserData Author{get; set;}=null!;
 
             public int? PostId{get; set;}
-            public PostData? Post{get; set;}= null!;
+            public PostData? Post{get; set;}
 
             public int? CommentId{get; set;}
-            public CommentData? Comment{get; set;} =null!;
+            public CommentData? Comment{get; set;}
             public DateTime CreatedAt {get; set;}=DateTime.UtcNow;
 
         

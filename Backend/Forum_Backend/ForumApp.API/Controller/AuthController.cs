@@ -98,8 +98,12 @@ namespace ForumApp.API.Controller
         }
 
         [HttpPost("logout")]
-        public IActionResult Logout()
+        public async Task<IActionResult> Logout(CancellationToken ct)
         {
+            var refreshToken = Request.Cookies["refreshToken"];
+            if (!string.IsNullOrEmpty(refreshToken))
+                await _userService.LogoutAsync(refreshToken, ct);
+
             Response.Cookies.Delete("refreshToken", new CookieOptions
             {
                 HttpOnly = true,

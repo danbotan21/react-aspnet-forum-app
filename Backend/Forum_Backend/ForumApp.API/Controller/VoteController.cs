@@ -20,13 +20,13 @@ namespace ForumApp.API.Controller
         // POST api/vote
         [Authorize]
         [HttpPost]
-        public async Task<IActionResult> Vote([FromBody] CreateVoteRequestDto voteData)
+        public async Task<IActionResult> Vote([FromBody] CreateVoteRequestDto voteData, CancellationToken ct)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
             var userId = GetCurrentUserId();
-            var result = await _voteService.VoteAsync(voteData, userId);
+            var result = await _voteService.VoteAsync(voteData, userId, ct);
 
             if (result == null)
                 return BadRequest(new { message = "Invalid vote data. Provide either PostId OR CommentId." });
@@ -37,13 +37,13 @@ namespace ForumApp.API.Controller
         // PUT api/vote/{voteId}
         [Authorize]
         [HttpPut("{voteId}")]
-        public async Task<IActionResult> UpdateVote(int voteId, [FromBody] UpdateVoteRequestDto voteData)
+        public async Task<IActionResult> UpdateVote(int voteId, [FromBody] UpdateVoteRequestDto voteData, CancellationToken ct)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
             var userId = GetCurrentUserId();
-            var result = await _voteService.UpdateVoteAsync(voteData, voteId, userId);
+            var result = await _voteService.UpdateVoteAsync(voteData, voteId, userId, ct);
 
             if (result == null)
                 return NotFound(new { message = "Vote not found or unauthorized" });
@@ -54,10 +54,10 @@ namespace ForumApp.API.Controller
         // DELETE api/vote/{voteId}
         [Authorize]
         [HttpDelete("{voteId}")]
-        public async Task<IActionResult> RemoveVote(int voteId)
+        public async Task<IActionResult> RemoveVote(int voteId, CancellationToken ct)
         {
             var userId = GetCurrentUserId();
-            var result = await _voteService.RemoveVoteAsync(voteId, userId);
+            var result = await _voteService.RemoveVoteAsync(voteId, userId, ct);
 
             if (!result.IsSuccess)
                 return BadRequest(result);
@@ -67,9 +67,9 @@ namespace ForumApp.API.Controller
 
         // GET api/vote/{voteId}
         [HttpGet("{voteId}")]
-        public async Task<IActionResult> GetVoteById(int voteId)
+        public async Task<IActionResult> GetVoteById(int voteId, CancellationToken ct)
         {
-            var result = await _voteService.GetVoteByIdAsync(voteId);
+            var result = await _voteService.GetVoteByIdAsync(voteId, ct);
 
             if (result == null)
                 return NotFound(new { message = "Vote not found" });
@@ -80,20 +80,20 @@ namespace ForumApp.API.Controller
         // GET api/vote/mine — returns all votes for the authenticated user
         [Authorize]
         [HttpGet("mine")]
-        public async Task<IActionResult> GetMyVotes()
+        public async Task<IActionResult> GetMyVotes(CancellationToken ct)
         {
             var userId = GetCurrentUserId();
-            var result = await _voteService.GetUserVotesAsync(userId);
+            var result = await _voteService.GetUserVotesAsync(userId, ct);
             return Ok(result);
         }
 
         // GET api/vote/post/{postId} — returns the authenticated user's vote on a post
         [Authorize]
         [HttpGet("post/{postId}")]
-        public async Task<IActionResult> GetUserVoteOnPost(int postId)
+        public async Task<IActionResult> GetUserVoteOnPost(int postId, CancellationToken ct)
         {
             var userId = GetCurrentUserId();
-            var result = await _voteService.GetUserVoteOnPostAsync(postId, userId);
+            var result = await _voteService.GetUserVoteOnPostAsync(postId, userId, ct);
 
             if (result == null)
                 return Ok(null);
@@ -104,10 +104,10 @@ namespace ForumApp.API.Controller
         // GET api/vote/comment/{commentId} — returns the authenticated user's vote on a comment
         [Authorize]
         [HttpGet("comment/{commentId}")]
-        public async Task<IActionResult> GetUserVoteOnComment(int commentId)
+        public async Task<IActionResult> GetUserVoteOnComment(int commentId, CancellationToken ct)
         {
             var userId = GetCurrentUserId();
-            var result = await _voteService.GetUserVoteOnCommentAsync(commentId, userId);
+            var result = await _voteService.GetUserVoteOnCommentAsync(commentId, userId, ct);
 
             if (result == null)
                 return Ok(null);
@@ -117,9 +117,9 @@ namespace ForumApp.API.Controller
 
         // GET api/vote/user/{userId} — public: all post votes cast by a specific user
         [HttpGet("user/{userId}")]
-        public async Task<IActionResult> GetVotesByUser(int userId)
+        public async Task<IActionResult> GetVotesByUser(int userId, CancellationToken ct)
         {
-            var result = await _voteService.GetUserVotesAsync(userId);
+            var result = await _voteService.GetUserVotesAsync(userId, ct);
             return Ok(result);
         }
 

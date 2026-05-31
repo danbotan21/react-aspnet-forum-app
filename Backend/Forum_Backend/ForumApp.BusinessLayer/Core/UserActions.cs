@@ -23,11 +23,25 @@ namespace ForumApp.BusinessLayer.Core
             _configuration = configuration;
         }
 
+        // Full mapping — includes email. Used only for authenticated user's own profile.
         private static UserResponseDto MapToDto(UserData user) => new()
         {
             ID = user.ID,
             UserName = user.UserName,
             Email = user.Email,
+            Bio = user.Bio,
+            AvatarUrl = user.AvatarUrl,
+            Karma = user.Karma,
+            Role = user.Role,
+            CreatedAt = user.CreatedAt,
+            HasPassword = !string.IsNullOrEmpty(user.PasswordHash)
+        };
+
+        // Public mapping — omits email to avoid exposing PII in public endpoints.
+        private static UserResponseDto MapToPublicDto(UserData user) => new()
+        {
+            ID = user.ID,
+            UserName = user.UserName,
             Bio = user.Bio,
             AvatarUrl = user.AvatarUrl,
             Karma = user.Karma,
@@ -367,20 +381,20 @@ namespace ForumApp.BusinessLayer.Core
                 .OrderByDescending(u => u.CreatedAt)
                 .ToListAsync(ct);
 
-            return users.Select(MapToDto).ToList();
+            return users.Select(MapToPublicDto).ToList();
         }
 
         internal async Task<UserResponseDto?> GetUserByIdExecution(int userId, CancellationToken ct = default)
         {
             var user = await _context.Users.FindAsync(new object[] { userId }, ct);
-            return user == null ? null : MapToDto(user);
+            return user == null ? null : MapToPublicDto(user);
         }
 
         internal async Task<UserResponseDto?> GetUserByUsernameExecution(string username, CancellationToken ct = default)
         {
             var user = await _context.Users
                 .FirstOrDefaultAsync(u => u.UserName == username, ct);
-            return user == null ? null : MapToDto(user);
+            return user == null ? null : MapToPublicDto(user);
         }
 
         internal async Task<IReadOnlyList<UserResponseDto>> SearchUsersExecution(string searchTerm, CancellationToken ct = default)
@@ -390,7 +404,19 @@ namespace ForumApp.BusinessLayer.Core
                 .OrderBy(u => u.UserName)
                 .ToListAsync(ct);
 
-            return users.Select(MapToDto).ToList();
+            return users.Select(MapToPublicDto).ToList();
+        }
+
+        internal async Task LogoutExecution(string refreshToken, CancellationToken ct = default)
+        {
+            var user = await _context.Users
+                .FirstOrDefaultAsync(u => u.RefreshToken == refreshToken, ct);
+            if (user != null)
+            {
+                user.RefreshToken = null;
+                user.RefreshTokenExpiry = null;
+                await _context.SaveChangesAsync(ct);
+            }
         }
     }
 }

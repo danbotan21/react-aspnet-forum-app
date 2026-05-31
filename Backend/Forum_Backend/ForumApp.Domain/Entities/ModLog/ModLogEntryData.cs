@@ -8,6 +8,7 @@ namespace ForumApp.Domain.Entities.ModLog
     public class ModLogEntryData
     {
         [Key]
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int Id { get; set; }
 
         [Required]

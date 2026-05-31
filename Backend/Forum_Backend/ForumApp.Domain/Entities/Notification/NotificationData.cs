@@ -25,6 +25,7 @@ namespace ForumApp.Domain.Entities.Notification
         public int RecipientId { get; set; }
         public UserData Recipient { get; set; } = null!;
 
+        [ForeignKey("Actor")]
         public int? ActorId { get; set; }
         public UserData? Actor { get; set; }
 
@@ -32,6 +33,7 @@ namespace ForumApp.Domain.Entities.Notification
         public int? PostId { get; set; }
         public PostData? Post { get; set; }
 
+        [ForeignKey("Comment")]
         public int? CommentId { get; set; }
         public CommentData? Comment { get; set; }
 

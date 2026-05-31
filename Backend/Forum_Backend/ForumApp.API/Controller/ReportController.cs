@@ -32,7 +32,7 @@ namespace ForumApp.API.Controller
         }
 
         // GET api/report — admin only (all reports)
-        [Authorize]
+        [Authorize(Roles = "Admin")]
         [HttpGet]
         public async Task<IActionResult> GetAllReports(CancellationToken ct)
         {
@@ -75,6 +75,7 @@ namespace ForumApp.API.Controller
         }
 
         // DELETE api/report/{id} — admin deletes a report
+        [Authorize(Roles = "Admin")]
         [HttpDelete("{id:int}")]
         public async Task<IActionResult> DeleteReport(int id, CancellationToken ct)
         {

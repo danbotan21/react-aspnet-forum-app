@@ -25,7 +25,7 @@ namespace ForumApp.API.Controller
         }
 
         [HttpPost]
-        public async Task<IActionResult> CreateDraft([FromBody] CreateDraftRequestDto draftData)
+        public async Task<IActionResult> CreateDraft([FromBody] CreateDraftRequestDto draftData, CancellationToken ct)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
@@ -35,7 +35,7 @@ namespace ForumApp.API.Controller
 
             try
             {
-                var result = await _draftService.CreateDraftAsync(draftData, userId.Value);
+                var result = await _draftService.CreateDraftAsync(draftData, userId.Value, ct);
                 return Ok(result);
             }
             catch (InvalidOperationException ex)
@@ -45,7 +45,7 @@ namespace ForumApp.API.Controller
         }
 
         [HttpPut("{draftId}")]
-        public async Task<IActionResult> UpdateDraft(int draftId, [FromBody] UpdateDraftRequestDto draftData)
+        public async Task<IActionResult> UpdateDraft(int draftId, [FromBody] UpdateDraftRequestDto draftData, CancellationToken ct)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
@@ -53,7 +53,7 @@ namespace ForumApp.API.Controller
             var userId = GetCurrentUserId();
             if (userId == null) return Unauthorized();
 
-            var result = await _draftService.UpdateDraftAsync(draftData, draftId, userId.Value);
+            var result = await _draftService.UpdateDraftAsync(draftData, draftId, userId.Value, ct);
 
             if (result == null)
                 return NotFound(new { message = "Draft not found or unauthorized" });
@@ -62,12 +62,12 @@ namespace ForumApp.API.Controller
         }
 
         [HttpGet("{draftId}")]
-        public async Task<IActionResult> GetDraftById(int draftId)
+        public async Task<IActionResult> GetDraftById(int draftId, CancellationToken ct)
         {
             var userId = GetCurrentUserId();
             if (userId == null) return Unauthorized();
 
-            var result = await _draftService.GetDraftByIdAsync(draftId, userId.Value);
+            var result = await _draftService.GetDraftByIdAsync(draftId, userId.Value, ct);
 
             if (result == null)
                 return NotFound(new { message = "Draft not found or unauthorized" });
@@ -76,22 +76,22 @@ namespace ForumApp.API.Controller
         }
 
         [HttpGet("user")]
-        public async Task<IActionResult> GetAllUserDrafts()
+        public async Task<IActionResult> GetAllUserDrafts(CancellationToken ct)
         {
             var userId = GetCurrentUserId();
             if (userId == null) return Unauthorized();
 
-            var result = await _draftService.GetAllUserDraftsAsync(userId.Value);
+            var result = await _draftService.GetAllUserDraftsAsync(userId.Value, ct);
             return Ok(result);
         }
 
         [HttpDelete("{draftId}")]
-        public async Task<IActionResult> DeleteDraft(int draftId)
+        public async Task<IActionResult> DeleteDraft(int draftId, CancellationToken ct)
         {
             var userId = GetCurrentUserId();
             if (userId == null) return Unauthorized();
 
-            var result = await _draftService.DeleteDraftAsync(draftId, userId.Value);
+            var result = await _draftService.DeleteDraftAsync(draftId, userId.Value, ct);
 
             if (!result.IsSuccess)
                 return BadRequest(result);

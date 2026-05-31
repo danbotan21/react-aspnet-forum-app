@@ -47,5 +47,8 @@ namespace ForumApp.BusinessLayer.Structure
 
         public Task<IReadOnlyList<UserResponseDto>> SearchUsersAsync(string searchTerm, CancellationToken ct = default)
             => SearchUsersExecution(searchTerm, ct);
+
+        public Task LogoutAsync(string refreshToken, CancellationToken ct = default)
+            => LogoutExecution(refreshToken, ct);
     }
 }

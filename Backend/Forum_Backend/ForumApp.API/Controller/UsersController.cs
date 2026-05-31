@@ -1,4 +1,5 @@
 using ForumApp.BusinessLayer.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ForumApp.API.Controller
@@ -15,6 +16,7 @@ namespace ForumApp.API.Controller
         }
 
         // GET api/users
+        [Authorize]
         [HttpGet]
         public async Task<IActionResult> GetAll(CancellationToken ct)
         {

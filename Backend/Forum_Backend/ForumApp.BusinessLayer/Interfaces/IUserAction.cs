@@ -10,6 +10,7 @@ namespace ForumApp.BusinessLayer.Interfaces
         Task<LoginResponseDto?> LoginAsync(UserLoginDto userData, CancellationToken ct = default);
         Task<LoginResponseDto?> GoogleLoginAsync(string accessToken, CancellationToken ct = default);
         Task<LoginResponseDto?> RefreshTokenAsync(string refreshToken, CancellationToken ct = default);
+        Task LogoutAsync(string refreshToken, CancellationToken ct = default);
 
         // Profile (userul logat)
         Task<UserResponseDto?> GetProfileAsync(int userId, CancellationToken ct = default);
