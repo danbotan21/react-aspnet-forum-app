@@ -38,3 +38,4 @@ ForumApp.API/wwwroot/uploads/
 
 # Sensitive config — keep secrets out of git
 ForumApp.API/appsettings.Development.json
+ForumApp.API/appsettings.Development.json
