@@ -9,16 +9,14 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ForumApp.BusinessLayer.Core
 {
-    public class PostActions
+    public class PostActions : BaseActions
     {
-        protected readonly ForumDbContext _context;
         protected readonly INotificationAction _notificationActions;
         private const int DefaultPageSize = 15;
         private const int MaxPageSize = 50;
 
-        public PostActions(ForumDbContext context, INotificationAction notificationActions)
+        public PostActions(ForumDbContext context, INotificationAction notificationActions) : base(context)
         {
-            _context = context;
             _notificationActions = notificationActions;
         }
 
@@ -35,7 +33,9 @@ namespace ForumApp.BusinessLayer.Core
             IsPinned = post.IsPinned,
             CreatedAt = post.CreatedAt,
             AuthorName = post.Author.UserName,
-            CommunitySlug = post.Community.Slug
+            AuthorAvatarUrl = post.Author.AvatarUrl,
+            CommunitySlug = post.Community.Slug,
+            CommunityAvatarUrl = post.Community.AvatarUrl
         };
 
         private static (int Page, int PageSize) NormalizePagination(int page, int pageSize)
@@ -100,7 +100,10 @@ namespace ForumApp.BusinessLayer.Core
                 .Include(p => p.Community)
                 .AsQueryable();
 
-            if (excludePrivateCommunities)
+            // Global admins see every post, including those in private communities.
+            var isAdmin = requestingUserId.HasValue && await IsGlobalAdminAsync(requestingUserId.Value, ct);
+
+            if (excludePrivateCommunities && !isAdmin)
             {
                 if (requestingUserId.HasValue)
                 {
@@ -228,16 +231,31 @@ namespace ForumApp.BusinessLayer.Core
             };
         }
 
-        internal async Task<PostBatchResponseDto> GetPostsByUserExecution(int userId, int page = 1, int pageSize = 15, CancellationToken ct = default)
+        internal async Task<PostBatchResponseDto> GetPostsByUserExecution(int userId, int? viewerId = null, int page = 1, int pageSize = 15, CancellationToken ct = default)
         {
             var (normalizedPage, normalizedPageSize) = NormalizePagination(page, pageSize);
             var skip = (normalizedPage - 1) * normalizedPageSize;
 
-            var batch = await _context.Posts
+            // Own profile (and admins) see everything; everyone else sees a user's
+            // private-community posts only for communities they are a member of.
+            var isSelf = viewerId.HasValue && viewerId.Value == userId;
+            var isAdmin = viewerId.HasValue && await IsGlobalAdminAsync(viewerId.Value, ct);
+
+            var query = _context.Posts
                 .AsNoTracking()
                 .Include(p => p.Author)
                 .Include(p => p.Community)
-                .Where(p => p.AuthorId == userId && p.Community.Type.ToLower() != "private")
+                .Where(p => p.AuthorId == userId);
+
+            if (!isSelf && !isAdmin)
+            {
+                query = query.Where(p =>
+                    p.Community.Type.ToLower() != "private" ||
+                    (viewerId.HasValue && _context.CommunityMembers.Any(m =>
+                        m.CommunityId == p.CommunityId && m.UserId == viewerId.Value && !m.IsBanned)));
+            }
+
+            var batch = await query
                 .OrderByDescending(p => p.CreatedAt)
                 .ThenByDescending(p => p.Id)
                 .Skip(skip)
@@ -377,37 +395,13 @@ namespace ForumApp.BusinessLayer.Core
                 communitySlug = post.Community?.Slug;
             }
 
-            var savedItems = await _context.SavedItems.Where(s => s.PostId == postId).ToListAsync(ct);
-            _context.SavedItems.RemoveRange(savedItems);
+            // A non-supreme admin may not remove another admin's post.
+            if (await IsProtectedAdminContentAsync(post.AuthorId, requestingUserId, ct))
+                return new ActionResponse { IsSuccess = false, Message = "Only the primary administrator can remove another administrator's content." };
 
-            var votes = await _context.Votes.Where(v => v.PostId == postId).ToListAsync(ct);
-            _context.Votes.RemoveRange(votes);
-
-            var commentIds = await _context.Comments
-                .Where(c => c.PostId == postId)
-                .Select(c => c.ID)
-                .ToListAsync(ct);
-
-            if (commentIds.Count > 0)
-            {
-                var commentNotifications = await _context.Notifications
-                    .Where(n => n.CommentId != null && commentIds.Contains(n.CommentId!.Value))
-                    .ToListAsync(ct);
-                _context.Notifications.RemoveRange(commentNotifications);
-
-                var comments = await _context.Comments.Where(c => c.PostId == postId).ToListAsync(ct);
-                _context.Comments.RemoveRange(comments);
-            }
-
-            var reports = await _context.Reports
-                .Where(r => r.ReportedItemId == postId && r.Type == Domain.Entities.Report.ReportType.Post)
-                .ToListAsync(ct);
-            _context.Reports.RemoveRange(reports);
-
-            var notifications = await _context.Notifications.Where(n => n.PostId == postId).ToListAsync(ct);
-            _context.Notifications.RemoveRange(notifications);
-
-            _context.Posts.Remove(post);
+            // Remove the post together with every comment, reply, vote, saved item,
+            // notification and report that depends on it (all FKs are NoAction).
+            await CascadeDeletePostsAsync(new[] { postId }, ct);
 
             try
             {
@@ -438,10 +432,6 @@ namespace ForumApp.BusinessLayer.Core
 
             return new ActionResponse { IsSuccess = true, Message = "Post deleted successfully." };
         }
-
-        // Global admins get owner-level moderation power in any community.
-        private Task<bool> IsGlobalAdminAsync(int userId, CancellationToken ct = default)
-            => _context.Users.AnyAsync(u => u.ID == userId && u.Role == "Admin", ct);
 
         internal async Task<ActionResponse> PinPostExecution(int postId, int communityId, int requestingUserId, CancellationToken ct = default)
         {

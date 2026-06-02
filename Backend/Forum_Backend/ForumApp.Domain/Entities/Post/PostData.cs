@@ -35,7 +35,8 @@ namespace ForumApp.Domain.Entities.Post
         public UserData Author { get; set; } = null!;
 
 
-        public int CommunityId { get; set; } // - Cheie Foreign, trimitere la tabelul Community ce eu il am, ID stie automat EF ca asa este codat;
+        [ForeignKey("Community")]
+        public int CommunityId { get; set; }
         public CommunityData Community { get; set; } = null!;
 
         // Relatia cu Comment:

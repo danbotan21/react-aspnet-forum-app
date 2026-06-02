@@ -2,7 +2,7 @@ namespace ForumApp.Domain.Models.Comment
 {
     public class CommentResponseDto
     {
-        public int ID { get; set; }
+        public int Id { get; set; }
         public string Body { get; set; }
         public int Votes { get; set; }
         public DateTime CreatedAt { get; set; }

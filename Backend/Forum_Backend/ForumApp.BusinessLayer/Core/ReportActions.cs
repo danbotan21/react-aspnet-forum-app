@@ -1,5 +1,7 @@
+using ForumApp.BusinessLayer.Interfaces;
 using ForumApp.DataAccess;
 using ForumApp.Domain.Entities.ModLog;
+using ForumApp.Domain.Entities.Notification;
 using ForumApp.Domain.Entities.Report;
 using ForumApp.Domain.Models.Report;
 using ForumApp.Domain.Models.Responses;
@@ -7,13 +9,13 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ForumApp.BusinessLayer.Core
 {
-    public class ReportActions
+    public class ReportActions : BaseActions
     {
-        protected readonly ForumDbContext _context;
+        private readonly INotificationAction _notifications;
 
-        public ReportActions(ForumDbContext context)
+        public ReportActions(ForumDbContext context, INotificationAction notifications) : base(context)
         {
-            _context = context;
+            _notifications = notifications;
         }
 
         internal async Task<ActionResponse> CreateReportExecution(ReportCreateDto reportData, int reporterId, CancellationToken ct = default)
@@ -50,7 +52,7 @@ namespace ForumApp.BusinessLayer.Core
                 {
                     var comment = await _context.Comments
                         .Include(c => c.Post)
-                        .FirstOrDefaultAsync(c => c.ID == reportData.ReportedItemId, ct);
+                        .FirstOrDefaultAsync(c => c.Id == reportData.ReportedItemId, ct);
                     communityId = comment?.Post?.CommunityId;
                 }
 
@@ -121,10 +123,6 @@ namespace ForumApp.BusinessLayer.Core
             }
         }
 
-        // Global admins get owner-level moderation power in any community.
-        private Task<bool> IsGlobalAdminAsync(int userId, CancellationToken ct = default)
-            => _context.Users.AnyAsync(u => u.ID == userId && u.Role == "Admin", ct);
-
         internal async Task<IReadOnlyList<CommunityReportResponseDto>> GetCommunityReportsExecution(int communityId, int requestingUserId, CancellationToken ct = default)
         {
             var canAct = await _context.CommunityMembers
@@ -152,9 +150,19 @@ namespace ForumApp.BusinessLayer.Core
 
             var commentIds = commentReports.Select(r => r.ReportedItemId).Distinct().ToList();
             var comments = await _context.Comments
-                .Where(c => commentIds.Contains(c.ID))
+                .Where(c => commentIds.Contains(c.Id))
                 .Include(c => c.Author)
-                .ToDictionaryAsync(c => c.ID, ct);
+                .ToDictionaryAsync(c => c.Id, ct);
+
+            // Look up each content author's role in this community so the UI can flag the
+            // owner's content and hide actions a moderator isn't allowed to take.
+            var authorIds = posts.Values.Select(p => p.AuthorId)
+                .Concat(comments.Values.Select(c => c.AuthorId))
+                .Distinct()
+                .ToList();
+            var rolesByUserId = await _context.CommunityMembers
+                .Where(m => m.CommunityId == communityId && authorIds.Contains(m.UserId))
+                .ToDictionaryAsync(m => m.UserId, m => m.Role, ct);
 
             var result = new List<CommunityReportResponseDto>();
 
@@ -176,6 +184,7 @@ namespace ForumApp.BusinessLayer.Core
                     HasImage = post.ImageUrl != null,
                     PostImageUrl = post.ImageUrl,
                     ContentAuthorUserName = post.Author.UserName,
+                    ContentAuthorRole = rolesByUserId.GetValueOrDefault(post.AuthorId),
                     ReportedItemId = report.ReportedItemId,
                     PostId = post.Id
                 });
@@ -197,6 +206,7 @@ namespace ForumApp.BusinessLayer.Core
                     ContentPreview = preview,
                     HasImage = false,
                     ContentAuthorUserName = comment.Author.UserName,
+                    ContentAuthorRole = rolesByUserId.GetValueOrDefault(comment.AuthorId),
                     ReportedItemId = report.ReportedItemId,
                     PostId = comment.PostId
                 });
@@ -237,76 +247,68 @@ namespace ForumApp.BusinessLayer.Core
             var report = await _context.Reports.FirstOrDefaultAsync(r => r.Id == reportId, ct);
             if (report == null) return new ActionResponse { IsSuccess = false, Message = "Report not found." };
 
+            // Resolve the reported content and its author up front — needed both for the
+            // permission check and to notify the author afterwards.
+            int? contentAuthorId = null;
+            if (report.Type == ReportType.Post)
+            {
+                contentAuthorId = await _context.Posts
+                    .Where(p => p.Id == report.ReportedItemId).Select(p => (int?)p.AuthorId).FirstOrDefaultAsync(ct);
+            }
+            else if (report.Type == ReportType.Comment)
+            {
+                contentAuthorId = await _context.Comments
+                    .Where(c => c.Id == report.ReportedItemId).Select(c => (int?)c.AuthorId).FirstOrDefaultAsync(ct);
+            }
+
             if (!isPrivileged && report.CommunityId.HasValue)
             {
-                var canAct = await _context.CommunityMembers
-                    .AnyAsync(m => m.CommunityId == report.CommunityId.Value && m.UserId == requestingUserId
-                                   && (m.Role == "owner" || m.Role == "moderator") && !m.IsBanned, ct)
-                    || await IsGlobalAdminAsync(requestingUserId, ct);
+                var isAdmin = await IsGlobalAdminAsync(requestingUserId, ct);
+                var actorRole = await _context.CommunityMembers
+                    .Where(m => m.CommunityId == report.CommunityId.Value && m.UserId == requestingUserId && !m.IsBanned)
+                    .Select(m => m.Role)
+                    .FirstOrDefaultAsync(ct);
+
+                var canAct = isAdmin || actorRole == "owner" || actorRole == "moderator";
                 if (!canAct) return new ActionResponse { IsSuccess = false, Message = "You don't have permission to remove content." };
+
+                // A moderator must not be able to remove content posted by the owner or
+                // by another moderator — only the owner (or a global admin) can do that.
+                if (!isAdmin && actorRole == "moderator" && contentAuthorId.HasValue)
+                {
+                    var authorRole = await _context.CommunityMembers
+                        .Where(m => m.CommunityId == report.CommunityId.Value && m.UserId == contentAuthorId.Value)
+                        .Select(m => m.Role)
+                        .FirstOrDefaultAsync(ct);
+                    if (authorRole == "owner" || authorRole == "moderator")
+                        return new ActionResponse { IsSuccess = false, Message = "Moderators cannot remove content posted by the owner or another moderator." };
+                }
             }
+
+            // A non-supreme admin may not remove a fellow admin's content via reports.
+            if (contentAuthorId.HasValue && await IsProtectedAdminContentAsync(contentAuthorId.Value, requestingUserId, ct))
+                return new ActionResponse { IsSuccess = false, Message = "Only the primary administrator can remove another administrator's content." };
 
             if (report.Type == ReportType.Post)
             {
                 var post = await _context.Posts.FirstOrDefaultAsync(p => p.Id == report.ReportedItemId, ct);
                 if (post != null)
                 {
-                    // Clean up all dependent data before removing the post
-                    var savedItems = await _context.SavedItems.Where(s => s.PostId == post.Id).ToListAsync(ct);
-                    _context.SavedItems.RemoveRange(savedItems);
-
-                    var votes = await _context.Votes.Where(v => v.PostId == post.Id).ToListAsync(ct);
-                    _context.Votes.RemoveRange(votes);
-
-                    var commentIds = await _context.Comments
-                        .Where(c => c.PostId == post.Id)
-                        .Select(c => c.ID)
-                        .ToListAsync(ct);
-
-                    if (commentIds.Count > 0)
-                    {
-                        var commentNotifications = await _context.Notifications
-                            .Where(n => n.CommentId != null && commentIds.Contains(n.CommentId!.Value))
-                            .ToListAsync(ct);
-                        _context.Notifications.RemoveRange(commentNotifications);
-
-                        var commentSavedItems = await _context.SavedItems
-                            .Where(s => s.CommentId != null && commentIds.Contains(s.CommentId!.Value))
-                            .ToListAsync(ct);
-                        _context.SavedItems.RemoveRange(commentSavedItems);
-
-                        var comments = await _context.Comments.Where(c => c.PostId == post.Id).ToListAsync(ct);
-                        _context.Comments.RemoveRange(comments);
-                    }
-
-                    var postNotifications = await _context.Notifications.Where(n => n.PostId == post.Id).ToListAsync(ct);
-                    _context.Notifications.RemoveRange(postNotifications);
-
-                    _context.Posts.Remove(post);
+                    await CascadeDeletePostsAsync(new[] { post.Id }, ct);
                 }
             }
             else if (report.Type == ReportType.Comment)
             {
                 var comment = await _context.Comments
                     .Include(c => c.Post)
-                    .FirstOrDefaultAsync(c => c.ID == report.ReportedItemId, ct);
+                    .FirstOrDefaultAsync(c => c.Id == report.ReportedItemId, ct);
 
                 if (comment != null)
                 {
-                    var commentNotifications = await _context.Notifications
-                        .Where(n => n.CommentId == comment.ID)
-                        .ToListAsync(ct);
-                    _context.Notifications.RemoveRange(commentNotifications);
+                    int removed = await CascadeDeleteCommentsAsync(new[] { comment.Id }, ct);
 
-                    var commentSavedItems = await _context.SavedItems
-                        .Where(s => s.CommentId == comment.ID)
-                        .ToListAsync(ct);
-                    _context.SavedItems.RemoveRange(commentSavedItems);
-
-                    if (comment.Post != null && comment.Post.CommentsCount > 0)
-                        comment.Post.CommentsCount--;
-
-                    _context.Comments.Remove(comment);
+                    if (comment.Post != null && removed > 0)
+                        comment.Post.CommentsCount = Math.Max(0, comment.Post.CommentsCount - removed);
                 }
             }
 
@@ -330,6 +332,29 @@ namespace ForumApp.BusinessLayer.Core
 
             try { await _context.SaveChangesAsync(ct); }
             catch { return new ActionResponse { IsSuccess = false, Message = "Failed to remove content." }; }
+
+            // Notify the content author that their post/comment was removed by a moderator.
+            if (contentAuthorId.HasValue && contentAuthorId.Value != requestingUserId)
+            {
+                try
+                {
+                    var slug = report.CommunityId.HasValue
+                        ? await _context.Communities.Where(c => c.Id == report.CommunityId.Value).Select(c => c.Slug).FirstOrDefaultAsync(ct)
+                        : null;
+                    var isPostType = report.Type == ReportType.Post;
+                    await _notifications.CreateAndSendAsync(
+                        contentAuthorId.Value,
+                        isPostType ? NotificationType.PostDeletedByMod : NotificationType.CommentDeletedByMod,
+                        isPostType ? "Your post was removed by a moderator." : "Your comment was removed by a moderator.",
+                        requestingUserId,
+                        null,
+                        null,
+                        slug,
+                        null,
+                        ct);
+                }
+                catch { }
+            }
 
             return new ActionResponse { IsSuccess = true, Message = "Content removed and report actioned." };
         }

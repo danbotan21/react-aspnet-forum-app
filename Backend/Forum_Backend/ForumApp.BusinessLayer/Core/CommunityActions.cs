@@ -11,16 +11,18 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ForumApp.BusinessLayer.Core
 {
-    public class CommunityActions
+    public class CommunityActions : BaseActions
     {
-        protected readonly ForumDbContext _context;
         protected readonly INotificationAction _notificationActions;
 
-        public CommunityActions(ForumDbContext context, INotificationAction notificationActions)
+        public CommunityActions(ForumDbContext context, INotificationAction notificationActions) : base(context)
         {
-            _context = context;
             _notificationActions = notificationActions;
         }
+
+        // How long a kicked user must wait before they can rejoin a community.
+        // TEST value: 1 minute. For production use TimeSpan.FromHours(24).
+        private static readonly TimeSpan KickRejoinCooldown = TimeSpan.FromMinutes(1);
 
         private async Task<int?> GetOwnerUserIdAsync(int communityId, CancellationToken ct = default)
         {
@@ -29,11 +31,6 @@ namespace ForumApp.BusinessLayer.Core
                 .Select(m => (int?)m.UserId)
                 .FirstOrDefaultAsync(ct);
         }
-
-        // True if the user is a global application admin. Such users get owner-level
-        // power in EVERY community's mod tools (absolute control across the app).
-        private Task<bool> IsGlobalAdminAsync(int userId, CancellationToken ct = default)
-            => _context.Users.AnyAsync(u => u.ID == userId && u.Role == "Admin", ct);
 
         private async Task<bool> IsModeratorOrOwnerAsync(int communityId, int userId, CancellationToken ct = default)
         {
@@ -57,6 +54,58 @@ namespace ForumApp.BusinessLayer.Core
             });
         }
 
+        // Removes a community and everything under it (posts + their comments/votes/
+        // saves/reports, members, mod logs, reports; drafts keep their author but lose
+        // the community reference). All FKs are NoAction, so children go first.
+        // Does NOT call SaveChanges — the caller batches the save.
+        private async Task CascadeDeleteCommunityAsync(int communityId, CommunityData community, CancellationToken ct = default)
+        {
+            var postIds = await _context.Posts
+                .Where(p => p.CommunityId == communityId)
+                .Select(p => p.Id)
+                .ToListAsync(ct);
+            await CascadeDeletePostsAsync(postIds, ct);
+
+            var members = await _context.CommunityMembers
+                .Where(m => m.CommunityId == communityId)
+                .ToListAsync(ct);
+            _context.CommunityMembers.RemoveRange(members);
+
+            var modLogs = await _context.ModLogs
+                .Where(l => l.CommunityId == communityId)
+                .ToListAsync(ct);
+            _context.ModLogs.RemoveRange(modLogs);
+
+            var communityReports = await _context.Reports
+                .Where(r => r.CommunityId == communityId)
+                .ToListAsync(ct);
+            _context.Reports.RemoveRange(communityReports);
+
+            var communityDrafts = await _context.Drafts
+                .Where(d => d.CommunityId == communityId)
+                .ToListAsync(ct);
+            foreach (var draft in communityDrafts)
+                draft.CommunityId = null;
+
+            _context.Communities.Remove(community);
+        }
+
+        // Maps communityId -> owner username for the given communities (one batched query).
+        private async Task<Dictionary<int, string>> GetOwnerNamesAsync(IEnumerable<int> communityIds, CancellationToken ct)
+        {
+            var ids = communityIds.Distinct().ToList();
+            if (ids.Count == 0) return new Dictionary<int, string>();
+
+            var owners = await _context.CommunityMembers
+                .Where(m => ids.Contains(m.CommunityId) && m.Role == "owner")
+                .Select(m => new { m.CommunityId, m.User.UserName })
+                .ToListAsync(ct);
+
+            return owners
+                .GroupBy(o => o.CommunityId)
+                .ToDictionary(g => g.Key, g => g.First().UserName);
+        }
+
         private static CommunityResponseDto MapToDto(CommunityData community) => new CommunityResponseDto
         {
             Id = community.Id,
@@ -72,19 +121,35 @@ namespace ForumApp.BusinessLayer.Core
             CreatedAt = community.CreatedAt
         };
 
-        internal async Task<IReadOnlyList<CommunityResponseDto>> GetAllCommunitiesExecution(CancellationToken ct = default)
+        internal async Task<IReadOnlyList<CommunityResponseDto>> GetAllCommunitiesExecution(int? requestingUserId = null, CancellationToken ct = default)
         {
+            // Global admins see every community, including private ones.
+            var isAdmin = requestingUserId.HasValue && await IsGlobalAdminAsync(requestingUserId.Value, ct);
+
+            // Admins see everything; everyone else also sees the private communities they
+            // are a (non-banned) member of.
             var communities = await _context.Communities
-                .Where(c => c.Type.ToLower() != "private")
+                .Where(c => isAdmin || c.Type.ToLower() != "private" ||
+                    (requestingUserId.HasValue && _context.CommunityMembers.Any(m =>
+                        m.CommunityId == c.Id && m.UserId == requestingUserId.Value && !m.IsBanned)))
                 .OrderByDescending(c => c.MembersCount)
                 .ToListAsync(ct);
 
-            return communities.Select(MapToDto).ToList().AsReadOnly();
+            var ownerNames = await GetOwnerNamesAsync(communities.Select(c => c.Id), ct);
+            return communities.Select(c =>
+            {
+                var dto = MapToDto(c);
+                dto.OwnerUserName = ownerNames.GetValueOrDefault(c.Id);
+                return dto;
+            }).ToList().AsReadOnly();
         }
 
-        internal async Task<IReadOnlyList<CommunityResponseDto>> GetAllCommunitiesByTypeExecution(string type, CancellationToken ct = default)
+        internal async Task<IReadOnlyList<CommunityResponseDto>> GetAllCommunitiesByTypeExecution(string type, int? requestingUserId = null, CancellationToken ct = default)
         {
-            if (type.ToLower() == "private")
+            var isAdmin = requestingUserId.HasValue && await IsGlobalAdminAsync(requestingUserId.Value, ct);
+
+            // Only admins may list private communities.
+            if (type.ToLower() == "private" && !isAdmin)
                 return Array.Empty<CommunityResponseDto>();
 
             var communities = await _context.Communities
@@ -106,12 +171,13 @@ namespace ForumApp.BusinessLayer.Core
             return communities.Select(MapToDto).ToList().AsReadOnly();
         }
 
-        internal async Task<IReadOnlyList<CommunityResponseDto>> SearchCommunitiesExecution(string searchTerm, CancellationToken ct = default)
+        internal async Task<IReadOnlyList<CommunityResponseDto>> SearchCommunitiesExecution(string searchTerm, int? requestingUserId = null, CancellationToken ct = default)
         {
             var term = searchTerm.ToLower();
+            var isAdmin = requestingUserId.HasValue && await IsGlobalAdminAsync(requestingUserId.Value, ct);
 
             var communities = await _context.Communities
-                .Where(c => c.Type.ToLower() != "private"
+                .Where(c => (isAdmin || c.Type.ToLower() != "private")
                          && (c.Title.ToLower().Contains(term) || c.Slug.ToLower().Contains(term)))
                 .OrderByDescending(c => c.MembersCount)
                 .ToListAsync(ct);
@@ -135,12 +201,19 @@ namespace ForumApp.BusinessLayer.Core
                                 && m.UserId == requestingUserId.Value
                                 && !m.IsBanned, ct);
 
-                if (!isMember) return null;
+                // Global admins can open any private community (e.g. via the admin panel's
+                // Mod Tools link) even though they aren't members.
+                if (!isMember && !await IsGlobalAdminAsync(requestingUserId.Value, ct))
+                    return null;
             }
 
             var dto = MapToDto(community);
             dto.MembersCount = await _context.CommunityMembers
                 .CountAsync(m => m.CommunityId == community.Id && !m.IsBanned, ct);
+            dto.OwnerUserName = await _context.CommunityMembers
+                .Where(m => m.CommunityId == community.Id && m.Role == "owner")
+                .Select(m => m.User.UserName)
+                .FirstOrDefaultAsync(ct);
             return dto;
         }
 
@@ -238,7 +311,12 @@ namespace ForumApp.BusinessLayer.Core
                     return new ActionResponse { IsSuccess = false, Message = "Only the community owner can delete this community." };
             }
 
-            _context.Communities.Remove(community);
+            // A non-supreme admin may not delete a community owned by a fellow admin.
+            var communityOwnerId = await GetOwnerUserIdAsync(communityId, ct);
+            if (communityOwnerId.HasValue && await IsProtectedAdminContentAsync(communityOwnerId.Value, requestingUserId, ct))
+                return new ActionResponse { IsSuccess = false, Message = "Only the primary administrator can delete another administrator's community." };
+
+            await CascadeDeleteCommunityAsync(communityId, community, ct);
 
             try
             {
@@ -263,11 +341,38 @@ namespace ForumApp.BusinessLayer.Core
             if (community.Type.ToLower() == "private")
                 return new ActionResponse { IsSuccess = false, Message = "This is a private community. You can only be added by the owner or a moderator." };
 
-            var alreadyMember = await _context.CommunityMembers
-                .AnyAsync(m => m.CommunityId == communityId && m.UserId == userId, ct);
+            var existing = await _context.CommunityMembers
+                .FirstOrDefaultAsync(m => m.CommunityId == communityId && m.UserId == userId, ct);
 
-            if (alreadyMember)
+            if (existing != null)
+            {
+                if (existing.IsBanned)
+                    return new ActionResponse { IsSuccess = false, Message = "You are banned from this community and cannot join." };
+
                 return new ActionResponse { IsSuccess = false, Message = "You are already a member of this community." };
+            }
+
+            // Kick cooldown: a recently kicked user must wait before rejoining. We read
+            // the timestamp from the existing kick mod-log entry, so no schema change is
+            // needed. (Test value 1 min; production should be 24h.)
+            var lastKickAt = await _context.ModLogs
+                .Where(l => l.CommunityId == communityId && l.TargetUserId == userId && l.ActionType == "kick")
+                .OrderByDescending(l => l.CreatedAt)
+                .Select(l => (DateTime?)l.CreatedAt)
+                .FirstOrDefaultAsync(ct);
+
+            if (lastKickAt.HasValue)
+            {
+                var rejoinAt = lastKickAt.Value.Add(KickRejoinCooldown);
+                if (rejoinAt > DateTime.UtcNow)
+                {
+                    var remaining = rejoinAt - DateTime.UtcNow;
+                    var wait = remaining.TotalMinutes >= 1
+                        ? $"{Math.Ceiling(remaining.TotalMinutes)} minute(s)"
+                        : $"{Math.Ceiling(remaining.TotalSeconds)} second(s)";
+                    return new ActionResponse { IsSuccess = false, Message = $"You were recently kicked from this community. You can rejoin in {wait}." };
+                }
+            }
 
             var membership = new CommunityMemberData
             {
@@ -300,6 +405,13 @@ namespace ForumApp.BusinessLayer.Core
             if (membership == null)
                 return new ActionResponse { IsSuccess = false, Message = "You are not a member of this community." };
 
+            // A banned member is already excluded from the community everywhere (sidebar,
+            // member list, count). "Leaving" must NOT delete their row — that would erase
+            // the ban and let them rejoin. So it's a no-op: the ban record stays in the
+            // banned list and they still can't join.
+            if (membership.IsBanned)
+                return new ActionResponse { IsSuccess = true, Message = "You have left this community. Note: your ban is still in effect." };
+
             var community = await _context.Communities
                 .FirstOrDefaultAsync(c => c.Id == communityId, ct);
 
@@ -314,7 +426,21 @@ namespace ForumApp.BusinessLayer.Core
                     .FirstOrDefaultAsync(ct);
 
                 if (successor != null)
+                {
                     successor.Role = "owner";
+                }
+                else if (community != null)
+                {
+                    // The owner is the last active member — the community has no one
+                    // left to run it, so delete it entirely instead of leaving an
+                    // empty, ownerless community behind.
+                    await CascadeDeleteCommunityAsync(communityId, community, ct);
+
+                    try { await _context.SaveChangesAsync(ct); }
+                    catch (DbUpdateException) { return new ActionResponse { IsSuccess = false, Message = "Failed to leave community." }; }
+
+                    return new ActionResponse { IsSuccess = true, Message = "You left the community. As the last member, it was deleted." };
+                }
             }
 
             _context.CommunityMembers.Remove(membership);
@@ -401,8 +527,8 @@ namespace ForumApp.BusinessLayer.Core
                 .ToList();
 
             var bannedByUsers = await _context.Users
-                .Where(u => bannedByIds.Contains(u.ID))
-                .ToDictionaryAsync(u => u.ID, u => u.UserName, ct);
+                .Where(u => bannedByIds.Contains(u.Id))
+                .ToDictionaryAsync(u => u.Id, u => u.UserName, ct);
 
             return banned.Select(m => new CommunityMemberResponseDto
             {
@@ -491,6 +617,22 @@ namespace ForumApp.BusinessLayer.Core
 
             try { await _context.SaveChangesAsync(ct); }
             catch (DbUpdateException) { return new ActionResponse { IsSuccess = false, Message = "Failed to kick member." }; }
+
+            try
+            {
+                var slug = community?.Slug ?? string.Empty;
+                await _notificationActions.CreateAndSendAsync(
+                    targetUserId,
+                    NotificationType.Kicked,
+                    $"You were removed from c/{slug} by a moderator.",
+                    requestingUserId,
+                    null,
+                    null,
+                    slug,
+                    null,
+                    ct);
+            }
+            catch { }
 
             return new ActionResponse { IsSuccess = true, Message = "Member kicked from community." };
         }
@@ -581,20 +723,16 @@ namespace ForumApp.BusinessLayer.Core
             if (target == null)
                 return new ActionResponse { IsSuccess = false, Message = "No active ban found for this user." };
 
-            target.IsBanned = false;
-            target.BanReason = null;
-            target.BannedAt = null;
-            target.BannedByUserId = null;
-            target.Role = "member";
-
-            var community2 = await _context.Communities.FirstOrDefaultAsync(c => c.Id == communityId, ct);
-            if (community2 != null) community2.MembersCount++;
+            // Unban removes the membership/ban record entirely, leaving the user a clean
+            // non-member. They are NOT auto-added back — they must rejoin themselves
+            // (which is what bumps the member count again).
+            _context.CommunityMembers.Remove(target);
             AddModLog(communityId, "unban", requestingUserId, targetUserId);
 
             try { await _context.SaveChangesAsync(ct); }
             catch (DbUpdateException) { return new ActionResponse { IsSuccess = false, Message = "Failed to unban member." }; }
 
-            return new ActionResponse { IsSuccess = true, Message = "Member unbanned." };
+            return new ActionResponse { IsSuccess = true, Message = "Member unbanned. They can now rejoin the community." };
         }
 
         internal async Task<CommunityStatsDto> GetCommunityStatsExecution(int communityId, CancellationToken ct = default)
@@ -673,7 +811,7 @@ namespace ForumApp.BusinessLayer.Core
         internal async Task<IReadOnlyList<CommunityWithRoleDto>> GetUserCommunitiesWithRolesExecution(int userId, CancellationToken ct = default)
         {
             var memberships = await _context.CommunityMembers
-                .Where(m => m.UserId == userId)
+                .Where(m => m.UserId == userId && !m.IsBanned)
                 .Include(m => m.Community)
                 .OrderBy(m => m.Community.Title)
                 .Select(m => new CommunityWithRoleDto

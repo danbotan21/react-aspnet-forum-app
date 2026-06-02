@@ -12,17 +12,17 @@ namespace ForumApp.BusinessLayer.Structure
         public CommunityActionExecution(ForumDbContext context, INotificationAction notificationActions)
             : base(context, notificationActions) { }
 
-        public Task<IReadOnlyList<CommunityResponseDto>> GetAllCommunitiesAsync(CancellationToken ct = default)
-            => GetAllCommunitiesExecution(ct);
+        public Task<IReadOnlyList<CommunityResponseDto>> GetAllCommunitiesAsync(int? requestingUserId = null, CancellationToken ct = default)
+            => GetAllCommunitiesExecution(requestingUserId, ct);
 
-        public Task<IReadOnlyList<CommunityResponseDto>> GetAllCommunitiesByTypeAsync(string type, CancellationToken ct = default)
-            => GetAllCommunitiesByTypeExecution(type, ct);
+        public Task<IReadOnlyList<CommunityResponseDto>> GetAllCommunitiesByTypeAsync(string type, int? requestingUserId = null, CancellationToken ct = default)
+            => GetAllCommunitiesByTypeExecution(type, requestingUserId, ct);
 
         public Task<IReadOnlyList<CommunityResponseDto>> GetCommunitiesByUserAsync(int userId, CancellationToken ct = default)
             => GetCommunitiesByUserExecution(userId, ct);
 
-        public Task<IReadOnlyList<CommunityResponseDto>> SearchCommunitiesAsync(string searchTerm, CancellationToken ct = default)
-            => SearchCommunitiesExecution(searchTerm, ct);
+        public Task<IReadOnlyList<CommunityResponseDto>> SearchCommunitiesAsync(string searchTerm, int? requestingUserId = null, CancellationToken ct = default)
+            => SearchCommunitiesExecution(searchTerm, requestingUserId, ct);
 
         public Task<CommunityResponseDto?> GetCommunityAsync(string slug, int? requestingUserId = null, CancellationToken ct = default)
             => GetCommunityExecution(slug, requestingUserId, ct);

@@ -51,7 +51,10 @@ namespace ForumApp.BusinessLayer.Core
             }
 
             var users = await query.OrderByDescending(u => u.CreatedAt).ToListAsync(ct);
-            var userIds = users.Select(u => u.ID).ToList();
+            var userIds = users.Select(u => u.Id).ToList();
+
+            // The supreme admin is the first admin ever created (smallest Id with Admin role).
+            var supremeAdminId = await GetSupremeAdminIdAsync(ct);
 
             // Activity counts in a single grouped query each (avoids N+1).
             var postCounts = await _context.Posts
@@ -74,20 +77,21 @@ namespace ForumApp.BusinessLayer.Core
 
             return users.Select(u => new AdminUserDto
             {
-                Id = u.ID,
+                Id = u.Id,
                 UserName = u.UserName,
                 Email = u.Email,
                 Bio = u.Bio,
                 AvatarUrl = u.AvatarUrl,
                 Role = u.Role,
+                IsSupremeAdmin = u.Id == supremeAdminId,
                 Karma = u.Karma,
                 CreatedAt = u.CreatedAt,
                 IsBanned = u.IsBanned,
                 BanReason = u.BanReason,
                 BannedAt = u.BannedAt,
-                PostsCount = postCounts.GetValueOrDefault(u.ID, 0),
-                CommentsCount = commentCounts.GetValueOrDefault(u.ID, 0),
-                CommunitiesCount = communityCounts.GetValueOrDefault(u.ID, 0),
+                PostsCount = postCounts.GetValueOrDefault(u.Id, 0),
+                CommentsCount = commentCounts.GetValueOrDefault(u.Id, 0),
+                CommunitiesCount = communityCounts.GetValueOrDefault(u.Id, 0),
             }).ToList();
         }
 
@@ -99,7 +103,7 @@ namespace ForumApp.BusinessLayer.Core
             if (string.IsNullOrWhiteSpace(reason) || reason.Trim().Length < 3)
                 return new ActionResponse { IsSuccess = false, Message = "Please provide a ban reason." };
 
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.ID == targetUserId, ct);
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == targetUserId, ct);
             if (user == null)
                 return new ActionResponse { IsSuccess = false, Message = "User not found." };
 
@@ -114,7 +118,7 @@ namespace ForumApp.BusinessLayer.Core
             user.RefreshToken = null;
             user.RefreshTokenExpiry = null;
 
-            AddLog(adminUserId, "ban", "user", user.ID, $"u/{user.UserName}", reason.Trim());
+            AddLog(adminUserId, "ban", "user", user.Id, $"u/{user.UserName}", reason.Trim());
 
             try { await _context.SaveChangesAsync(ct); }
             catch { return new ActionResponse { IsSuccess = false, Message = "Failed to ban user." }; }
@@ -124,7 +128,7 @@ namespace ForumApp.BusinessLayer.Core
 
         internal async Task<ActionResponse> UnbanUserExecution(int targetUserId, int adminUserId, CancellationToken ct = default)
         {
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.ID == targetUserId, ct);
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == targetUserId, ct);
             if (user == null)
                 return new ActionResponse { IsSuccess = false, Message = "User not found." };
 
@@ -136,7 +140,7 @@ namespace ForumApp.BusinessLayer.Core
             user.BannedAt = null;
             user.BannedByUserId = null;
 
-            AddLog(adminUserId, "unban", "user", user.ID, $"u/{user.UserName}", null);
+            AddLog(adminUserId, "unban", "user", user.Id, $"u/{user.UserName}", null);
 
             try { await _context.SaveChangesAsync(ct); }
             catch { return new ActionResponse { IsSuccess = false, Message = "Failed to unban user." }; }
@@ -144,24 +148,41 @@ namespace ForumApp.BusinessLayer.Core
             return new ActionResponse { IsSuccess = true, Message = $"User u/{user.UserName} has been unbanned." };
         }
 
+        // The "supreme" admin is the first admin ever created (smallest user Id with
+        // the Admin role). They are permanent and only they may manage admin roles.
+        private Task<int?> GetSupremeAdminIdAsync(CancellationToken ct = default)
+            => _context.Users
+                .Where(u => u.Role == "Admin")
+                .OrderBy(u => u.Id)
+                .Select(u => (int?)u.Id)
+                .FirstOrDefaultAsync(ct);
+
         internal async Task<ActionResponse> ChangeUserRoleExecution(int targetUserId, string role, int adminUserId, CancellationToken ct = default)
         {
             if (!ValidRoles.Contains(role))
                 return new ActionResponse { IsSuccess = false, Message = "Invalid role. Allowed values: Admin, User." };
 
-            if (targetUserId == adminUserId && role != "Admin")
-                return new ActionResponse { IsSuccess = false, Message = "You cannot remove your own admin role." };
-
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.ID == targetUserId, ct);
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == targetUserId, ct);
             if (user == null)
                 return new ActionResponse { IsSuccess = false, Message = "User not found." };
+
+            var supremeAdminId = await GetSupremeAdminIdAsync(ct);
+
+            // The primary administrator is permanent — nobody (not even themselves) can strip the role.
+            if (targetUserId == supremeAdminId && role != "Admin")
+                return new ActionResponse { IsSuccess = false, Message = "The primary administrator's role cannot be changed." };
+
+            // Granting or revoking the Admin role is reserved to the primary administrator.
+            bool touchesAdminRole = role == "Admin" || user.Role == "Admin";
+            if (touchesAdminRole && adminUserId != supremeAdminId)
+                return new ActionResponse { IsSuccess = false, Message = "Only the primary administrator can grant or revoke the Admin role." };
 
             if (user.IsBanned && role == "Admin")
                 return new ActionResponse { IsSuccess = false, Message = "Unban the user before promoting them to admin." };
 
             user.Role = role;
 
-            AddLog(adminUserId, "role", "user", user.ID, $"u/{user.UserName}", $"role set to {role}");
+            AddLog(adminUserId, "role", "user", user.Id, $"u/{user.UserName}", $"role set to {role}");
 
             try { await _context.SaveChangesAsync(ct); }
             catch { return new ActionResponse { IsSuccess = false, Message = "Failed to change user role." }; }
@@ -230,10 +251,10 @@ namespace ForumApp.BusinessLayer.Core
 
             var posts = await _context.Posts.Where(p => postIds.Contains(p.Id))
                 .Include(p => p.Author).ToDictionaryAsync(p => p.Id, ct);
-            var comments = await _context.Comments.Where(c => commentIds.Contains(c.ID))
-                .Include(c => c.Author).ToDictionaryAsync(c => c.ID, ct);
-            var reportedUsers = await _context.Users.Where(u => reportedUserIds.Contains(u.ID))
-                .ToDictionaryAsync(u => u.ID, u => u.UserName, ct);
+            var comments = await _context.Comments.Where(c => commentIds.Contains(c.Id))
+                .Include(c => c.Author).ToDictionaryAsync(c => c.Id, ct);
+            var reportedUsers = await _context.Users.Where(u => reportedUserIds.Contains(u.Id))
+                .ToDictionaryAsync(u => u.Id, u => u.UserName, ct);
 
             var communityIds = reports.Where(r => r.CommunityId.HasValue).Select(r => r.CommunityId!.Value).Distinct().ToList();
             var communities = await _context.Communities.Where(c => communityIds.Contains(c.Id))
@@ -265,6 +286,8 @@ namespace ForumApp.BusinessLayer.Core
                     dto.PostId = post.Id;
                     dto.ContentPreview = Preview(post.Body);
                     dto.ContentAuthorUserName = post.Author?.UserName;
+                    dto.ContentAuthorId = post.Author?.Id;
+                    dto.ContentAuthorIsAdmin = post.Author?.Role == "Admin";
                 }
                 else if (r.Type == ReportType.Comment && comments.TryGetValue(r.ReportedItemId, out var comment))
                 {
@@ -272,6 +295,8 @@ namespace ForumApp.BusinessLayer.Core
                     dto.PostId = comment.PostId;
                     dto.ContentPreview = Preview(comment.Body);
                     dto.ContentAuthorUserName = comment.Author?.UserName;
+                    dto.ContentAuthorId = comment.Author?.Id;
+                    dto.ContentAuthorIsAdmin = comment.Author?.Role == "Admin";
                 }
                 else if (r.Type == ReportType.User)
                 {
@@ -356,7 +381,7 @@ namespace ForumApp.BusinessLayer.Core
 
             var items = comments.Select(c => new AdminCommentDto
             {
-                Id = c.ID,
+                Id = c.Id,
                 Preview = c.Body.Length > 200 ? c.Body.Substring(0, 200) + "..." : c.Body,
                 Votes = c.Votes,
                 CreatedAt = c.CreatedAt,
@@ -424,7 +449,7 @@ namespace ForumApp.BusinessLayer.Core
                 if (notifText.Length > 300) notifText = notifText.Substring(0, 297) + "...";
                 try
                 {
-                    await _notifications.CreateAndSendAsync(recipient.ID, NotificationType.ContactReply, notifText, adminUserId, ct: ct);
+                    await _notifications.CreateAndSendAsync(recipient.Id, NotificationType.ContactReply, notifText, adminUserId, ct: ct);
                 }
                 catch { /* notification failure must not fail the reply */ }
 

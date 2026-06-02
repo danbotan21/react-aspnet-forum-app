@@ -20,8 +20,8 @@ namespace ForumApp.BusinessLayer.Structure
         public Task<PostBatchResponseDto> GetPostsByCommunityAsync(int communityId, string? sortBy = null, int page = 1, int pageSize = 15, int? requestingUserId = null, CancellationToken ct = default)
             => GetPostsByCommunityExecution(communityId, sortBy, page, pageSize, requestingUserId, ct);
 
-        public Task<PostBatchResponseDto> GetPostsByUserAsync(int userId, int page = 1, int pageSize = 15, CancellationToken ct = default)
-            => GetPostsByUserExecution(userId, page, pageSize, ct);
+        public Task<PostBatchResponseDto> GetPostsByUserAsync(int userId, int? viewerId = null, int page = 1, int pageSize = 15, CancellationToken ct = default)
+            => GetPostsByUserExecution(userId, viewerId, page, pageSize, ct);
 
         public Task<PostResponseDto?> CreatePostAsync(PostCreateDto postData, int authorId, CancellationToken ct = default)
             => CreatePostExecution(postData, authorId, ct);

@@ -12,7 +12,7 @@ namespace ForumApp.Domain.Entities.Comment
     {
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        public int ID { get; set; }
+        public int Id { get; set; }
 
         [Required]
         [StringLength(1000)]
@@ -28,10 +28,12 @@ namespace ForumApp.Domain.Entities.Comment
         public UserData Author { get; set; } = null!;
 
         // FK spre Post (comentariul apartine unui post)
+        [ForeignKey("Post")]
         public int PostId { get; set; }
         public PostData Post { get; set; } = null!;
 
         // Self-referencing: reply la alt comentariu (optional)
+        [ForeignKey("ParentComment")]
         public int? ParentCommentId { get; set; }
         public CommentData? ParentComment { get; set; }
 

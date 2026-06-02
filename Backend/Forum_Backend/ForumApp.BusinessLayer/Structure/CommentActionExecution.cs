@@ -11,14 +11,14 @@ namespace ForumApp.BusinessLayer.Structure
         public CommentActionExecution(ForumDbContext context, INotificationAction notificationActions)
             : base(context, notificationActions) { }
 
-        public Task<CommentResponseDto?> GetCommentByIdAsync(int commentId, CancellationToken ct = default)
-            => GetCommentByIdExecution(commentId, ct);
+        public Task<CommentResponseDto?> GetCommentByIdAsync(int commentId, int? viewerId = null, CancellationToken ct = default)
+            => GetCommentByIdExecution(commentId, viewerId, ct);
 
         public Task<IReadOnlyList<CommentResponseDto>> GetCommentsByPostAsync(int postId, int? requestingUserId = null, CancellationToken ct = default)
             => GetCommentsByPostExecution(postId, requestingUserId, ct);
 
-        public Task<IReadOnlyList<CommentResponseDto>> GetCommentsByUserAsync(int userId, CancellationToken ct = default)
-            => GetCommentsByUserExecution(userId, ct);
+        public Task<IReadOnlyList<CommentResponseDto>> GetCommentsByUserAsync(int userId, int? viewerId = null, CancellationToken ct = default)
+            => GetCommentsByUserExecution(userId, viewerId, ct);
 
         public Task<CommentResponseDto?> CreateCommentAsync(CommentCreateDto commentData, int authorId, CancellationToken ct = default)
             => CreateCommentExecution(commentData, authorId, ct);

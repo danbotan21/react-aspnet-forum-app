@@ -53,7 +53,8 @@ namespace ForumApp.API.Controller
         [HttpGet("user/{userId:int}")]
         public async Task<IActionResult> GetByUser(int userId, [FromQuery] int page = 1, [FromQuery] int pageSize = 15, CancellationToken ct = default)
         {
-            var posts = await _postService.GetPostsByUserAsync(userId, page, pageSize, ct);
+            int? viewerId = TryGetCurrentUserId();
+            var posts = await _postService.GetPostsByUserAsync(userId, viewerId, page, pageSize, ct);
             return Ok(posts);
         }
 

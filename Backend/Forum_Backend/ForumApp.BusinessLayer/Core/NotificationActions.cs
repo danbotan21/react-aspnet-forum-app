@@ -109,7 +109,7 @@ namespace ForumApp.BusinessLayer.Core
             if (actorId.HasValue)
             {
                 var actor = await _context.Users
-                    .Where(u => u.ID == actorId.Value)
+                    .Where(u => u.Id == actorId.Value)
                     .Select(u => new { u.UserName, u.AvatarUrl })
                     .FirstOrDefaultAsync(ct);
                 actorUsername = actor?.UserName;

@@ -21,7 +21,7 @@ namespace ForumApp.API.Controller
         [HttpGet("{id:int}")]
         public async Task<IActionResult> GetById(int id, CancellationToken ct)
         {
-            var comment = await _commentService.GetCommentByIdAsync(id, ct);
+            var comment = await _commentService.GetCommentByIdAsync(id, TryGetCurrentUserId(), ct);
 
             if (comment == null)
                 return NotFound($"Comment with id {id} was not found.");
@@ -42,7 +42,7 @@ namespace ForumApp.API.Controller
         [HttpGet("user/{userId:int}")]
         public async Task<IActionResult> GetByUser(int userId, CancellationToken ct)
         {
-            var comments = await _commentService.GetCommentsByUserAsync(userId, ct);
+            var comments = await _commentService.GetCommentsByUserAsync(userId, TryGetCurrentUserId(), ct);
             return Ok(comments);
         }
 
@@ -60,7 +60,7 @@ namespace ForumApp.API.Controller
             if (created == null)
                 return BadRequest("Comment could not be created. Ensure post exists, parent comment is valid, and user is a member of the community.");
 
-            return CreatedAtAction(nameof(GetById), new { id = created.ID }, created);
+            return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
         }
 
         // PUT api/comments/{id}

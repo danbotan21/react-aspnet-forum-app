@@ -23,7 +23,7 @@ namespace ForumApp.API.Controller
         [HttpGet]
         public async Task<IActionResult> GetAll(CancellationToken ct)
         {
-            var communities = await _communityService.GetAllCommunitiesAsync(ct);
+            var communities = await _communityService.GetAllCommunitiesAsync(TryGetCurrentUserId(), ct);
             return Ok(communities);
         }
 
@@ -31,7 +31,7 @@ namespace ForumApp.API.Controller
         [HttpGet("type/{type}")]
         public async Task<IActionResult> GetByType(string type, CancellationToken ct)
         {
-            var communities = await _communityService.GetAllCommunitiesByTypeAsync(type, ct);
+            var communities = await _communityService.GetAllCommunitiesByTypeAsync(type, TryGetCurrentUserId(), ct);
             return Ok(communities);
         }
 
@@ -70,7 +70,7 @@ namespace ForumApp.API.Controller
             if (string.IsNullOrWhiteSpace(term))
                 return BadRequest("Search term cannot be empty.");
 
-            var communities = await _communityService.SearchCommunitiesAsync(term, ct);
+            var communities = await _communityService.SearchCommunitiesAsync(term, TryGetCurrentUserId(), ct);
             return Ok(communities);
         }
 

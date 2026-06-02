@@ -14,7 +14,7 @@ namespace ForumApp.Domain.Entities.User
 
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        public int ID { get; set; }
+        public int Id { get; set; }
 
         [Required]
         [StringLength(50, MinimumLength = 6)]
@@ -47,6 +47,8 @@ namespace ForumApp.Domain.Entities.User
         public string Language { get; set; } = string.Empty;
 
         public string? AvatarUrl { get; set; }
+
+        public string? BannerUrl { get; set; }
 
         public int Karma { get; set; } = 0;
 

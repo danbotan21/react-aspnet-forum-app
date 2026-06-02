@@ -12,7 +12,9 @@ namespace ForumApp.Domain.Models.Post
         public int CommentsCount { get; set; }
         public DateTime CreatedAt { get; set; }
         public string AuthorName { get; set; }
+        public string? AuthorAvatarUrl { get; set; }
         public string CommunitySlug { get; set; }
+        public string? CommunityAvatarUrl { get; set; }
         public bool IsPinned { get; set; }
     }
 }

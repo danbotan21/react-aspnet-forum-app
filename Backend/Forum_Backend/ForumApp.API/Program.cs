@@ -12,7 +12,13 @@ using System.Text;
 var builder = WebApplication.CreateBuilder(args);
 
 //  Add services
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(o =>
+    {
+        // DateTimes are stored as UTC; emit them with a 'Z' so the browser parses them
+        // as UTC instead of local time (otherwise "x minutes ago" is off by the offset).
+        o.JsonSerializerOptions.Converters.Add(new ForumApp.API.UtcDateTimeConverter());
+    });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSignalR();
 
@@ -143,3 +149,21 @@ app.MapControllers();
 app.MapHub<NotificationHub>("/hubs/notifications");
 
 app.Run();
+
+namespace ForumApp.API
+{
+    // Serializes DateTime as UTC ISO-8601 with a trailing 'Z'. Also applies to DateTime?.
+    public sealed class UtcDateTimeConverter : System.Text.Json.Serialization.JsonConverter<DateTime>
+    {
+        public override DateTime Read(ref System.Text.Json.Utf8JsonReader reader, Type typeToConvert, System.Text.Json.JsonSerializerOptions options)
+            => reader.GetDateTime();
+
+        public override void Write(System.Text.Json.Utf8JsonWriter writer, DateTime value, System.Text.Json.JsonSerializerOptions options)
+        {
+            var utc = value.Kind == DateTimeKind.Unspecified
+                ? DateTime.SpecifyKind(value, DateTimeKind.Utc)
+                : value.ToUniversalTime();
+            writer.WriteStringValue(utc.ToString("yyyy-MM-ddTHH:mm:ss.fff'Z'"));
+        }
+    }
+}

@@ -36,7 +36,7 @@ namespace ForumApp.BusinessLayer.Core
                 return await _context.Posts.Where(p => p.Id == postId.Value).Select(p => (int?)p.AuthorId).FirstOrDefaultAsync(ct);
 
             if (commentId.HasValue)
-                return await _context.Comments.Where(c => c.ID == commentId.Value).Select(c => (int?)c.AuthorId).FirstOrDefaultAsync(ct);
+                return await _context.Comments.Where(c => c.Id == commentId.Value).Select(c => (int?)c.AuthorId).FirstOrDefaultAsync(ct);
 
             return null;
         }
@@ -47,7 +47,7 @@ namespace ForumApp.BusinessLayer.Core
                 return await _context.Posts.Where(p => p.Id == postId.Value).Select(p => (int?)p.CommunityId).FirstOrDefaultAsync(ct);
 
             if (commentId.HasValue)
-                return await _context.Comments.Where(c => c.ID == commentId.Value).Select(c => (int?)c.Post.CommunityId).FirstOrDefaultAsync(ct);
+                return await _context.Comments.Where(c => c.Id == commentId.Value).Select(c => (int?)c.Post.CommunityId).FirstOrDefaultAsync(ct);
 
             return null;
         }
@@ -79,7 +79,7 @@ namespace ForumApp.BusinessLayer.Core
                 return await _context.Posts.Where(p => p.Id == postId.Value).Select(p => p.Community.Slug).FirstOrDefaultAsync(ct);
 
             if (commentId.HasValue)
-                return await _context.Comments.Where(c => c.ID == commentId.Value).Select(c => c.Post.Community.Slug).FirstOrDefaultAsync(ct);
+                return await _context.Comments.Where(c => c.Id == commentId.Value).Select(c => c.Post.Community.Slug).FirstOrDefaultAsync(ct);
 
             return null;
         }
@@ -90,7 +90,7 @@ namespace ForumApp.BusinessLayer.Core
                 return await _context.Posts.Where(p => p.Id == postId.Value).Select(p => p.Title).FirstOrDefaultAsync(ct);
 
             if (commentId.HasValue)
-                return await _context.Comments.Where(c => c.ID == commentId.Value).Select(c => c.Post.Title).FirstOrDefaultAsync(ct);
+                return await _context.Comments.Where(c => c.Id == commentId.Value).Select(c => c.Post.Title).FirstOrDefaultAsync(ct);
 
             return null;
         }

@@ -11,9 +11,11 @@ namespace ForumApp.Domain.Entities.CommunityMember
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int Id { get; set; }
 
+        [ForeignKey("User")]
         public int UserId { get; set; }
         public UserData User { get; set; } = null!;
 
+        [ForeignKey("Community")]
         public int CommunityId { get; set; }
         public CommunityData Community { get; set; } = null!;
 

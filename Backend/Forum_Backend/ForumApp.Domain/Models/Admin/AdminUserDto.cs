@@ -9,6 +9,7 @@ namespace ForumApp.Domain.Models.Admin
         public string? Bio { get; set; }
         public string? AvatarUrl { get; set; }
         public string Role { get; set; } = string.Empty;
+        public bool IsSupremeAdmin { get; set; }
         public int Karma { get; set; }
         public DateTime CreatedAt { get; set; }
 

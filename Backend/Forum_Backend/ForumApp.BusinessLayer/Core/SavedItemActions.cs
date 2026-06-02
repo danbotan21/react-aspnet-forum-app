@@ -41,7 +41,7 @@ namespace ForumApp.BusinessLayer.Core
 
             if (itemData.CommentId.HasValue)
             {
-                var commentExists = await _context.Comments.AnyAsync(c => c.ID == itemData.CommentId.Value, ct);
+                var commentExists = await _context.Comments.AnyAsync(c => c.Id == itemData.CommentId.Value, ct);
                 if (!commentExists) return null;
             }
 

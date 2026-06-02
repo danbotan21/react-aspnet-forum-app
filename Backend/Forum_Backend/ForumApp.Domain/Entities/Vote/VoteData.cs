@@ -18,11 +18,14 @@ using System.ComponentModel.DataAnnotations.Schema;
             public int Id { get; set; }
 
             public VoteType Type { get; set; }
+            [ForeignKey("Post")]
             public int? PostId { get; set; }
             public PostData? Post { get; set; }
+            [ForeignKey("Comment")]
             public int? CommentId { get; set; }
             public CommentData? Comment { get; set; }
             public DateTime VotedAt { get; set; } = DateTime.UtcNow;
+            [ForeignKey("Author")]
             public int AuthorId { get; set; }
             public UserData Author { get; set; } = null!;
         }

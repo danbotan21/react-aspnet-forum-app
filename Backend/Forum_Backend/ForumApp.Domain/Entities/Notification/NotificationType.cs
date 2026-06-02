@@ -10,6 +10,7 @@ namespace ForumApp.Domain.Entities.Notification
         Banned = 5,
         PostDeletedByMod = 6,
         CommentDeletedByMod = 7,
-        ContactReply = 8
+        ContactReply = 8,
+        Kicked = 9
     }
 }

@@ -92,6 +92,12 @@ namespace ForumApp.DataAccess
                 .HasForeignKey(c => c.AuthorId)
                 .OnDelete(DeleteBehavior.NoAction);
 
+            modelBuilder.Entity<CommentData>()
+                .HasOne(c => c.ParentComment)
+                .WithMany(c => c.Replies)
+                .HasForeignKey(c => c.ParentCommentId)
+                .OnDelete(DeleteBehavior.NoAction);
+
             modelBuilder.Entity<CommunityMemberData>()
                 .HasIndex(m => new { m.CommunityId, m.UserId })
                 .IsUnique();

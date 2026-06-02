@@ -23,5 +23,7 @@ namespace ForumApp.Domain.Models.Admin
         public int? PostId { get; set; }
         public string? ContentPreview { get; set; }
         public string? ContentAuthorUserName { get; set; }
+        public int? ContentAuthorId { get; set; }
+        public bool ContentAuthorIsAdmin { get; set; }
     }
 }

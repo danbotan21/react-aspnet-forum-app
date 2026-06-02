@@ -16,6 +16,10 @@ namespace ForumApp.Domain.Models.Report
         public string? PostImageUrl { get; set; }
         public string ContentAuthorUserName { get; set; } = string.Empty;
 
+        // The content author's role in this community ("owner"/"moderator"/"member"/null).
+        // Lets the UI flag the owner's content and hide actions a moderator may not take.
+        public string? ContentAuthorRole { get; set; }
+
         public int ReportedItemId { get; set; }
         public int? PostId { get; set; } // for comments: the parent post id
     }

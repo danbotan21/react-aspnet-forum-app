@@ -8,20 +8,18 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ForumApp.BusinessLayer.Core
 {
-    public class CommentActions
+    public class CommentActions : BaseActions
     {
-        protected readonly ForumDbContext _context;
         protected readonly INotificationAction _notificationActions;
 
-        public CommentActions(ForumDbContext context, INotificationAction notificationActions)
+        public CommentActions(ForumDbContext context, INotificationAction notificationActions) : base(context)
         {
-            _context = context;
             _notificationActions = notificationActions;
         }
 
         private static CommentResponseDto MapToDto(CommentData comment) => new CommentResponseDto
         {
-            ID = comment.ID,
+            Id = comment.Id,
             Body = comment.Body,
             Votes = comment.Votes,
             CreatedAt = comment.CreatedAt,
@@ -30,13 +28,25 @@ namespace ForumApp.BusinessLayer.Core
             ParentCommentId = comment.ParentCommentId
         };
 
-        internal async Task<CommentResponseDto?> GetCommentByIdExecution(int commentId, CancellationToken ct = default)
+        internal async Task<CommentResponseDto?> GetCommentByIdExecution(int commentId, int? viewerId = null, CancellationToken ct = default)
         {
             var comment = await _context.Comments
                 .Include(c => c.Author)
-                .FirstOrDefaultAsync(c => c.ID == commentId, ct);
+                .Include(c => c.Post).ThenInclude(p => p!.Community)
+                .FirstOrDefaultAsync(c => c.Id == commentId, ct);
 
             if (comment == null) return null;
+
+            // A comment in a private community is only visible to its (non-banned)
+            // members or a global admin.
+            if (comment.Post?.Community != null && comment.Post.Community.Type.ToLower() == "private")
+            {
+                if (!viewerId.HasValue) return null;
+                var canView = await _context.CommunityMembers.AnyAsync(
+                        m => m.CommunityId == comment.Post.CommunityId && m.UserId == viewerId.Value && !m.IsBanned, ct)
+                    || await IsGlobalAdminAsync(viewerId.Value, ct);
+                if (!canView) return null;
+            }
 
             return MapToDto(comment);
         }
@@ -69,11 +79,26 @@ namespace ForumApp.BusinessLayer.Core
             return comments.Select(MapToDto).ToList().AsReadOnly();
         }
 
-        internal async Task<IReadOnlyList<CommentResponseDto>> GetCommentsByUserExecution(int userId, CancellationToken ct = default)
+        internal async Task<IReadOnlyList<CommentResponseDto>> GetCommentsByUserExecution(int userId, int? viewerId = null, CancellationToken ct = default)
         {
-            var comments = await _context.Comments
+            // Own profile (and admins) see everything; everyone else sees private-community
+            // comments only for communities they are a (non-banned) member of.
+            var isSelf = viewerId.HasValue && viewerId.Value == userId;
+            var isAdmin = viewerId.HasValue && await IsGlobalAdminAsync(viewerId.Value, ct);
+
+            var query = _context.Comments
                 .Include(c => c.Author)
-                .Where(c => c.AuthorId == userId && c.Post.Community.Type.ToLower() != "private")
+                .Where(c => c.AuthorId == userId);
+
+            if (!isSelf && !isAdmin)
+            {
+                query = query.Where(c =>
+                    c.Post.Community.Type.ToLower() != "private" ||
+                    (viewerId.HasValue && _context.CommunityMembers.Any(m =>
+                        m.CommunityId == c.Post.CommunityId && m.UserId == viewerId.Value && !m.IsBanned)));
+            }
+
+            var comments = await query
                 .OrderByDescending(c => c.CreatedAt)
                 .ToListAsync(ct);
 
@@ -101,7 +126,7 @@ namespace ForumApp.BusinessLayer.Core
             if (commentData.ParentCommentId.HasValue)
             {
                 var parentInfo = await _context.Comments
-                    .Where(c => c.ID == commentData.ParentCommentId.Value && c.PostId == commentData.PostId)
+                    .Where(c => c.Id == commentData.ParentCommentId.Value && c.PostId == commentData.PostId)
                     .Select(c => new { c.AuthorId })
                     .FirstOrDefaultAsync(ct);
 
@@ -147,7 +172,7 @@ namespace ForumApp.BusinessLayer.Core
                             "Someone replied to your comment.",
                             authorId,
                             commentData.PostId,
-                            comment.ID,
+                            comment.Id,
                             postInfo.CommunitySlug,
                             postInfo.Title,
                             ct);
@@ -167,7 +192,7 @@ namespace ForumApp.BusinessLayer.Core
                             "Someone commented on your post.",
                             authorId,
                             commentData.PostId,
-                            comment.ID,
+                            comment.Id,
                             postInfo.CommunitySlug,
                             postInfo.Title,
                             ct);
@@ -183,7 +208,7 @@ namespace ForumApp.BusinessLayer.Core
         {
             var comment = await _context.Comments
                 .Include(c => c.Author)
-                .FirstOrDefaultAsync(c => c.ID == commentId, ct);
+                .FirstOrDefaultAsync(c => c.Id == commentId, ct);
 
             if (comment == null) return null;
             if (comment.AuthorId != requestingUserId) return null;
@@ -209,7 +234,7 @@ namespace ForumApp.BusinessLayer.Core
         {
             var comment = await _context.Comments
                 .Include(c => c.Post).ThenInclude(p => p!.Community)
-                .FirstOrDefaultAsync(c => c.ID == commentId, ct);
+                .FirstOrDefaultAsync(c => c.Id == commentId, ct);
 
             if (comment == null)
                 return new ActionResponse { IsSuccess = false, Message = "Comment not found." };
@@ -226,7 +251,7 @@ namespace ForumApp.BusinessLayer.Core
                                 && m.UserId == requestingUserId
                                 && (m.Role == "owner" || m.Role == "moderator")
                                 && !m.IsBanned, ct)
-                    || await _context.Users.AnyAsync(u => u.ID == requestingUserId && u.Role == "Admin", ct);
+                    || await IsGlobalAdminAsync(requestingUserId, ct);
 
                 if (!isModOrOwner)
                     return new ActionResponse { IsSuccess = false, Message = "You are not the author of this comment." };
@@ -235,15 +260,16 @@ namespace ForumApp.BusinessLayer.Core
                 communitySlug = comment.Post.Community?.Slug;
             }
 
-            var commentNotifications = await _context.Notifications
-                .Where(n => n.CommentId == commentId)
-                .ToListAsync(ct);
-            _context.Notifications.RemoveRange(commentNotifications);
+            // A non-supreme admin may not remove another admin's comment.
+            if (await IsProtectedAdminContentAsync(comment.AuthorId, requestingUserId, ct))
+                return new ActionResponse { IsSuccess = false, Message = "Only the primary administrator can remove another administrator's content." };
 
-            if (comment.Post != null && comment.Post.CommentsCount > 0)
-                comment.Post.CommentsCount--;
+            // Remove the comment, its full reply tree and every dependent row
+            // (votes, saved items, notifications, reports). All FKs are NoAction.
+            int removed = await CascadeDeleteCommentsAsync(new[] { commentId }, ct);
 
-            _context.Comments.Remove(comment);
+            if (comment.Post != null && removed > 0)
+                comment.Post.CommentsCount = Math.Max(0, comment.Post.CommentsCount - removed);
 
             try
             {

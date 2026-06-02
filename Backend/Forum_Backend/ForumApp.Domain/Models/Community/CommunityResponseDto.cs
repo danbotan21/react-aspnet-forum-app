@@ -13,5 +13,6 @@ namespace ForumApp.Domain.Models.Community
         public string Type { get; set; }
         public string? Rules { get; set; }
         public DateTime CreatedAt { get; set; }
+        public string? OwnerUserName { get; set; }
     }
 }

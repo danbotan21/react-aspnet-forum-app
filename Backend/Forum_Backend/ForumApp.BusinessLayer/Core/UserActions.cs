@@ -4,6 +4,8 @@ using ForumApp.Domain.Entities.User;
 using ForumApp.Domain.Models.User;
 using ForumApp.Domain.Models.Responses;
 using System.Net.Http.Headers;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -26,13 +28,15 @@ namespace ForumApp.BusinessLayer.Core
         // Full mapping — includes email. Used only for authenticated user's own profile.
         private static UserResponseDto MapToDto(UserData user) => new()
         {
-            ID = user.ID,
+            Id = user.Id,
             UserName = user.UserName,
             Email = user.Email,
             Bio = user.Bio,
             AvatarUrl = user.AvatarUrl,
+            BannerUrl = user.BannerUrl,
             Karma = user.Karma,
             Role = user.Role,
+            ProfileVisibility = user.ProfileVisibility,
             CreatedAt = user.CreatedAt,
             HasPassword = !string.IsNullOrEmpty(user.PasswordHash)
         };
@@ -40,15 +44,23 @@ namespace ForumApp.BusinessLayer.Core
         // Public mapping — omits email to avoid exposing PII in public endpoints.
         private static UserResponseDto MapToPublicDto(UserData user) => new()
         {
-            ID = user.ID,
+            Id = user.Id,
             UserName = user.UserName,
             Bio = user.Bio,
             AvatarUrl = user.AvatarUrl,
+            BannerUrl = user.BannerUrl,
             Karma = user.Karma,
             Role = user.Role,
+            ProfileVisibility = user.ProfileVisibility,
             CreatedAt = user.CreatedAt,
             HasPassword = !string.IsNullOrEmpty(user.PasswordHash)
         };
+
+        private static string HashToken(string token)
+        {
+            var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(token));
+            return Convert.ToHexString(bytes).ToLowerInvariant();
+        }
 
         private async Task<string> GenerateUniqueUsernameAsync(string displayName, CancellationToken ct)
         {
@@ -107,11 +119,11 @@ namespace ForumApp.BusinessLayer.Core
                         ? $"Your account has been banned. Reason: {reason}"
                         : "Your account has been banned.");
 
-            var accessToken = _tokenService.GenerateToken(user.ID, user.UserName, user.Role);
+            var accessToken = _tokenService.GenerateToken(user.Id, user.UserName, user.Role);
             var refreshToken = _tokenService.GenerateRefreshToken();
 
             var expiryDays = int.Parse(_configuration["JwtSettings:RefreshTokenExpiryDays"]!);
-            user.RefreshToken = refreshToken;
+            user.RefreshToken = HashToken(refreshToken);
             user.RefreshTokenExpiry = DateTime.UtcNow.AddDays(expiryDays);
             await _context.SaveChangesAsync(ct);
 
@@ -125,8 +137,9 @@ namespace ForumApp.BusinessLayer.Core
 
         internal async Task<LoginResponseDto?> RefreshTokenExecution(string refreshToken, CancellationToken ct = default)
         {
+            var tokenHash = HashToken(refreshToken);
             var user = await _context.Users
-                .FirstOrDefaultAsync(u => u.RefreshToken == refreshToken, ct);
+                .FirstOrDefaultAsync(u => u.RefreshToken == tokenHash, ct);
 
             if (user == null || user.RefreshTokenExpiry < DateTime.UtcNow)
                 return null;
@@ -135,11 +148,11 @@ namespace ForumApp.BusinessLayer.Core
             if (user.IsBanned)
                 return null;
 
-            var newAccessToken = _tokenService.GenerateToken(user.ID, user.UserName, user.Role);
+            var newAccessToken = _tokenService.GenerateToken(user.Id, user.UserName, user.Role);
             var newRefreshToken = _tokenService.GenerateRefreshToken();
 
             var expiryDays = int.Parse(_configuration["JwtSettings:RefreshTokenExpiryDays"]!);
-            user.RefreshToken = newRefreshToken;
+            user.RefreshToken = HashToken(newRefreshToken);
             user.RefreshTokenExpiry = DateTime.UtcNow.AddDays(expiryDays);
             await _context.SaveChangesAsync(ct);
 
@@ -206,11 +219,11 @@ namespace ForumApp.BusinessLayer.Core
                         ? $"Your account has been banned. Reason: {reason}"
                         : "Your account has been banned.");
 
-            var newAccessToken = _tokenService.GenerateToken(user.ID, user.UserName, user.Role);
+            var newAccessToken = _tokenService.GenerateToken(user.Id, user.UserName, user.Role);
             var refreshToken = _tokenService.GenerateRefreshToken();
 
             var expiryDays = int.Parse(_configuration["JwtSettings:RefreshTokenExpiryDays"]!);
-            user.RefreshToken = refreshToken;
+            user.RefreshToken = HashToken(refreshToken);
             user.RefreshTokenExpiry = DateTime.UtcNow.AddDays(expiryDays);
             await _context.SaveChangesAsync(ct);
 
@@ -243,7 +256,7 @@ namespace ForumApp.BusinessLayer.Core
                     throw new InvalidOperationException("Username must have between 6 and 50 characters.");
 
                 var usernameTaken = await _context.Users
-                    .AnyAsync(u => u.ID != userId && u.UserName.ToLower() == normalizedUserName.ToLower(), ct);
+                    .AnyAsync(u => u.Id != userId && u.UserName.ToLower() == normalizedUserName.ToLower(), ct);
                 if (usernameTaken)
                     throw new InvalidOperationException("Username is already in use.");
 
@@ -265,7 +278,7 @@ namespace ForumApp.BusinessLayer.Core
                         throw new InvalidOperationException("Current password is incorrect.");
 
                     var emailTaken = await _context.Users
-                        .AnyAsync(u => u.ID != userId && u.Email.ToLower() == normalizedEmail, ct);
+                        .AnyAsync(u => u.Id != userId && u.Email.ToLower() == normalizedEmail, ct);
                     if (emailTaken)
                         throw new InvalidOperationException("Email is already in use.");
 
@@ -283,6 +296,12 @@ namespace ForumApp.BusinessLayer.Core
             {
                 var normalizedAvatarUrl = userData.AvatarUrl.Trim();
                 user.AvatarUrl = string.IsNullOrWhiteSpace(normalizedAvatarUrl) ? null : normalizedAvatarUrl;
+            }
+
+            if (userData.BannerUrl != null)
+            {
+                var normalizedBannerUrl = userData.BannerUrl.Trim();
+                user.BannerUrl = string.IsNullOrWhiteSpace(normalizedBannerUrl) ? null : normalizedBannerUrl;
             }
 
             if (!string.IsNullOrWhiteSpace(userData.Theme))
@@ -409,8 +428,9 @@ namespace ForumApp.BusinessLayer.Core
 
         internal async Task LogoutExecution(string refreshToken, CancellationToken ct = default)
         {
+            var tokenHash = HashToken(refreshToken);
             var user = await _context.Users
-                .FirstOrDefaultAsync(u => u.RefreshToken == refreshToken, ct);
+                .FirstOrDefaultAsync(u => u.RefreshToken == tokenHash, ct);
             if (user != null)
             {
                 user.RefreshToken = null;

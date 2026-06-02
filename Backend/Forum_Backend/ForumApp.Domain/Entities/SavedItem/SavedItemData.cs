@@ -10,6 +10,7 @@ namespace ForumApp.Domain.Entities.SavedItem{
             [Key]
             [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
             public int Id{get; set;}
+            [ForeignKey("Author")]
             public int AuthorId{get; set;}
             public UserData Author{get; set;}=null!;
 

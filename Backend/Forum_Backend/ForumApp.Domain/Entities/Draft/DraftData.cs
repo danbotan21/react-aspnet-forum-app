@@ -10,12 +10,14 @@ namespace ForumApp.Domain.Entities.Draft
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int Id { get; set; }
+        [ForeignKey("Author")]
         public int AuthorId { get; set; }
         public UserData Author { get; set; } = null!;
         public string Title { get; set; } = string.Empty;
         public string? Body { get; set; }
         public string? LinkUrl { get; set; }
         public string? ImageUrl { get; set; }
+        [ForeignKey("Community")]
         public int? CommunityId { get; set; }
         public CommunityData? Community { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
