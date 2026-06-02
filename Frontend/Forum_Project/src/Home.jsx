@@ -21,6 +21,7 @@ import { fetchUserSavedPosts, savePost, unsaveItem } from './utils/savedItemApi'
 import { fetchPostsPage } from './utils/postFeedApi'
 import { ReportModal } from './ReportModal'
 import { deletePost, fetchMyCommunities } from './utils/modApi'
+import { AdSidebar } from './AdSidebar'
 
 const SORT_OPTIONS = [
   { id: 'popular', label: 'Popular' },
@@ -440,6 +441,8 @@ export const Home = () => {
 
   return (
     <div className='home'>
+      <div className='feed-layout'>
+        <div className='feed-main'>
       <div className='home-sort-bar' ref={sortRef}>
         <div className='sort-trigger-wrapper'>
           <button
@@ -708,6 +711,9 @@ export const Home = () => {
             )}
           </>
         )}
+      </div>
+        </div>
+        <AdSidebar />
       </div>
 
       {reportingPost && (

@@ -25,7 +25,10 @@ export const uploadImage = async (file, category) => {
   })
 
   if (!response.ok) {
-    const errorMessage = await readResponseError(response, 'Image upload failed.')
+    const errorMessage = await readResponseError(
+      response,
+      'Image upload failed.',
+    )
     throw new Error(errorMessage)
   }
 

@@ -15,6 +15,7 @@ import { fetchUserSavedPosts, savePost, unsaveItem } from './utils/savedItemApi'
 import { fetchPostsPage } from './utils/postFeedApi'
 import { ReportModal } from './ReportModal'
 import { deletePost, fetchMyCommunities } from './utils/modApi'
+import { AdSidebar } from './AdSidebar'
 
 const getPostRoute = (post) =>
   `/community/${encodeURIComponent(post.communitySlug)}/post/${post.id}`
@@ -394,6 +395,8 @@ export const Popular = () => {
 
   return (
     <div className='popular-page'>
+      <div className='feed-layout'>
+        <div className='feed-main'>
       <div ref={postsWrapRef}>
         {loading ? (
           <p style={{ textAlign: 'center', padding: '2rem' }}>
@@ -605,6 +608,9 @@ export const Popular = () => {
             )}
           </>
         )}
+      </div>
+        </div>
+        <AdSidebar />
       </div>
 
       {reportingPost && (

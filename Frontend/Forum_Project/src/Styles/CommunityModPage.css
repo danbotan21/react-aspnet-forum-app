@@ -13,8 +13,16 @@
   padding-right: 24px;
   padding-bottom: 56px;
   background:
-    radial-gradient(980px 320px at 88% -44%, rgba(15, 67, 199, 0.10), transparent 62%),
-    radial-gradient(760px 280px at 10% -10%, rgba(56, 189, 248, 0.10), transparent 56%),
+    radial-gradient(
+      980px 320px at 88% -44%,
+      rgba(15, 67, 199, 0.1),
+      transparent 62%
+    ),
+    radial-gradient(
+      760px 280px at 10% -10%,
+      rgba(56, 189, 248, 0.1),
+      transparent 56%
+    ),
     linear-gradient(160deg, #f0f4ff 0%, #f8f9fa 100%);
   box-sizing: border-box;
   font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
@@ -109,7 +117,9 @@
   cursor: pointer;
   text-align: left;
   font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
-  transition: background-color 0.15s ease, color 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
 }
 
 .mod-nav-item:hover {
@@ -118,7 +128,7 @@
 }
 
 .mod-nav-active {
-  background-color: rgba(15, 67, 199, 0.10);
+  background-color: rgba(15, 67, 199, 0.1);
   color: rgb(15, 67, 199);
   font-weight: 600;
 }
@@ -200,16 +210,38 @@
   border: 1px solid transparent;
 }
 
-.mod-stat-orange { background: linear-gradient(135deg, #eef2fb, #e2e8f5); border-color: #c8d5e8; }
-.mod-stat-blue   { background: linear-gradient(135deg, #edf4ff, #dce9ff); border-color: #bfd4f5; }
-.mod-stat-teal   { background: linear-gradient(135deg, #f0fdfa, #ccfbf1); border-color: #99f6e4; }
-.mod-stat-purple { background: linear-gradient(135deg, #faf5ff, #ede9fe); border-color: #c4b5fd; }
+.mod-stat-orange {
+  background: linear-gradient(135deg, #eef2fb, #e2e8f5);
+  border-color: #c8d5e8;
+}
+.mod-stat-blue {
+  background: linear-gradient(135deg, #edf4ff, #dce9ff);
+  border-color: #bfd4f5;
+}
+.mod-stat-teal {
+  background: linear-gradient(135deg, #f0fdfa, #ccfbf1);
+  border-color: #99f6e4;
+}
+.mod-stat-purple {
+  background: linear-gradient(135deg, #faf5ff, #ede9fe);
+  border-color: #c4b5fd;
+}
 
-.mod-stat-icon { font-size: 22px; }
-.mod-stat-orange .mod-stat-icon { color: #102543; }
-.mod-stat-blue   .mod-stat-icon { color: rgb(15, 67, 199); }
-.mod-stat-teal   .mod-stat-icon { color: #0d9488; }
-.mod-stat-purple .mod-stat-icon { color: #7c3aed; }
+.mod-stat-icon {
+  font-size: 22px;
+}
+.mod-stat-orange .mod-stat-icon {
+  color: #102543;
+}
+.mod-stat-blue .mod-stat-icon {
+  color: rgb(15, 67, 199);
+}
+.mod-stat-teal .mod-stat-icon {
+  color: #0d9488;
+}
+.mod-stat-purple .mod-stat-icon {
+  color: #7c3aed;
+}
 
 .mod-stat-body {
   display: flex;
@@ -286,7 +318,10 @@
   font-weight: 600;
   cursor: pointer;
   font-family: inherit;
-  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    color 0.15s ease,
+    background 0.15s ease;
 }
 
 .mod-filter-btn:hover {
@@ -328,7 +363,7 @@
 }
 
 .mod-report-card:hover {
-  box-shadow: 0 4px 16px rgba(12, 28, 61, 0.10);
+  box-shadow: 0 4px 16px rgba(12, 28, 61, 0.1);
 }
 
 .mod-report-header {
@@ -348,7 +383,9 @@
   color: #2b4367;
 }
 
-.mod-reason-icon { font-size: 12px; }
+.mod-reason-icon {
+  font-size: 12px;
+}
 
 .mod-report-date {
   margin-left: auto;
@@ -438,8 +475,14 @@
   font-weight: 700;
 }
 
-.mod-type-post    { background: #dbeafe; color: #1d4ed8; }
-.mod-type-comment { background: #dcfce7; color: #15803d; }
+.mod-type-post {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+.mod-type-comment {
+  background: #dcfce7;
+  color: #15803d;
+}
 
 /* ─── ROLE BADGES ─────────────────────────────────────────────── */
 
@@ -471,7 +514,9 @@
   border: 1px solid #e2e8f0;
 }
 
-.mod-role-icon { font-size: 10px; }
+.mod-role-icon {
+  font-size: 10px;
+}
 
 /* ─── MEMBERS ─────────────────────────────────────────────────── */
 
@@ -509,12 +554,14 @@
   font-family: inherit;
   outline: none;
   box-sizing: border-box;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .mod-search-input:focus {
   border-color: rgb(15, 67, 199);
-  box-shadow: 0 0 0 3px rgba(15, 67, 199, 0.10);
+  box-shadow: 0 0 0 3px rgba(15, 67, 199, 0.1);
   background: #fff;
 }
 
@@ -749,7 +796,10 @@
   border-radius: 10px;
   font-family: inherit;
   outline: none;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease;
   box-sizing: border-box;
   width: 100%;
 }
@@ -758,7 +808,7 @@
 .mod-settings-select:focus {
   background: #fff;
   border-color: rgb(15, 67, 199);
-  box-shadow: 0 0 0 3px rgba(15, 67, 199, 0.10);
+  box-shadow: 0 0 0 3px rgba(15, 67, 199, 0.1);
 }
 
 .mod-settings-textarea {
@@ -848,7 +898,9 @@
   justify-content: center;
   cursor: pointer;
   gap: 6px;
-  transition: border-color 0.2s ease, background 0.2s ease;
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease;
 }
 
 .mod-media-upload-zone:hover {
@@ -991,7 +1043,9 @@
   transition: color 0.15s ease;
 }
 
-.mod-rule-remove:hover { color: #e74c3c; }
+.mod-rule-remove:hover {
+  color: #e74c3c;
+}
 
 .mod-add-rule-row {
   display: flex;
@@ -1150,7 +1204,9 @@
   border-radius: 12px;
 }
 
-.mod-log-entry-left { flex-shrink: 0; }
+.mod-log-entry-left {
+  flex-shrink: 0;
+}
 
 .mod-log-info {
   display: flex;
@@ -1178,7 +1234,9 @@
   text-decoration: none;
 }
 
-.mod-log-user-link:hover { text-decoration: underline; }
+.mod-log-user-link:hover {
+  text-decoration: underline;
+}
 
 .mod-log-badge {
   display: inline-block;
@@ -1189,16 +1247,46 @@
   white-space: nowrap;
 }
 
-.mod-log-ban      { background: #fee2e2; color: #dc2626; }
-.mod-log-unban    { background: #dcfce7; color: #15803d; }
-.mod-log-kick     { background: #eef2fb; color: #102543; }
-.mod-log-promote  { background: #dcfce7; color: #15803d; }
-.mod-log-demote   { background: #f1f5f9; color: #475569; }
-.mod-log-transfer { background: #ede9fe; color: #6d28d9; }
-.mod-log-pin      { background: #dbeafe; color: #1d4ed8; }
-.mod-log-unpin    { background: #f1f5f9; color: #475569; }
-.mod-log-remove   { background: #fee2e2; color: #dc2626; }
-.mod-log-dismiss  { background: #f1f5f9; color: #475569; }
+.mod-log-ban {
+  background: #fee2e2;
+  color: #dc2626;
+}
+.mod-log-unban {
+  background: #dcfce7;
+  color: #15803d;
+}
+.mod-log-kick {
+  background: #eef2fb;
+  color: #102543;
+}
+.mod-log-promote {
+  background: #dcfce7;
+  color: #15803d;
+}
+.mod-log-demote {
+  background: #f1f5f9;
+  color: #475569;
+}
+.mod-log-transfer {
+  background: #ede9fe;
+  color: #6d28d9;
+}
+.mod-log-pin {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+.mod-log-unpin {
+  background: #f1f5f9;
+  color: #475569;
+}
+.mod-log-remove {
+  background: #fee2e2;
+  color: #dc2626;
+}
+.mod-log-dismiss {
+  background: #f1f5f9;
+  color: #475569;
+}
 
 /* ─── EMPTY STATE ─────────────────────────────────────────────── */
 
@@ -1218,8 +1306,12 @@
 }
 
 @keyframes mod-spin {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .mod-spin {
@@ -1257,12 +1349,14 @@
   text-decoration: none;
 }
 
-.mod-btn:active { transform: scale(0.97); }
+.mod-btn:active {
+  transform: scale(0.97);
+}
 
 .mod-btn-primary {
   background: linear-gradient(135deg, #0e4ad2, #1a68ff);
   color: #fff;
-  box-shadow: 0 2px 8px rgba(15, 67, 199, 0.30);
+  box-shadow: 0 2px 8px rgba(15, 67, 199, 0.3);
 }
 .mod-btn-primary:hover {
   background: linear-gradient(135deg, #0b3cb5, #155ee0);
@@ -1274,41 +1368,53 @@
   color: rgb(15, 67, 199);
   border-color: #c8d9f8;
 }
-.mod-btn-secondary:hover { background: #e0e9ff; }
+.mod-btn-secondary:hover {
+  background: #e0e9ff;
+}
 
 .mod-btn-blue {
   background: linear-gradient(135deg, #eff6ff, #dbeafe);
   color: #1d4ed8;
   border-color: #bfdbfe;
 }
-.mod-btn-blue:hover { background: linear-gradient(135deg, #dbeafe, #bfdbfe); }
+.mod-btn-blue:hover {
+  background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+}
 
 .mod-btn-ghost {
   background: #f1f5f9;
   color: #475569;
   border-color: #e2e8f0;
 }
-.mod-btn-ghost:hover { background: #e2e8f0; color: #334155; }
+.mod-btn-ghost:hover {
+  background: #e2e8f0;
+  color: #334155;
+}
 
 .mod-btn-warning {
   background: linear-gradient(135deg, #eef2fb, #e2e8f5);
   color: #102543;
   border-color: #c8d5e8;
 }
-.mod-btn-warning:hover { background: linear-gradient(135deg, #e2e8f5, #d5dff0); }
+.mod-btn-warning:hover {
+  background: linear-gradient(135deg, #e2e8f5, #d5dff0);
+}
 
 .mod-btn-danger {
   background: linear-gradient(135deg, #fee2e2, #fecaca);
   color: #dc2626;
   border-color: #fca5a5;
 }
-.mod-btn-danger:hover { background: linear-gradient(135deg, #fecaca, #fca5a5); color: #b91c1c; }
+.mod-btn-danger:hover {
+  background: linear-gradient(135deg, #fecaca, #fca5a5);
+  color: #b91c1c;
+}
 
 .mod-btn-danger-solid {
   background: #e74c3c;
   color: #fff;
   border-color: transparent;
-  box-shadow: 0 2px 8px rgba(231, 76, 60, 0.30);
+  box-shadow: 0 2px 8px rgba(231, 76, 60, 0.3);
 }
 .mod-btn-danger-solid:hover {
   background: #c0392b;
@@ -1468,8 +1574,12 @@
 /* ─── SPINNER ANIMATION ────────────────────────────────────────── */
 
 @keyframes mod-spin {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .mod-spin {

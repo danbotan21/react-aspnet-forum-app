@@ -50,7 +50,9 @@ export const fetchCommunityPostsPage = async ({
   token,
 }) => {
   const query = buildQueryString({ sortBy, page, pageSize })
-  const response = await apiFetch(`/api/posts/community/${communityId}?${query}`)
+  const response = await apiFetch(
+    `/api/posts/community/${communityId}?${query}`,
+  )
   if (!response.ok) {
     throw new Error(`Failed to load community posts (${response.status})`)
   }

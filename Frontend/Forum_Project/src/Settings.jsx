@@ -16,6 +16,12 @@ import { Link } from 'react-router-dom'
 import { useAuth } from './AuthContext'
 import { readResponseError } from './utils/imageUpload'
 import { fetchMyCommunities } from './utils/modApi'
+import {
+  fetchSubscriptionStatus,
+  purchasePremium,
+} from './utils/subscriptionApi'
+import { PremiumCheckout } from './PremiumCheckout'
+import { PremiumBadge } from './PremiumBadge'
 import './Styles/Settings.css'
 
 const INITIAL_FORM_DATA = {
@@ -64,6 +70,14 @@ export const Settings = () => {
   const [myCommunities, setMyCommunities] = useState([])
   const [communitiesLoading, setCommunitiesLoading] = useState(false)
   const [communitiesError, setCommunitiesError] = useState('')
+
+  // Subscription / premium
+  const [subStatus, setSubStatus] = useState(null)
+  const [subLoading, setSubLoading] = useState(false)
+  const [subError, setSubError] = useState('')
+  const [subSuccess, setSubSuccess] = useState('')
+  const [showCheckout, setShowCheckout] = useState(false)
+  const [isPaying, setIsPaying] = useState(false)
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target
@@ -325,6 +339,73 @@ export const Settings = () => {
     }
   }, [activeSection, token])
 
+  useEffect(() => {
+    if (activeSection !== 'subscription' || !token) return
+    let cancelled = false
+    setSubLoading(true)
+    setSubError('')
+    fetchSubscriptionStatus()
+      .then((data) => {
+        if (!cancelled) setSubStatus(data)
+      })
+      .catch((e) => {
+        if (!cancelled) setSubError(e.message)
+      })
+      .finally(() => {
+        if (!cancelled) setSubLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [activeSection, token])
+
+  const handlePurchase = async (cardData) => {
+    setSubError('')
+    setSubSuccess('')
+
+    if (!token) {
+      setSubError('Please login to subscribe.')
+      return
+    }
+
+    setIsPaying(true)
+    try {
+      const result = await purchasePremium(cardData)
+
+      // Refresh the authenticated user so isPremium/premiumUntil update everywhere
+      // (e.g. the ad sidebar disappears immediately).
+      try {
+        const meResponse = await executeWithAuth((accessToken) =>
+          fetch('/api/auth/me', {
+            method: 'GET',
+            headers: { Authorization: `Bearer ${accessToken}` },
+          }),
+        )
+        if (meResponse?.ok) {
+          const profile = await meResponse.json()
+          updateUser(profile)
+        }
+      } catch {
+        // Non-fatal: status will still refresh below.
+      }
+
+      // Refresh the subscription panel.
+      try {
+        const fresh = await fetchSubscriptionStatus()
+        setSubStatus(fresh)
+      } catch {
+        // ignore
+      }
+
+      setSubSuccess(result?.message || 'Premium activated!')
+      setShowCheckout(false)
+    } catch (error) {
+      setSubError(error?.message || 'Payment failed. Please try again.')
+    } finally {
+      setIsPaying(false)
+    }
+  }
+
   const handleSavePreferences = (e) => {
     e.preventDefault()
     console.log('Saving preferences:', formData)
@@ -446,6 +527,13 @@ export const Settings = () => {
           >
             <FaLock className='settings-nav-icon' />
             <span>Password</span>
+          </button>
+          <button
+            className={`settings-nav-item ${activeSection === 'subscription' ? 'active' : ''}`}
+            onClick={() => setActiveSection('subscription')}
+          >
+            <FaCrown className='settings-nav-icon' />
+            <span>Subscription</span>
           </button>
           <button
             className={`settings-nav-item ${activeSection === 'preferences' ? 'active' : ''}`}
@@ -672,6 +760,109 @@ export const Settings = () => {
                   {isChangingPassword ? 'Updating...' : 'Update Password'}
                 </button>
               </form>
+            </div>
+          )}
+
+          {/* Subscription */}
+          {activeSection === 'subscription' && (
+            <div className='settings-section'>
+              <h2 className='settings-section-title'>Subscription</h2>
+              <p className='settings-section-subtitle'>
+                Manage your membership and go ad-free
+              </p>
+
+              {subError && (
+                <p className='settings-status settings-status-error'>
+                  {subError}
+                </p>
+              )}
+              {subSuccess && (
+                <p className='settings-status settings-status-success'>
+                  {subSuccess}
+                </p>
+              )}
+
+              {subLoading ? (
+                <p className='settings-section-subtitle'>Loading…</p>
+              ) : (
+                <>
+                  <div
+                    className={`sub-status-card ${
+                      subStatus?.isPremium ? 'sub-status-card--premium' : ''
+                    }`}
+                  >
+                    <FaCrown className='sub-status-icon' />
+                    <div className='sub-status-text'>
+                      <span className='sub-status-label'>Current plan</span>
+                      {subStatus?.isPremium ? (
+                        <span className='sub-status-value'>
+                          <PremiumBadge size='sm' /> active until{' '}
+                          {new Date(
+                            subStatus.premiumUntil,
+                          ).toLocaleDateString()}
+                        </span>
+                      ) : (
+                        <span className='sub-status-value'>
+                          Free member · ads are shown
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className='sub-plan-card'>
+                    <div className='sub-plan-head'>
+                      <span className='sub-plan-name'>
+                        <FaCrown /> Premium
+                      </span>
+                      <span className='sub-plan-price'>
+                        ${subStatus?.price ?? '4.99'}
+                        <span className='sub-plan-period'>/month</span>
+                      </span>
+                    </div>
+                    <ul className='sub-plan-benefits'>
+                      <li>No ads anywhere in the app</li>
+                      <li>Premium badge on your profile</li>
+                      <li>Support the platform</li>
+                    </ul>
+
+                    {!showCheckout && (
+                      <button
+                        type='button'
+                        className='settings-btn settings-btn-primary'
+                        onClick={() => {
+                          setSubSuccess('')
+                          setSubError('')
+                          setShowCheckout(true)
+                        }}
+                      >
+                        {subStatus?.isPremium
+                          ? 'Extend Premium (+1 month)'
+                          : 'Go Premium'}
+                      </button>
+                    )}
+
+                  </div>
+
+                  {showCheckout && (
+                    <div className='sub-checkout-panel'>
+                      <h3 className='sub-checkout-title'>Payment details</h3>
+                      <div className='sub-checkout-note'>
+                        🔒 Demo checkout — no real payment is processed.
+                        <br />✅ Success: <strong>4242 4242 4242 4242</strong>
+                        <br />❌ Declined: <strong>4000 0000 0000 0002</strong>{' '}
+                        (or 4000 0000 0000 9995 = insufficient funds)
+                        <br />Use any future expiry (MM/YY) and any 3-digit CVC.
+                      </div>
+                      <PremiumCheckout
+                        price={subStatus?.price ?? '4.99'}
+                        isPaying={isPaying}
+                        onPay={handlePurchase}
+                        onCancel={() => setShowCheckout(false)}
+                      />
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           )}
 

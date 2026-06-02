@@ -14,6 +14,7 @@ import {
 import { useAuth, apiFetch } from './AuthContext'
 import { useNotifications } from './NotificationContext'
 import { normalizeImageSrc } from './utils/media'
+import { PremiumBadge } from './PremiumBadge'
 import './Styles/Navbar.css'
 import defaultAvatar from './img/avatar.webp'
 
@@ -48,6 +49,7 @@ export const Navbar = () => {
   const loggedUser = user?.userName || 'username'
   const userKarma = user?.karma ?? 0
   const userAvatarSrc = normalizeImageSrc(user?.avatarUrl) || defaultAvatar
+  const isPremium = !!user?.isPremium
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -241,22 +243,34 @@ export const Navbar = () => {
             ref={profileRef}
             onClick={() => setIsOpen((prev) => !prev)}
           >
-            <img src={userAvatarSrc} alt='avatar' className='navbar-avatar' />
+            <span
+              className={`navbar-avatar-wrap ${isPremium ? 'navbar-avatar-wrap--premium' : ''}`}
+              title={isPremium ? 'Premium member' : undefined}
+            >
+              <img src={userAvatarSrc} alt='avatar' className='navbar-avatar' />
+            </span>
 
             {isOpen && (
               <div
                 className='profile-dropdown'
                 onClick={(e) => e.stopPropagation()}
               >
-                <div className='profile-dropdown-header'>
-                  <img
-                    src={userAvatarSrc}
-                    alt='avatar'
-                    className='profile-dropdown-avatar'
-                  />
+                <div
+                  className={`profile-dropdown-header ${isPremium ? 'profile-dropdown-header--premium' : ''}`}
+                >
+                  <span
+                    className={`profile-dropdown-avatar-wrap ${isPremium ? 'profile-dropdown-avatar-wrap--premium' : ''}`}
+                  >
+                    <img
+                      src={userAvatarSrc}
+                      alt='avatar'
+                      className='profile-dropdown-avatar'
+                    />
+                  </span>
                   <span className='profile-dropdown-username'>
                     u/{loggedUser}
                   </span>
+                  {isPremium && <PremiumBadge size='sm' />}
                   <span className='profile-dropdown-karma'>
                     {userKarma} karma
                   </span>

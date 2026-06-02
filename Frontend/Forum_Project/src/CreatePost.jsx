@@ -1,6 +1,12 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { FaTimes, FaPen, FaTrash, FaCloudUploadAlt, FaUserShield } from 'react-icons/fa'
+import {
+  FaTimes,
+  FaPen,
+  FaTrash,
+  FaCloudUploadAlt,
+  FaUserShield,
+} from 'react-icons/fa'
 import { useAuth } from './AuthContext'
 import { uploadImage } from './utils/imageUpload'
 import { normalizeImageSrc } from './utils/media'
@@ -200,7 +206,9 @@ export const CreatePost = () => {
       .then((s) => setIsBannedInSelected(s.isBanned))
       .catch(() => setIsBannedInSelected(false))
 
-    const selected = communities.find((c) => String(c.id) === String(communityId))
+    const selected = communities.find(
+      (c) => String(c.id) === String(communityId),
+    )
     if (selected?.type?.toLowerCase() !== 'restricted') return
 
     fetch(`/api/communities/${communityId}/myrole`, {
@@ -353,10 +361,14 @@ export const CreatePost = () => {
       return
     }
 
-    const selectedComm = communities.find((c) => String(c.id) === String(communityId))
+    const selectedComm = communities.find(
+      (c) => String(c.id) === String(communityId),
+    )
     if (selectedComm?.type?.toLowerCase() === 'restricted') {
       if (myRoleInSelected !== 'owner' && myRoleInSelected !== 'moderator') {
-        setSubmitError('This is a restricted community — only moderators can post here.')
+        setSubmitError(
+          'This is a restricted community — only moderators can post here.',
+        )
         return
       }
     }
@@ -428,7 +440,9 @@ export const CreatePost = () => {
       }
     } catch (error) {
       console.error(error)
-      setSubmitError('An error occurred while creating the post. Please try again.')
+      setSubmitError(
+        'An error occurred while creating the post. Please try again.',
+      )
     } finally {
       setIsSubmitting(false)
     }
@@ -470,20 +484,34 @@ export const CreatePost = () => {
             </option>
             {communities.map((comm) => (
               <option key={comm.id} value={comm.id}>
-                r/{comm.slug}{comm.type === 'restricted' ? ' (restricted)' : comm.type === 'private' ? ' (private)' : ''}
+                r/{comm.slug}
+                {comm.type === 'restricted'
+                  ? ' (restricted)'
+                  : comm.type === 'private'
+                    ? ' (private)'
+                    : ''}
               </option>
             ))}
           </select>
         </div>
 
         {(() => {
-          const sel = communities.find((c) => String(c.id) === String(communityId))
+          const sel = communities.find(
+            (c) => String(c.id) === String(communityId),
+          )
           if (!sel) return null
-          if (sel.type?.toLowerCase() === 'restricted' && myRoleInSelected !== 'owner' && myRoleInSelected !== 'moderator') {
+          if (
+            sel.type?.toLowerCase() === 'restricted' &&
+            myRoleInSelected !== 'owner' &&
+            myRoleInSelected !== 'moderator'
+          ) {
             return (
               <div className='create-post-restricted-banner'>
                 <FaUserShield className='create-post-restricted-icon' />
-                <span><strong>Restricted community</strong> — Only moderators and the owner can post here.</span>
+                <span>
+                  <strong>Restricted community</strong> — Only moderators and
+                  the owner can post here.
+                </span>
               </div>
             )
           }
@@ -619,9 +647,7 @@ export const CreatePost = () => {
           </div>
 
           {submitError && (
-            <div className='create-post-submit-error'>
-              {submitError}
-            </div>
+            <div className='create-post-submit-error'>{submitError}</div>
           )}
 
           <div className='create-post-actions'>

@@ -370,3 +370,41 @@ a {
 .profile-dropdown-logout:hover .profile-dropdown-item-icon {
   color: #c0392b;
 }
+
+/* ===== Premium indicator on the navbar avatar ===== */
+.navbar-avatar-wrap {
+  position: relative;
+  display: inline-flex;
+  line-height: 0;
+}
+/* Premium = a thin gold gradient ring around the avatar (no blue ring, no crown).
+   The ring is the wrapper's gradient background showing through 2px of padding. */
+.navbar-avatar-wrap--premium {
+  padding: 2px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ffe9a8 0%, #f3c24a 50%, #d99a16 100%);
+  margin-right: 15px; /* carries the avatar's right spacing so the ring stays circular */
+}
+.navbar-avatar-wrap--premium .navbar-avatar {
+  border: 0; /* drop the default blue ring — the gold gradient is the ring now */
+  margin-right: 0;
+}
+
+/* ===== Premium styling inside the profile dropdown ===== */
+.profile-dropdown-header--premium {
+  background: linear-gradient(180deg, #fff7e6 0%, #ffffff 72%);
+  border-bottom: 1px solid #f1e2bb;
+}
+.profile-dropdown-avatar-wrap {
+  display: inline-flex;
+  line-height: 0;
+  border-radius: 50%;
+}
+.profile-dropdown-avatar-wrap--premium {
+  padding: 3px;
+  background: linear-gradient(135deg, #ffe9a8 0%, #f3c24a 50%, #d99a16 100%);
+  box-shadow: 0 4px 12px rgba(224, 165, 27, 0.3);
+}
+.profile-dropdown-avatar-wrap--premium .profile-dropdown-avatar {
+  border: 2px solid #ffffff; /* white gap makes the gold read as a clean ring */
+}

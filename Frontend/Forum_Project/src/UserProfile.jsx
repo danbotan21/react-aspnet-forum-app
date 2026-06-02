@@ -15,6 +15,7 @@ import { ProfileCommentsTab } from './ProfileCommentsTab'
 import { ProfileSavedTab } from './ProfileSavedTab'
 import { ProfileVotedTab } from './ProfileVotedTab'
 import { useAuth, apiFetch } from './AuthContext'
+import { PremiumBadge } from './PremiumBadge'
 import { normalizeImageSrc } from './utils/media'
 import { uploadImage } from './utils/imageUpload'
 import { fetchUserPostsPage } from './utils/postFeedApi'
@@ -1215,13 +1216,20 @@ export function UserProfile() {
             </div>
 
             <div className='user-hero-body'>
-              <img
-                src={profileAvatarSrc}
-                alt='Avatar'
-                className='user-hero-avatar'
-              />
+              <span
+                className={`user-hero-avatar-wrap ${profileUser.isPremium ? 'user-hero-avatar-wrap--premium' : ''}`}
+              >
+                <img
+                  src={profileAvatarSrc}
+                  alt='Avatar'
+                  className='user-hero-avatar'
+                />
+              </span>
               <div className='user-hero-meta'>
-                <h1>{profileUser.userName || displayName}</h1>
+                <h1 className='user-hero-name'>
+                  {profileUser.userName || displayName}
+                  {profileUser.isPremium && <PremiumBadge size='md' />}
+                </h1>
                 <p>u/{profileUser.userName || displayName}</p>
               </div>
               <div className='user-hero-actions'>

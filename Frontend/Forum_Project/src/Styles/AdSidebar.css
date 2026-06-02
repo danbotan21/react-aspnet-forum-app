@@ -1,0 +1,204 @@
+/* Two-column wrapper used by the Home + Popular feeds: centered feed column on the
+   left, sponsored rail on the right. The feed keeps its existing 800px width.
+   The gap is intentionally generous so the rail does not crowd the posts. */
+.feed-layout {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 140px;
+  align-items: flex-start;
+  justify-content: center;
+  max-width: 1220px; /* 800 (feed) + 140 (gap) + 280 (rail) */
+  margin: 0 auto;
+}
+
+.feed-main {
+  width: 800px;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.ad-rail {
+  width: 280px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 96px;
+  font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+  /* Hidden by default; only shown on wide screens where there is room (see media query). */
+  display: none;
+}
+
+/* "Sponsored" section header: a refined uppercase label followed by a hairline rule. */
+.ad-rail-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 2px 14px;
+}
+
+.ad-rail-header-label {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #7c8aa3;
+  white-space: nowrap;
+}
+
+.ad-rail-header::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, #cdd9ec, rgba(205, 217, 236, 0));
+}
+
+.ad-rail-list {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.ad-card {
+  display: block;
+  background: #ffffff;
+  border: 1px solid #e1e9f5;
+  border-radius: 20px;
+  overflow: hidden;
+  color: inherit;
+  /* Display-only: not a link, so no pointer cursor (it does not navigate). The hover
+     animation is purely decorative — it brings the card to life without implying a click. */
+  cursor: default;
+  box-shadow: 0 6px 16px rgba(12, 28, 61, 0.06);
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.25s ease,
+    transform 0.2s ease;
+}
+
+.ad-card:hover {
+  border-color: #b9d0f4;
+  box-shadow: 0 16px 32px rgba(15, 67, 199, 0.16);
+  transform: translateY(-3px);
+}
+
+.ad-card-media {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  background: #eef3fb;
+  overflow: hidden;
+}
+
+.ad-card-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.4s ease;
+}
+
+.ad-card:hover .ad-card-media img {
+  transform: scale(1.06);
+}
+
+.ad-card-media-fallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 40px;
+  font-weight: 800;
+  color: #9db4dc;
+  background: linear-gradient(135deg, #eef3fb 0%, #dde8f7 100%);
+}
+
+/* The clearest, standard way to mark sponsored content: a small badge on the media. */
+.ad-card-badge {
+  position: absolute;
+  top: 9px;
+  left: 9px;
+  background: rgba(16, 35, 63, 0.74);
+  color: #ffffff;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 7px;
+  backdrop-filter: blur(2px);
+}
+
+.ad-card-body {
+  padding: 13px 15px 15px;
+}
+
+.ad-card-brand {
+  display: inline-block;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #0f43c7;
+  background: #eaf1ff;
+  padding: 3px 9px;
+  border-radius: 999px;
+  margin-bottom: 9px;
+}
+
+.ad-card-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #173464;
+  margin: 0 0 6px;
+  line-height: 1.28;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.ad-card-text {
+  font-size: 12.5px;
+  color: #66789a;
+  margin: 0;
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.ad-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.ad-card-price {
+  font-size: 15px;
+  font-weight: 800;
+  color: #0a7d33;
+}
+
+.ad-rail-disclaimer {
+  font-size: 10.5px;
+  color: #97a6bf;
+  text-align: center;
+  margin: 16px 4px 0;
+}
+
+/* Only show the rail when the viewport is wide enough to fit feed + gap + rail.
+   Crucially, when the rail IS shown we also lock the feed at a rigid 800px (flex: 0 0)
+   so increasing the gap pushes the rail further right INSTEAD of shrinking the posts.
+   Rule of thumb: keep min-width >= max-width(of .feed-layout) + 340. */
+@media (min-width: 1600px) {
+  .ad-rail {
+    display: block;
+  }
+
+  .feed-main {
+    flex: 0 0 800px;
+  }
+}

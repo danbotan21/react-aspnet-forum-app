@@ -1,4 +1,5 @@
-const BACKEND_ORIGIN = import.meta.env.VITE_BACKEND_ORIGIN || 'http://localhost:5129'
+const BACKEND_ORIGIN =
+  import.meta.env.VITE_BACKEND_ORIGIN || 'http://localhost:5129'
 
 const toBackendAbsolutePath = (value) => {
   const normalized = value.replace(/\\/g, '/')
