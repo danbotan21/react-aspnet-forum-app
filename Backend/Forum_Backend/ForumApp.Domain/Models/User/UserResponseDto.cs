@@ -15,6 +15,10 @@ namespace ForumApp.Domain.Models.User
         public string? ProfileVisibility { get; set; }
         public DateTime CreatedAt { get; set; }
         public bool HasPassword { get; set; }
+
+        // Premium subscription state (computed from PremiumUntil).
+        public bool IsPremium { get; set; }
+        public DateTime? PremiumUntil { get; set; }
     }
 
 }

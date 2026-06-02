@@ -52,6 +52,10 @@ namespace ForumApp.Domain.Entities.User
 
         public int Karma { get; set; } = 0;
 
+        // Premium subscription: the moment the user's premium access expires.
+        // null (or a past date) = free member. A future date = active premium.
+        public DateTime? PremiumUntil { get; set; }
+
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         // Global ban (applied by an application admin — blocks login across the whole app)

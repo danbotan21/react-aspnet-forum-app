@@ -38,7 +38,11 @@ namespace ForumApp.BusinessLayer.Core
             Role = user.Role,
             ProfileVisibility = user.ProfileVisibility,
             CreatedAt = user.CreatedAt,
-            HasPassword = !string.IsNullOrEmpty(user.PasswordHash)
+            HasPassword = !string.IsNullOrEmpty(user.PasswordHash),
+            IsPremium = user.PremiumUntil.HasValue && user.PremiumUntil.Value > DateTime.UtcNow,
+            PremiumUntil = user.PremiumUntil.HasValue && user.PremiumUntil.Value > DateTime.UtcNow
+                ? user.PremiumUntil
+                : null
         };
 
         // Public mapping — omits email to avoid exposing PII in public endpoints.
@@ -53,7 +57,9 @@ namespace ForumApp.BusinessLayer.Core
             Role = user.Role,
             ProfileVisibility = user.ProfileVisibility,
             CreatedAt = user.CreatedAt,
-            HasPassword = !string.IsNullOrEmpty(user.PasswordHash)
+            HasPassword = !string.IsNullOrEmpty(user.PasswordHash),
+            // Others may see only WHETHER someone is premium (for a badge), not the exact date.
+            IsPremium = user.PremiumUntil.HasValue && user.PremiumUntil.Value > DateTime.UtcNow
         };
 
         private static string HashToken(string token)

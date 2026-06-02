@@ -85,6 +85,17 @@ builder.Services.AddScoped<ISavedItemAction, SavedItemActionExecution>();
 builder.Services.AddScoped<IContactAction, ContactActionExecution>();
 builder.Services.AddScoped<IReportAction, ReportActionExecution>();
 builder.Services.AddScoped<IAdminAction, AdminActionExecution>();
+builder.Services.AddScoped<ISubscriptionAction, SubscriptionActionExecution>();
+
+//  Ads: the business action lives in the BusinessLayer (logic only); the external HTTP
+//  provider is infrastructure and lives in the API layer, behind IAdProviderAction —
+//  same split as IImageStorageAction/LocalImageStorageService and the SignalR notifier.
+builder.Services.AddScoped<IAdAction, AdActionExecution>();
+builder.Services.AddHttpClient<IAdProviderAction, DummyJsonAdProvider>(client =>
+{
+    client.BaseAddress = new Uri("https://dummyjson.com/");
+    client.Timeout = TimeSpan.FromSeconds(10);
+});
 
 //  Auth services
 builder.Services.AddScoped<ITokenAction, TokenActionExecution>();
