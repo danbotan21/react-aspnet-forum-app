@@ -721,7 +721,19 @@ export const CreatePost = () => {
                       className={`drafts-item${isActive ? ' drafts-item--active' : ''}`}
                       key={draftId}
                     >
-                      <div className='drafts-item-main'>
+                      <div
+                        className='drafts-item-main'
+                        role='button'
+                        tabIndex={0}
+                        style={{ cursor: 'pointer' }}
+                        onClick={() => handleOpenDraft(draft)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault()
+                            handleOpenDraft(draft)
+                          }
+                        }}
+                      >
                         <div className='drafts-item-title'>{draftTitle}</div>
                         <div className='drafts-item-sub'>
                           {draftCommunitySlug ? (

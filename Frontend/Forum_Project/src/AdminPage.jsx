@@ -331,7 +331,12 @@ function UsersTab({ token, currentUserName }) {
         </div>
       ) : (
         <div className='admin-user-list'>
-          {users.map((u) => (
+          {users.map((u) => {
+            // Only the supreme (parent) admin may grant/revoke the Admin role.
+            const amSupreme = users.some(
+              (x) => x.userName === currentUserName && x.isSupremeAdmin,
+            )
+            return (
             <div key={u.id} className={`admin-user-card ${u.isBanned ? 'admin-user-banned' : ''}`}>
               <Avatar name={u.userName} src={u.avatarUrl} />
               <div className='admin-user-info'>
@@ -363,7 +368,7 @@ function UsersTab({ token, currentUserName }) {
               </div>
 
               <div className='admin-user-actions'>
-                {u.userName !== currentUserName && (
+                {amSupreme && !u.isSupremeAdmin && (
                   <button
                     className='admin-btn admin-btn-sm admin-btn-ghost'
                     onClick={() => handleToggleRole(u)}
@@ -433,7 +438,8 @@ function UsersTab({ token, currentUserName }) {
                 )}
               </div>
             </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>
@@ -567,7 +573,7 @@ function CommunitiesTab({ token }) {
 
 const STATUS_FILTERS = ['pending', 'actioned', 'dismissed', 'all']
 
-function ReportsTab({ token }) {
+function ReportsTab({ token, currentUserId }) {
   const [reports, setReports] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -656,6 +662,7 @@ function ReportsTab({ token }) {
         <div className='admin-report-list'>
           {reports.map((r) => {
             const link = viewLink(r)
+            const isOwn = currentUserId != null && r.contentAuthorId === currentUserId
             return (
               <div key={r.id} className='admin-report-card'>
                 <div className='admin-report-header'>
@@ -682,6 +689,15 @@ function ReportsTab({ token }) {
                       <span>
                         {r.typeName === 'User' ? 'User' : 'Author'}:{' '}
                         <strong>u/{r.contentAuthorUserName}</strong>
+                        {isOwn ? (
+                          <span style={{ marginLeft: 6, padding: '1px 7px', borderRadius: 999, fontSize: 11, fontWeight: 700, background: '#6366f1', color: '#fff' }}>
+                            you
+                          </span>
+                        ) : r.contentAuthorIsAdmin ? (
+                          <span style={{ marginLeft: 6, padding: '1px 7px', borderRadius: 999, fontSize: 11, fontWeight: 700, background: '#7c3aed', color: '#fff' }}>
+                            🛡 Admin
+                          </span>
+                        ) : null}
                       </span>
                     </>
                   )}
@@ -708,7 +724,7 @@ function ReportsTab({ token }) {
                       <FaTimes /> Dismiss
                     </button>
                   )}
-                  {r.status === 'pending' && (r.typeName === 'Post' || r.typeName === 'Comment') && (
+                  {r.status === 'pending' && !isOwn && (r.typeName === 'Post' || r.typeName === 'Comment') && (
                     <button
                       className='admin-btn admin-btn-sm admin-btn-danger'
                       onClick={() => handleRemove(r)}
@@ -717,13 +733,16 @@ function ReportsTab({ token }) {
                       <FaTrash /> Remove Content
                     </button>
                   )}
-                  <button
-                    className='admin-btn admin-btn-sm admin-btn-danger-solid'
-                    onClick={() => handleDelete(r.id)}
-                    disabled={pending[r.id]}
-                  >
-                    Discard Report
-                  </button>
+                  {r.status !== 'pending' && (
+                    <button
+                      className='admin-btn admin-btn-sm admin-btn-danger-solid'
+                      onClick={() => handleDelete(r.id)}
+                      disabled={pending[r.id]}
+                      title='Delete this resolved report record'
+                    >
+                      Discard Report
+                    </button>
+                  )}
                 </div>
               </div>
             )
@@ -1161,6 +1180,7 @@ export function AdminPage() {
   const { token, user, loading } = useAuth()
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('overview')
+  const [pendingReports, setPendingReports] = useState(0)
 
   const isAdmin = user?.role === 'Admin'
 
@@ -1168,6 +1188,13 @@ export function AdminPage() {
     // Wait for the silent-refresh to settle, then gate non-admins out.
     if (!loading && !isAdmin) navigate('/home', { replace: true })
   }, [loading, isAdmin, navigate])
+
+  useEffect(() => {
+    if (!token || !isAdmin) return
+    fetchAdminStats(token)
+      .then((s) => setPendingReports(s?.pendingReports ?? 0))
+      .catch(() => {})
+  }, [token, isAdmin, activeTab])
 
   if (loading) return <main className='admin-page'><LoadingState /></main>
   if (!isAdmin) return null
@@ -1181,7 +1208,7 @@ export function AdminPage() {
       case 'content':
         return <ContentTab token={token} />
       case 'reports':
-        return <ReportsTab token={token} />
+        return <ReportsTab token={token} currentUserId={user?.id} />
       case 'messages':
         return <MessagesTab token={token} />
       case 'audit':
@@ -1215,6 +1242,26 @@ export function AdminPage() {
               >
                 <Icon className='admin-nav-icon' />
                 <span>{item.label}</span>
+                {item.id === 'reports' && pendingReports > 0 && (
+                  <span
+                    style={{
+                      marginLeft: 'auto',
+                      background: '#e53e3e',
+                      color: '#fff',
+                      borderRadius: 999,
+                      minWidth: 18,
+                      height: 18,
+                      fontSize: 11,
+                      fontWeight: 700,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: '0 5px',
+                    }}
+                  >
+                    {pendingReports > 99 ? '99+' : pendingReports}
+                  </span>
+                )}
               </button>
             )
           })}

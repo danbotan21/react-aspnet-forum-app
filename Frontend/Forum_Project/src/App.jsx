@@ -1,5 +1,6 @@
 import './Styles/App.css'
 import { Routes, Route, Navigate } from 'react-router-dom'
+import { useAuth } from './AuthContext'
 import { Navbar } from './Navbar'
 import { SideBar } from './Sidebar'
 import { Home } from './Home'
@@ -24,6 +25,23 @@ import { Settings } from './Settings'
 import { SearchResults } from './SearchResults'
 
 function AppLayout({ children }) {
+  const { user, loading } = useAuth()
+
+  // Wait for the initial silent refresh to resolve before deciding — otherwise a
+  // logged-in user would be bounced to /login while their session is still loading.
+  if (loading) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        Loading…
+      </div>
+    )
+  }
+
+  // Login required: no session → send to the login page.
+  if (!user) {
+    return <Navigate to='/login' replace />
+  }
+
   return (
     <div className='app-layout'>
       <Navbar />

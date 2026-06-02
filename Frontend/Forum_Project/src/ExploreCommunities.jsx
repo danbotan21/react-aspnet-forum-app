@@ -12,6 +12,7 @@ import {
 import { MdTravelExplore, MdLocalMovies } from 'react-icons/md'
 import './Styles/ExploreCommunities.css'
 import { normalizeImageSrc } from './utils/media'
+import { apiFetch } from './AuthContext'
 
 const CATEGORY_TABS = [
   'All',
@@ -89,7 +90,7 @@ export const ExploreCommunities = () => {
 
     const fetchCommunities = async () => {
       try {
-        const response = await fetch('/api/communities', {
+        const response = await apiFetch('/api/communities', {
           signal: controller.signal,
         })
         if (response.ok) {
@@ -217,6 +218,9 @@ export const ExploreCommunities = () => {
                 </h3>
                 <p className='explore-visitors'>
                   {community.membersCount} members
+                  {community.ownerUserName && (
+                    <> · by u/{community.ownerUserName}</>
+                  )}
                 </p>
                 <p className='explore-description'>{community.description}</p>
               </article>

@@ -11,7 +11,7 @@ import {
   FaSignOutAlt,
   FaShieldAlt,
 } from 'react-icons/fa'
-import { useAuth } from './AuthContext'
+import { useAuth, apiFetch } from './AuthContext'
 import { useNotifications } from './NotificationContext'
 import { normalizeImageSrc } from './utils/media'
 import './Styles/Navbar.css'
@@ -29,6 +29,20 @@ export const Navbar = () => {
   const [searchPosts, setSearchPosts] = useState([])
   const [showSearchDropdown, setShowSearchDropdown] = useState(false)
   const searchRequestId = useRef(0)
+  const [pushEnabled, setPushEnabled] = useState(
+    () => localStorage.getItem('pushNotifications') !== 'false',
+  )
+
+  useEffect(() => {
+    const sync = () =>
+      setPushEnabled(localStorage.getItem('pushNotifications') !== 'false')
+    window.addEventListener('push-notifications-changed', sync)
+    window.addEventListener('storage', sync)
+    return () => {
+      window.removeEventListener('push-notifications-changed', sync)
+      window.removeEventListener('storage', sync)
+    }
+  }, [])
 
   // Folosim username-ul real din context, sau fallback
   const loggedUser = user?.userName || 'username'
@@ -55,7 +69,7 @@ export const Navbar = () => {
       if (term !== '') {
         try {
           const [commRes, postRes] = await Promise.all([
-            fetch(`/api/Communities/search?term=${encodeURIComponent(term)}`),
+            apiFetch(`/api/Communities/search?term=${encodeURIComponent(term)}`),
             fetch(`/api/Posts/search?term=${encodeURIComponent(term)}&limit=3`),
           ])
           if (currentId !== searchRequestId.current) return
@@ -87,8 +101,12 @@ export const Navbar = () => {
   const handleLogout = () => {
     setIsOpen(false)
     logout()
-    navigate('/login')
+    navigate('/login', { replace: true })
   }
+
+  // No session → render nothing (protected routes already redirect to /login).
+  // Prevents the fallback "u/username" + default-avatar profile from ever showing.
+  if (!user) return null
 
   return (
     <header className='navbar'>
@@ -194,7 +212,7 @@ export const Navbar = () => {
 
           <Link to='/notification' className='navbar-icon-btn' style={{ position: 'relative' }}>
             <FaBell />
-            {unreadCount > 0 && (
+            {pushEnabled && unreadCount > 0 && (
               <span style={{
                 position: 'absolute',
                 top: '-4px',

@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { FaCaretUp, FaCaretDown, FaComment, FaUsers, FaEdit, FaTrash } from 'react-icons/fa'
 import { normalizeImageSrc } from './utils/media'
-import { useAuth } from './AuthContext'
+import { useAuth, apiFetch } from './AuthContext'
 import {
   deletePostVote,
   fetchUserPostVotes,
@@ -18,6 +18,7 @@ import './Styles/SearchResults.css'
 
 export const SearchResults = () => {
   const [searchParams] = useSearchParams()
+  const navigate = useNavigate()
   const query = searchParams.get('q') || ''
   const { user, token } = useAuth()
 
@@ -51,7 +52,7 @@ export const SearchResults = () => {
       .then((data) => { setPosts(data); setLoadingPosts(false) })
       .catch(() => setLoadingPosts(false))
 
-    fetch(`/api/Communities/search?term=${encodeURIComponent(query)}`)
+    apiFetch(`/api/Communities/search?term=${encodeURIComponent(query)}`)
       .then((r) => (r.ok ? r.json() : []))
       .then((data) => { setCommunities(data); setLoadingCommunities(false) })
       .catch(() => setLoadingCommunities(false))
@@ -406,7 +407,12 @@ export const SearchResults = () => {
           {communities.map((c) => {
             const communityAvatarSrc = normalizeImageSrc(c.avatarUrl)
             return (
-              <div key={c.id} className='sr-community-row'>
+              <div
+                key={c.id}
+                className='sr-community-row'
+                style={{ cursor: 'pointer' }}
+                onClick={() => navigate(`/community/${c.slug}`)}
+              >
                 <div className='sr-community-avatar'>
                   {communityAvatarSrc ? (
                     <img src={communityAvatarSrc} alt={c.title} />

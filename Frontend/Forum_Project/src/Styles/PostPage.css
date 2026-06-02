@@ -123,14 +123,12 @@
   color: #8aa2c2;
 }
 
-.post-chip-vote-icon:hover {
-  color: #2563eb;
-}
-
+.post-chip-vote-icon.upvote:hover,
 .post-chip-vote-icon.upvote.active {
   color: #2563eb;
 }
 
+.post-chip-vote-icon.downvote:hover,
 .post-chip-vote-icon.downvote.active {
   color: #ea580c;
 }

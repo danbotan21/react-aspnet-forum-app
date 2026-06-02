@@ -136,6 +136,11 @@ export const Settings = () => {
             username: profile?.userName || prev.username,
             email: profile?.email || prev.email,
             bio: profile?.bio || '',
+            profileVisibility:
+              (profile?.profileVisibility || '').toLowerCase() ||
+              prev.profileVisibility,
+            pushNotifications:
+              localStorage.getItem('pushNotifications') !== 'false',
           }))
         }
       } catch (error) {
@@ -180,6 +185,7 @@ export const Settings = () => {
       const body = {
         userName: trimmedUsername,
         bio: formData.bio,
+        profileVisibility: formData.profileVisibility,
         ...(emailChanged && {
           email: formData.email.trim(),
           currentPassword: confirmEmailPassword,
@@ -325,15 +331,46 @@ export const Settings = () => {
     alert('Preferences saved!')
   }
 
-  const handleSavePrivacy = (e) => {
+  const handleSavePrivacy = async (e) => {
     e.preventDefault()
-    console.log('Saving privacy settings:', formData)
-    alert('Privacy settings saved!')
+    if (!token) {
+      alert('Please login before updating privacy settings.')
+      return
+    }
+    try {
+      const response = await executeWithAuth((accessToken) =>
+        fetch('/api/auth/me', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({
+            profileVisibility: formData.profileVisibility,
+          }),
+        }),
+      )
+      if (!response || !response.ok) {
+        alert('Failed to save privacy settings.')
+        return
+      }
+      const updatedUser = await response.json()
+      updateUser(updatedUser)
+      alert('Privacy settings saved!')
+    } catch {
+      alert('Failed to save privacy settings.')
+    }
   }
 
   const handleSaveNotifications = (e) => {
     e.preventDefault()
-    console.log('Saving notification settings:', formData)
+    // Push notifications are a client-side preference: when off, the navbar hides the
+    // unread badge so the user isn't shown that they have notifications.
+    localStorage.setItem(
+      'pushNotifications',
+      JSON.stringify(formData.pushNotifications),
+    )
+    window.dispatchEvent(new Event('push-notifications-changed'))
     alert('Notification settings saved!')
   }
 

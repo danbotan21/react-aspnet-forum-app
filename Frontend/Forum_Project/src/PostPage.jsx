@@ -801,13 +801,36 @@ export function PostPage() {
         const msg = await parseErrorText(response, 'Failed to delete comment')
         throw new Error(msg)
       }
-      setComments((prev) => prev.filter((c) => c.id !== commentId))
+
+      // The backend deletes the comment together with its whole reply subtree,
+      // so mirror that in local state — otherwise orphaned replies would be
+      // re-bucketed as top-level comments and could no longer be deleted.
+      const removedIds = new Set([commentId])
+      let changed = true
+      while (changed) {
+        changed = false
+        for (const c of comments) {
+          if (
+            c.parentCommentId != null &&
+            removedIds.has(c.parentCommentId) &&
+            !removedIds.has(c.id)
+          ) {
+            removedIds.add(c.id)
+            changed = true
+          }
+        }
+      }
+
+      setComments((prev) => prev.filter((c) => !removedIds.has(c.id)))
       setConfirmDeleteCommentId(null)
       setPost((current) =>
         current
           ? {
               ...current,
-              commentsCount: Math.max((current.commentsCount ?? 1) - 1, 0),
+              commentsCount: Math.max(
+                (current.commentsCount ?? removedIds.size) - removedIds.size,
+                0,
+              ),
             }
           : current,
       )

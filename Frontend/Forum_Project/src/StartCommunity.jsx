@@ -226,6 +226,10 @@ export const StartCommunity = () => {
         }
       }
 
+      // Tell the sidebar (and anything else listening) to refresh the user's
+      // community list so the newly created community shows up without a manual reload.
+      window.dispatchEvent(new Event('communities-membership-updated'))
+
       navigate(`/community/${createdCommunity?.slug || generatedSlug}`)
     } catch (err) {
       setError(err.message)

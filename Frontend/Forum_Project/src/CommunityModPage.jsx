@@ -300,6 +300,7 @@ function ReportsTab({
   onCountChange,
   userId,
   myRole,
+  currentUserName,
 }) {
   const [reports, setReports] = useState([])
   const [loading, setLoading] = useState(true)
@@ -452,7 +453,23 @@ function ReportsTab({
             </div>
           ) : (
             <div className='mod-report-list'>
-              {filtered.map((report) => (
+              {filtered.map((report) => {
+                const authorRole = report.contentAuthorRole
+                const isOwnContent =
+                  currentUserName &&
+                  report.contentAuthorUserName === currentUserName
+                const isOwner = myRole === 'owner'
+                // A moderator may not remove the owner's or another moderator's content.
+                const canRemove =
+                  isOwner ||
+                  (authorRole !== 'owner' && authorRole !== 'moderator')
+                // Can't ban the owner, can't ban a fellow moderator unless you're the
+                // owner, and can't ban yourself.
+                const canBan =
+                  !isOwnContent &&
+                  authorRole !== 'owner' &&
+                  (isOwner || authorRole !== 'moderator')
+                return (
                 <div key={report.id} className='mod-report-card'>
                   <div className='mod-report-header'>
                     <TypeBadge type={report.typeName} />
@@ -493,6 +510,19 @@ function ReportsTab({
                       <strong className='mod-report-author-name'>
                         u/{report.contentAuthorUserName}
                       </strong>
+                      {isOwnContent ? (
+                        <span style={{ marginLeft: 6, padding: '1px 7px', borderRadius: 999, fontSize: 11, fontWeight: 700, background: '#6366f1', color: '#fff' }}>
+                          your content
+                        </span>
+                      ) : authorRole === 'owner' ? (
+                        <span style={{ marginLeft: 6, padding: '1px 7px', borderRadius: 999, fontSize: 11, fontWeight: 700, background: '#f59e0b', color: '#fff' }}>
+                          👑 Owner
+                        </span>
+                      ) : authorRole === 'moderator' ? (
+                        <span style={{ marginLeft: 6, padding: '1px 7px', borderRadius: 999, fontSize: 11, fontWeight: 700, background: '#2563eb', color: '#fff' }}>
+                          🛡 Moderator
+                        </span>
+                      ) : null}
                     </span>
                   </div>
                   <div className='mod-report-actions'>
@@ -511,25 +541,29 @@ function ReportsTab({
                     >
                       <FaTimes /> Dismiss
                     </button>
-                    <button
-                      className='mod-btn mod-btn-danger'
-                      onClick={() => handleRemove(report)}
-                      disabled={pending[report.id]}
-                    >
-                      <FaTrash /> Remove Content
-                    </button>
-                    <button
-                      className='mod-btn mod-btn-ban'
-                      onClick={() => {
-                        setBanningReport(
-                          banningReport === report.id ? null : report.id,
-                        )
-                        setBanReason('')
-                      }}
-                      disabled={pending[`ban-${report.id}`]}
-                    >
-                      <FaBan /> Ban Author
-                    </button>
+                    {canRemove && (
+                      <button
+                        className='mod-btn mod-btn-danger'
+                        onClick={() => handleRemove(report)}
+                        disabled={pending[report.id]}
+                      >
+                        <FaTrash /> Remove Content
+                      </button>
+                    )}
+                    {canBan && (
+                      <button
+                        className='mod-btn mod-btn-ban'
+                        onClick={() => {
+                          setBanningReport(
+                            banningReport === report.id ? null : report.id,
+                          )
+                          setBanReason('')
+                        }}
+                        disabled={pending[`ban-${report.id}`]}
+                      >
+                        <FaBan /> Ban Author
+                      </button>
+                    )}
                   </div>
 
                   {banningReport === report.id && (
@@ -571,7 +605,8 @@ function ReportsTab({
                     </div>
                   )}
                 </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </>
@@ -582,7 +617,7 @@ function ReportsTab({
 
 // ─── MEMBERS TAB ─────────────────────────────────────────────────────────────
 
-function MembersTab({ communityId, token, myRole }) {
+function MembersTab({ communityId, token, myRole, currentUserId }) {
   const [members, setMembers] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -700,7 +735,15 @@ function MembersTab({ communityId, token, myRole }) {
               <p>No members found matching your search.</p>
             </div>
           ) : (
-            filtered.map((member) => (
+            filtered.map((member) => {
+              const isMe = currentUserId != null && member.userId === currentUserId
+              // The owner can act on anyone but themselves and the owner slot; a
+              // moderator can only act on regular members.
+              const canAct =
+                !isMe &&
+                member.role !== 'owner' &&
+                (isOwner || (myRole === 'moderator' && member.role === 'member'))
+              return (
               <div key={member.userId} className='mod-member-card'>
                 <div
                   className='mod-member-avatar'
@@ -717,6 +760,9 @@ function MembersTab({ communityId, token, myRole }) {
                       u/{member.userName}
                     </Link>
                     <RoleBadge role={member.role} />
+                    {isMe && (
+                      <span style={{ fontSize: '12px', fontWeight: 600, opacity: 0.6 }}>(you)</span>
+                    )}
                   </div>
                   <div className='mod-member-meta'>
                     <span>{member.karma.toLocaleString()} karma</span>
@@ -727,7 +773,7 @@ function MembersTab({ communityId, token, myRole }) {
                   </div>
                 </div>
 
-                {member.role !== 'owner' && (
+                {canAct && (
                   <div className='mod-member-actions'>
                     {isOwner && member.role === 'member' && (
                       <button
@@ -803,7 +849,8 @@ function MembersTab({ communityId, token, myRole }) {
                   </div>
                 )}
               </div>
-            ))
+              )
+            })
           )}
         </div>
       )}
@@ -1837,11 +1884,12 @@ export function CommunityModPage() {
             onCountChange={setPendingReportsCount}
             userId={user?.id}
             myRole={myRole}
+            currentUserName={user?.userName}
           />
         )
       case 'members':
         return (
-          <MembersTab communityId={communityId} token={token} myRole={myRole} />
+          <MembersTab communityId={communityId} token={token} myRole={myRole} currentUserId={user?.id} />
         )
       case 'banned':
         return <BannedMembersTab communityId={communityId} token={token} />

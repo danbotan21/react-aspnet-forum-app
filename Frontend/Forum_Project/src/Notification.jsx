@@ -192,7 +192,15 @@ export const Notification = () => {
                 <div
                   key={n.id}
                   className={`notif-item${!n.isRead ? ' notif-item--unread' : ''}`}
-                  style={!n.isRead ? { borderLeftColor: color } : {}}
+                  style={{
+                    ...(!n.isRead ? { borderLeftColor: color } : {}),
+                    ...(navPath ? { cursor: 'pointer' } : {}),
+                  }}
+                  onClick={() => {
+                    if (!navPath) return
+                    if (!n.isRead) markAsRead(n.id)
+                    navigate(navPath)
+                  }}
                 >
                   <div
                     className='notif-type-icon'
@@ -243,7 +251,8 @@ export const Notification = () => {
                       <button
                         className='notif-btn-view'
                         style={{ color, borderColor: color }}
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.stopPropagation()
                           if (!n.isRead) markAsRead(n.id)
                           navigate(navPath)
                         }}
@@ -254,14 +263,20 @@ export const Notification = () => {
                     {!n.isRead && (
                       <button
                         className='notif-btn-read'
-                        onClick={() => markAsRead(n.id)}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          markAsRead(n.id)
+                        }}
                       >
                         Mark read
                       </button>
                     )}
                     <button
                       className='notif-btn-dismiss'
-                      onClick={() => removeNotification(n.id)}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        removeNotification(n.id)
+                      }}
                       title='Dismiss'
                     >
                       ×

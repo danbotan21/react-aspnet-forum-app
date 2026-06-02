@@ -33,7 +33,7 @@ export const apiFetch = async (url, options = {}) => {
     credentials: options.credentials ?? 'include',
   })
 
-  if (response.status === 401 && _tokenRef && _refreshFn) {
+  if (response.status === 401 && _refreshFn) {
     const newToken = await _refreshFn()
     if (newToken) {
       headers.set('Authorization', `Bearer ${newToken}`)
@@ -56,51 +56,71 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true)
   const userRef = useRef(null)
   const tokenRef = useRef(null)
-  const logoutRef = useRef(null)
 
-  // On mount: attempt silent re-auth using the httpOnly refresh token cookie.
-  // If the cookie is valid the backend returns a fresh access token.
-  useEffect(() => {
-    const applyAuth = (data) => {
-      if (data?.token && data?.user) {
-        setToken(data.token)
-        setUser(data.user)
-        tokenRef.current = data.token
-        userRef.current = data.user
-        _tokenRef = data.token
-        _userRef = data.user
-        localStorage.setItem('user', JSON.stringify(data.user))
-      } else {
-        localStorage.removeItem('user')
-      }
+  // Guards the refresh flow:
+  //  - refreshPromiseRef: a single in-flight refresh so concurrent callers share ONE
+  //    network call. The backend rotates the refresh token on every call, so firing
+  //    several refreshes at once made all-but-one send a stale token → spurious logout.
+  //  - loggedOutRef: once the user logs out, a late-completing refresh must not
+  //    resurrect the session.
+  const refreshPromiseRef = useRef(null)
+  const loggedOutRef = useRef(false)
+
+  const applyAuth = useCallback((data) => {
+    if (loggedOutRef.current) return null
+    if (data?.token && data?.user) {
+      setToken(data.token)
+      setUser(data.user)
+      tokenRef.current = data.token
+      userRef.current = data.user
+      _tokenRef = data.token
+      _userRef = data.user
+      localStorage.setItem('user', JSON.stringify(data.user))
+      return data.token
     }
-
-    const silentRefresh = () => {
-      fetch('/api/auth/refresh', { method: 'POST', credentials: 'include' })
-        .then((res) => (res.ok ? res.json() : null))
-        .then(applyAuth)
-        .catch(() => {})
-    }
-
-    fetch('/api/auth/refresh', {
-      method: 'POST',
-      credentials: 'include',
-    })
-      .then((res) => (res.ok ? res.json() : null))
-      .then(applyAuth)
-      .catch(() => {
-        localStorage.removeItem('user')
-      })
-      .finally(() => setLoading(false))
-
-    // Proactively refresh every 10 minutes so the access token never expires mid-session
-    const interval = setInterval(silentRefresh, 10 * 60 * 1000)
-    return () => clearInterval(interval)
+    localStorage.removeItem('user')
+    return null
   }, [])
 
+  // Single serialized refresh. Returns the new access token, or null.
+  const doRefresh = useCallback(async () => {
+    if (loggedOutRef.current) return null
+    if (refreshPromiseRef.current) return refreshPromiseRef.current
+
+    const promise = (async () => {
+      try {
+        const res = await fetch('/api/auth/refresh', {
+          method: 'POST',
+          credentials: 'include',
+        })
+        if (!res.ok) return null
+        const data = await res.json()
+        return applyAuth(data)
+      } catch {
+        return null
+      } finally {
+        refreshPromiseRef.current = null
+      }
+    })()
+
+    refreshPromiseRef.current = promise
+    return promise
+  }, [applyAuth])
+
+  // On mount: attempt silent re-auth using the httpOnly refresh token cookie.
+  useEffect(() => {
+    doRefresh().finally(() => setLoading(false))
+
+    // Proactively refresh before the 15-min access token expires.
+    const interval = setInterval(() => {
+      doRefresh()
+    }, 10 * 60 * 1000)
+    return () => clearInterval(interval)
+  }, [doRefresh])
+
   // Called after a successful login response from the backend.
-  // The backend sets the refresh token as an httpOnly cookie automatically.
   const login = useCallback((tokenValue, userData) => {
+    loggedOutRef.current = false
     setToken(tokenValue) // Access token lives in memory only
     setUser(userData)
     userRef.current = userData
@@ -111,6 +131,7 @@ export const AuthProvider = ({ children }) => {
   }, [])
 
   const logout = useCallback(async () => {
+    loggedOutRef.current = true
     setToken(null)
     setUser(null)
     userRef.current = null
@@ -131,44 +152,24 @@ export const AuthProvider = ({ children }) => {
 
   const updateUser = useCallback((userData) => {
     setUser(userData)
+    userRef.current = userData
+    _userRef = userData
     localStorage.setItem('user', JSON.stringify(userData))
   }, [])
 
-  const refreshToken = useCallback(async () => {
-    try {
-      const res = await fetch('/api/auth/refresh', {
-        method: 'POST',
-        credentials: 'include',
-      })
-      if (!res.ok) return null
-      const data = await res.json()
-      if (data?.token && data?.user) {
-        setToken(data.token)
-        setUser(data.user)
-        tokenRef.current = data.token
-        userRef.current = data.user
-        _tokenRef = data.token
-        _userRef = data.user
-        localStorage.setItem('user', JSON.stringify(data.user))
-        return data.token
-      }
-      return null
-    } catch {
-      return null
-    }
-  }, [])
-
-  _refreshFn = refreshToken
+  _refreshFn = doRefresh
   _logoutFn = logout
 
-  // Used after a token refresh to update the in-memory access token.
-  // The refreshTokenValue parameter is kept for call-site compatibility but ignored
-  // because the server manages the refresh token via httpOnly cookie.
+  // Kept for call-site compatibility; the server manages the refresh token via cookie.
   const updateAuthTokens = useCallback(
     (tokenValue, _refreshTokenValue = null, userData = user) => {
       setToken(tokenValue)
+      tokenRef.current = tokenValue
+      _tokenRef = tokenValue
       if (userData) {
         setUser(userData)
+        userRef.current = userData
+        _userRef = userData
         localStorage.setItem('user', JSON.stringify(userData))
       }
     },
@@ -185,7 +186,7 @@ export const AuthProvider = ({ children }) => {
         logout,
         updateUser,
         updateAuthTokens,
-        refreshToken,
+        refreshToken: doRefresh,
       }}
     >
       {children}

@@ -613,16 +613,43 @@ export function CommunityPage() {
                 </h1>
                 <p>c/{community.slug}</p>
                 <span>{community.membersCount} members</span>
+                {community.ownerUserName && (
+                  <span style={{ marginLeft: 8 }}>
+                    · created by{' '}
+                    <Link
+                      to={`/user/${encodeURIComponent(community.ownerUserName)}`}
+                      style={{ color: 'inherit', fontWeight: 600 }}
+                    >
+                      u/{community.ownerUserName}
+                    </Link>
+                  </span>
+                )}
+                {!isBanned && (myRole === 'owner' || myRole === 'moderator' || (isMember && myRole === 'member')) && (
+                  <span
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      marginLeft: '8px',
+                      padding: '2px 8px',
+                      borderRadius: '999px',
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      background: myRole === 'owner' ? '#f59e0b' : myRole === 'moderator' ? '#2563eb' : 'rgba(255,255,255,0.25)',
+                      color: '#fff',
+                    }}
+                  >
+                    {myRole === 'owner' ? '👑 Owner' : myRole === 'moderator' ? '🛡 Moderator' : 'Member'}
+                  </span>
+                )}
               </div>
               {isBanned ? (
-                <button
-                  type='button'
-                  className='community-join-btn community-leave-btn'
-                  onClick={handleToggleMembership}
-                  style={{ background: '#dc2626', borderColor: '#dc2626' }}
+                <div
+                  className='community-private-badge'
+                  style={{ background: '#dc2626', borderColor: '#dc2626', color: '#fff' }}
                 >
-                  Leave
-                </button>
+                  <FaBan /> Banned
+                </div>
               ) : community.type?.toLowerCase() !== 'private' || isMember ? (
                 <button
                   type='button'

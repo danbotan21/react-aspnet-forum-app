@@ -14,8 +14,9 @@ import { ProfilePostsTab } from './ProfilePostsTab'
 import { ProfileCommentsTab } from './ProfileCommentsTab'
 import { ProfileSavedTab } from './ProfileSavedTab'
 import { ProfileVotedTab } from './ProfileVotedTab'
-import { useAuth } from './AuthContext'
+import { useAuth, apiFetch } from './AuthContext'
 import { normalizeImageSrc } from './utils/media'
+import { uploadImage } from './utils/imageUpload'
 import { fetchUserPostsPage } from './utils/postFeedApi'
 import { fetchMySavedItems, unsaveItem, savePost } from './utils/savedItemApi'
 import {
@@ -86,7 +87,9 @@ const mapPostToVotedItem = (vote, post) => {
 export function UserProfile() {
   const { username } = useParams()
   const navigate = useNavigate()
-  const { user: authUser, token } = useAuth()
+  const { user: authUser, token, updateUser } = useAuth()
+  const bannerInputRef = useRef(null)
+  const [bannerUploading, setBannerUploading] = useState(false)
 
   const loggedUser = authUser?.userName?.trim() || ''
   const displayName = decodeURIComponent(username ?? 'guest').trim() || 'guest'
@@ -234,7 +237,7 @@ export function UserProfile() {
     const loadUserActivity = async () => {
       setIsActivityLoading(true)
       try {
-        const commentsResponse = await fetch(
+        const commentsResponse = await apiFetch(
           `/api/comments/user/${profileUser.id}`,
         )
         const fetchedComments = commentsResponse.ok
@@ -248,7 +251,7 @@ export function UserProfile() {
         const commentPosts = await Promise.all(
           commentPostIds.map(async (postId) => {
             try {
-              const response = await fetch(`/api/posts/${postId}`)
+              const response = await apiFetch(`/api/posts/${postId}`)
               if (!response.ok) return [postId, null]
               return [postId, await response.json()]
             } catch {
@@ -414,10 +417,10 @@ export function UserProfile() {
           isOwnProfile && token
             ? await Promise.all([fetchMySavedItems(token), fetchMyVotes(token)])
             : await Promise.all([
-                fetch(`/api/saveditem/user/${profileUser.id}`).then((r) =>
+                apiFetch(`/api/saveditem/user/${profileUser.id}`).then((r) =>
                   r.ok ? r.json() : [],
                 ),
-                fetch(`/api/vote/user/${profileUser.id}`).then((r) =>
+                apiFetch(`/api/vote/user/${profileUser.id}`).then((r) =>
                   r.ok ? r.json() : [],
                 ),
               ])
@@ -442,7 +445,7 @@ export function UserProfile() {
         const savedComments = await Promise.all(
           savedCommentIds.map(async (commentId) => {
             try {
-              const response = await fetch(`/api/comments/${commentId}`)
+              const response = await apiFetch(`/api/comments/${commentId}`)
               if (!response.ok) return [commentId, null]
               return [commentId, await response.json()]
             } catch {
@@ -474,7 +477,7 @@ export function UserProfile() {
         const fetchedPosts = await Promise.all(
           allPostIds.map(async (postId) => {
             try {
-              const response = await fetch(`/api/posts/${postId}`)
+              const response = await apiFetch(`/api/posts/${postId}`)
               if (!response.ok) return [postId, null]
               return [postId, await response.json()]
             } catch {
@@ -1151,6 +1154,34 @@ export function UserProfile() {
     )
   }
 
+  const handleBannerChange = async (e) => {
+    const file = e.target.files?.[0]
+    if (e.target) e.target.value = ''
+    if (!file || !file.type.startsWith('image/') || !token) return
+    setBannerUploading(true)
+    try {
+      const bannerUrl = await uploadImage(file, 'banners')
+      const response = await apiFetch('/api/auth/me', {
+        method: 'PUT',
+        body: JSON.stringify({ bannerUrl }),
+      })
+      if (!response.ok) throw new Error('Failed to update banner')
+      const updated = await response.json()
+      updateUser(updated)
+      setProfileUser((prev) => (prev ? { ...prev, bannerUrl } : prev))
+    } catch (err) {
+      alert(err.message || 'Failed to update banner.')
+    } finally {
+      setBannerUploading(false)
+    }
+  }
+
+  // A private profile hides its activity from everyone except the owner and admins.
+  const isPrivateToViewer =
+    (profileUser.profileVisibility || '').toLowerCase() === 'private' &&
+    !isOwnProfile &&
+    authUser?.role !== 'Admin'
+
   return (
     <main className='user-profile-page'>
       <section className='user-profile-shell'>
@@ -1158,14 +1189,28 @@ export function UserProfile() {
           <header className='user-hero'>
             <div className='user-hero-banner'>
               <img
-                src={nature}
+                src={normalizeImageSrc(profileUser.bannerUrl) || nature}
                 alt='Profile banner'
                 className='user-hero-banner-image'
               />
               {isOwnProfile && (
-                <button type='button' className='user-hero-banner-button'>
-                  Change banner
-                </button>
+                <>
+                  <input
+                    type='file'
+                    accept='image/*'
+                    ref={bannerInputRef}
+                    style={{ display: 'none' }}
+                    onChange={handleBannerChange}
+                  />
+                  <button
+                    type='button'
+                    className='user-hero-banner-button'
+                    onClick={() => bannerInputRef.current?.click()}
+                    disabled={bannerUploading}
+                  >
+                    {bannerUploading ? 'Uploading…' : 'Change banner'}
+                  </button>
+                </>
               )}
             </div>
 
@@ -1220,21 +1265,37 @@ export function UserProfile() {
               </div>
             </div>
 
-            <nav className='user-tabs' aria-label='Profile sections'>
-              {tabs.map((tab) => (
-                <button
-                  key={tab}
-                  type='button'
-                  onClick={() => setActiveTab(tab)}
-                  className={`user-tab ${activeTab === tab ? 'user-tab-active' : ''}`}
-                >
-                  {tab}
-                </button>
-              ))}
-            </nav>
+            {!isPrivateToViewer && (
+              <nav className='user-tabs' aria-label='Profile sections'>
+                {tabs.map((tab) => (
+                  <button
+                    key={tab}
+                    type='button'
+                    onClick={() => setActiveTab(tab)}
+                    className={`user-tab ${activeTab === tab ? 'user-tab-active' : ''}`}
+                  >
+                    {tab}
+                  </button>
+                ))}
+              </nav>
+            )}
           </header>
 
-          <section className='user-feed-card'>{renderTab()}</section>
+          {isPrivateToViewer ? (
+            <section
+              className='user-feed-card'
+              style={{ textAlign: 'center', padding: '3rem 1.5rem' }}
+            >
+              <div style={{ fontSize: '40px', marginBottom: '0.5rem' }}>🔒</div>
+              <h3 style={{ margin: '0 0 0.5rem' }}>This profile is private</h3>
+              <p style={{ color: '#7c7c7c', margin: 0 }}>
+                u/{profileUser.userName || displayName} keeps their posts,
+                comments and activity private.
+              </p>
+            </section>
+          ) : (
+            <section className='user-feed-card'>{renderTab()}</section>
+          )}
         </div>
 
         <aside className='user-profile-side'>
