@@ -32,6 +32,7 @@ namespace ForumApp.BusinessLayer.Core
             CommentsCount = post.CommentsCount,
             IsPinned = post.IsPinned,
             CreatedAt = post.CreatedAt,
+            EditedAt = post.EditedAt,
             AuthorName = post.Author.UserName,
             AuthorAvatarUrl = post.Author.AvatarUrl,
             CommunitySlug = post.Community.Slug,
@@ -335,6 +336,7 @@ namespace ForumApp.BusinessLayer.Core
             post.Body = postData.Body;
             post.ImageUrl = postData.ImageUrl;
             post.LinkUrl = postData.LinkUrl;
+            post.EditedAt = DateTime.UtcNow;
 
             try
             {

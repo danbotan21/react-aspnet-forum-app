@@ -11,6 +11,7 @@ namespace ForumApp.Domain.Models.Post
         public int Votes { get; set; }
         public int CommentsCount { get; set; }
         public DateTime CreatedAt { get; set; }
+        public DateTime? EditedAt { get; set; }
         public string AuthorName { get; set; }
         public string? AuthorAvatarUrl { get; set; }
         public string CommunitySlug { get; set; }

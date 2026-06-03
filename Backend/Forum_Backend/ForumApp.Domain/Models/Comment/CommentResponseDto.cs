@@ -6,6 +6,7 @@ namespace ForumApp.Domain.Models.Comment
         public string Body { get; set; }
         public int Votes { get; set; }
         public DateTime CreatedAt { get; set; }
+        public DateTime? EditedAt { get; set; }
         public string AuthorName { get; set; }
         public int PostId { get; set; }
         public int? ParentCommentId { get; set; }

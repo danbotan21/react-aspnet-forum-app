@@ -22,6 +22,9 @@ namespace ForumApp.Domain.Entities.Comment
         public int Votes { get; set; }
         public DateTime CreatedAt { get; set; }
 
+        // Set when the author edits the comment; null means it was never edited.
+        public DateTime? EditedAt { get; set; }
+
 
         //Foreign Key spre User, autorul la comentariu:
         public int AuthorId { get; set; }

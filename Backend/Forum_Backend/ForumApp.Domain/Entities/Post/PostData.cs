@@ -30,6 +30,9 @@ namespace ForumApp.Domain.Entities.Post
         public bool IsPinned { get; set; } = false;
         public DateTime CreatedAt { get; set; }
 
+        // Set when the author edits the post; null means it was never edited.
+        public DateTime? EditedAt { get; set; }
+
         // Relatia cu User (autorul postarii)
         public int AuthorId { get; set; }
         public UserData Author { get; set; } = null!;

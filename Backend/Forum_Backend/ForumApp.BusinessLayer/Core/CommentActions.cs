@@ -23,6 +23,7 @@ namespace ForumApp.BusinessLayer.Core
             Body = comment.Body,
             Votes = comment.Votes,
             CreatedAt = comment.CreatedAt,
+            EditedAt = comment.EditedAt,
             AuthorName = comment.Author.UserName,
             PostId = comment.PostId,
             ParentCommentId = comment.ParentCommentId
@@ -217,6 +218,7 @@ namespace ForumApp.BusinessLayer.Core
             if (string.IsNullOrWhiteSpace(normalizedBody)) return null;
 
             comment.Body = normalizedBody;
+            comment.EditedAt = DateTime.UtcNow;
 
             try
             {
