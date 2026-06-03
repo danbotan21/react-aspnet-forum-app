@@ -13,6 +13,7 @@ import {
 } from 'react-icons/fa'
 import { useAuth, apiFetch } from './AuthContext'
 import { useNotifications } from './NotificationContext'
+import { useChat } from './ChatContext'
 import { normalizeImageSrc } from './utils/media'
 import { PremiumBadge } from './PremiumBadge'
 import './Styles/Navbar.css'
@@ -25,6 +26,7 @@ export const Navbar = () => {
   const navigate = useNavigate()
   const { user, logout } = useAuth()
   const { unreadCount } = useNotifications()
+  const { totalUnread: unreadMessages } = useChat()
   const [searchTerm, setSearchTerm] = useState('')
   const [searchCommunities, setSearchCommunities] = useState([])
   const [searchPosts, setSearchPosts] = useState([])
@@ -196,13 +198,38 @@ export const Navbar = () => {
 
         {/* Actions + profile */}
         <div className='navbar-actions'>
-          <button
-            type='button'
+          <Link
+            to='/messages'
             className='navbar-icon-btn'
             aria-label='Messages'
+            style={{ position: 'relative' }}
           >
             <FaComment />
-          </button>
+            {unreadMessages > 0 && (
+              <span
+                style={{
+                  position: 'absolute',
+                  top: '-4px',
+                  right: '-4px',
+                  backgroundColor: '#e53e3e',
+                  color: '#fff',
+                  borderRadius: '50%',
+                  minWidth: '16px',
+                  height: '16px',
+                  fontSize: '10px',
+                  fontWeight: '700',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '0 2px',
+                  lineHeight: 1,
+                  pointerEvents: 'none',
+                }}
+              >
+                {unreadMessages > 99 ? '99+' : unreadMessages}
+              </span>
+            )}
+          </Link>
 
           <Link
             to='/create-post'

@@ -23,6 +23,7 @@ import { AdminPage } from './AdminPage'
 import { PostPage } from './PostPage'
 import { Settings } from './Settings'
 import { SearchResults } from './SearchResults'
+import { Messages } from './Messages'
 
 function AppLayout({ children }) {
   const { user, loading } = useAuth()
@@ -170,6 +171,14 @@ function App() {
           element={
             <AppLayout>
               <SearchResults />
+            </AppLayout>
+          }
+        />
+        <Route
+          path='/messages'
+          element={
+            <AppLayout>
+              <Messages />
             </AppLayout>
           }
         />

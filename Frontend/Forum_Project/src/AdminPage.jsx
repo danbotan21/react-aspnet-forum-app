@@ -619,6 +619,18 @@ function ReportsTab({ token, currentUserId }) {
     if (!window.confirm('Discard this report record?')) return
     withPending(id, () => deleteReportAdmin(id, token))
   }
+  const handleBanUser = (r) => {
+    if (!r.contentAuthorId) return
+    const reason = window.prompt(
+      `Ban reason for u/${r.contentAuthorUserName}:`,
+      'Banned following user reports',
+    )
+    if (reason === null) return
+    withPending(r.id, async () => {
+      await banUser(r.contentAuthorId, reason.trim() || 'Banned following user reports', token)
+      await dismissReportAdmin(r.id, token)
+    })
+  }
 
   const viewLink = (r) => {
     if ((r.typeName === 'Post' || r.typeName === 'Comment') && r.communitySlug && r.postId)
@@ -731,6 +743,15 @@ function ReportsTab({ token, currentUserId }) {
                       disabled={pending[r.id]}
                     >
                       <FaTrash /> Remove Content
+                    </button>
+                  )}
+                  {r.status === 'pending' && !isOwn && r.typeName === 'User' && !r.contentAuthorIsAdmin && (
+                    <button
+                      className='admin-btn admin-btn-sm admin-btn-danger'
+                      onClick={() => handleBanUser(r)}
+                      disabled={pending[r.id]}
+                    >
+                      <FaBan /> Ban user
                     </button>
                   )}
                   {r.status !== 'pending' && (

@@ -7,6 +7,7 @@ import {
   FaTrash,
   FaBell,
   FaEnvelopeOpenText,
+  FaUserPlus,
 } from 'react-icons/fa'
 import { useNotifications } from './NotificationContext'
 import { normalizeImageSrc } from './utils/media'
@@ -67,6 +68,12 @@ const TYPE_CONFIG = {
     color: '#dc2626',
     bg: 'rgba(220, 38, 38, 0.11)',
   },
+  NewFollower: {
+    label: 'New Follower',
+    Icon: FaUserPlus,
+    color: '#e0a51b',
+    bg: 'rgba(224, 165, 27, 0.13)',
+  },
 }
 
 const FALLBACK_CONFIG = {
@@ -94,6 +101,8 @@ const getNavigationPath = (n) => {
     ['NewComment', 'NewReply', 'PostUpvoted', 'CommentUpvoted'].includes(n.type)
   )
     return `/community/${n.communitySlug}/post/${n.postId}`
+  if (n.type === 'NewFollower' && n.actorUsername)
+    return `/user/${encodeURIComponent(n.actorUsername)}`
   if (n.communitySlug) return `/community/${n.communitySlug}`
   return null
 }

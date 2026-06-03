@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom'
 import { GoogleOAuthProvider } from '@react-oauth/google'
 import { AuthProvider } from './AuthContext'
 import { NotificationProvider } from './NotificationContext'
+import { ChatProvider } from './ChatContext'
 
 import App from './App.jsx'
 
@@ -16,7 +17,9 @@ createRoot(document.getElementById('root')).render(
       <BrowserRouter>
         <AuthProvider>
           <NotificationProvider>
-            <App />
+            <ChatProvider>
+              <App />
+            </ChatProvider>
           </NotificationProvider>
         </AuthProvider>
       </BrowserRouter>

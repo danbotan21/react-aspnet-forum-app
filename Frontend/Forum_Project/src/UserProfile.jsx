@@ -16,6 +16,7 @@ import { ProfileSavedTab } from './ProfileSavedTab'
 import { ProfileVotedTab } from './ProfileVotedTab'
 import { useAuth, apiFetch } from './AuthContext'
 import { PremiumBadge } from './PremiumBadge'
+import { ReportModal } from './ReportModal'
 import { normalizeImageSrc } from './utils/media'
 import { uploadImage } from './utils/imageUpload'
 import { fetchUserPostsPage } from './utils/postFeedApi'
@@ -28,6 +29,13 @@ import {
   voteValueFromDirection,
 } from './utils/voteApi'
 import { fetchMyCommunities } from './utils/modApi'
+import {
+  followUser,
+  unfollowUser,
+  fetchFollowStatus,
+  fetchFollowers,
+  fetchFollowing,
+} from './utils/followApi'
 
 const PROFILE_TABS = [
   'Overview',
@@ -106,6 +114,94 @@ export function UserProfile() {
 
   const [activeTab, setActiveTab] = useState('Overview')
   const [profileUser, setProfileUser] = useState(null)
+  const [followStatus, setFollowStatus] = useState(null)
+  const [followBusy, setFollowBusy] = useState(false)
+  const [listModal, setListModal] = useState(null) // 'followers' | 'following' | null
+  const [listUsers, setListUsers] = useState([])
+  const [listLoading, setListLoading] = useState(false)
+  const [reporting, setReporting] = useState(false)
+
+  // Load follow status + counts whenever the viewed profile changes.
+  useEffect(() => {
+    if (!profileUser?.id) {
+      setFollowStatus(null)
+      return
+    }
+    let cancelled = false
+    fetchFollowStatus(profileUser.id)
+      .then((s) => {
+        if (!cancelled) setFollowStatus(s)
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [profileUser?.id])
+
+  const handleToggleFollow = async () => {
+    if (!profileUser?.id || followBusy) return
+    setFollowBusy(true)
+    try {
+      if (followStatus?.isFollowing) {
+        await unfollowUser(profileUser.id)
+        setFollowStatus((s) => ({
+          ...s,
+          isFollowing: false,
+          followersCount: Math.max(0, (s?.followersCount || 1) - 1),
+        }))
+      } else {
+        await followUser(profileUser.id)
+        setFollowStatus((s) => ({
+          ...s,
+          isFollowing: true,
+          followersCount: (s?.followersCount || 0) + 1,
+        }))
+      }
+    } catch (e) {
+      alert(e.message)
+    } finally {
+      setFollowBusy(false)
+    }
+  }
+
+  const handleStartChat = () => {
+    if (profileUser?.id) navigate('/messages', { state: { userId: profileUser.id } })
+  }
+
+  const openFollowList = async (type) => {
+    if (!profileUser?.id) return
+    setListModal(type)
+    setListLoading(true)
+    setListUsers([])
+    try {
+      const data =
+        type === 'followers'
+          ? await fetchFollowers(profileUser.id)
+          : await fetchFollowing(profileUser.id)
+      setListUsers(data)
+    } catch {
+      /* ignore */
+    } finally {
+      setListLoading(false)
+    }
+  }
+
+  const handleFollowInList = async (u) => {
+    try {
+      if (u.isFollowedByMe) await unfollowUser(u.id)
+      else await followUser(u.id)
+      setListUsers((prev) =>
+        prev.map((x) =>
+          x.id === u.id ? { ...x, isFollowedByMe: !x.isFollowedByMe } : x,
+        ),
+      )
+      if (profileUser?.id) {
+        fetchFollowStatus(profileUser.id).then(setFollowStatus).catch(() => {})
+      }
+    } catch (e) {
+      alert(e.message)
+    }
+  }
   const [posts, setPosts] = useState([])
   const [totalPostsCount, setTotalPostsCount] = useState(0)
   const [comments, setComments] = useState([])
@@ -1231,6 +1327,14 @@ export function UserProfile() {
                   {profileUser.isPremium && <PremiumBadge size='md' />}
                 </h1>
                 <p>u/{profileUser.userName || displayName}</p>
+                <div className='user-hero-follow-stats'>
+                  <button type='button' onClick={() => openFollowList('followers')}>
+                    <strong>{followStatus?.followersCount ?? 0}</strong> Followers
+                  </button>
+                  <button type='button' onClick={() => openFollowList('following')}>
+                    <strong>{followStatus?.followingCount ?? 0}</strong> Following
+                  </button>
+                </div>
               </div>
               <div className='user-hero-actions'>
                 {isOwnProfile ? (
@@ -1252,22 +1356,38 @@ export function UserProfile() {
                   <>
                     <button
                       type='button'
-                      className='profile-btn profile-btn-primary'
+                      className={`profile-btn ${followStatus?.isFollowing ? 'profile-btn-secondary' : 'profile-btn-primary'}`}
+                      onClick={handleToggleFollow}
+                      disabled={followBusy}
                     >
-                      Follow
+                      {followStatus?.isFollowing
+                        ? 'Following'
+                        : followStatus?.followsMe
+                          ? 'Follow back'
+                          : 'Follow'}
                     </button>
                     <button
                       type='button'
                       className='profile-btn profile-btn-secondary'
+                      onClick={handleStartChat}
                     >
-                      Start Chat
+                      Message
                     </button>
-                    <button
-                      type='button'
-                      className='profile-btn profile-btn-danger'
-                    >
-                      Report
-                    </button>
+                    {profileUser.role !== 'Admin' && (
+                      <button
+                        type='button'
+                        className='profile-btn profile-btn-danger'
+                        onClick={() => {
+                          if (!token) {
+                            alert('Please log in to report.')
+                            return
+                          }
+                          setReporting(true)
+                        }}
+                      >
+                        Report
+                      </button>
+                    )}
                   </>
                 )}
               </div>
@@ -1288,6 +1408,79 @@ export function UserProfile() {
               </nav>
             )}
           </header>
+
+          {listModal && (
+            <div
+              className='follow-modal-overlay'
+              onClick={() => setListModal(null)}
+            >
+              <div
+                className='follow-modal'
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className='follow-modal-head'>
+                  <h3>{listModal === 'followers' ? 'Followers' : 'Following'}</h3>
+                  <button
+                    type='button'
+                    onClick={() => setListModal(null)}
+                    aria-label='Close'
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div className='follow-modal-body'>
+                  {listLoading ? (
+                    <p className='follow-modal-empty'>Loading…</p>
+                  ) : listUsers.length === 0 ? (
+                    <p className='follow-modal-empty'>Nobody here yet.</p>
+                  ) : (
+                    listUsers.map((u) => (
+                      <div key={u.id} className='follow-modal-item'>
+                        <Link
+                          to={`/user/${encodeURIComponent(u.userName)}`}
+                          className='follow-modal-user'
+                          onClick={() => setListModal(null)}
+                        >
+                          <img
+                            src={normalizeImageSrc(u.avatarUrl) || avatar}
+                            alt=''
+                          />
+                          <div className='follow-modal-user-meta'>
+                            <span className='follow-modal-name'>
+                              {u.userName}
+                              {u.isPremium && <PremiumBadge size='sm' />}
+                            </span>
+                            {u.bio && (
+                              <span className='follow-modal-bio'>{u.bio}</span>
+                            )}
+                          </div>
+                        </Link>
+                        {u.id !== authUser?.id && (
+                          <button
+                            type='button'
+                            className={`profile-btn ${u.isFollowedByMe ? 'profile-btn-secondary' : 'profile-btn-primary'} follow-modal-btn`}
+                            onClick={() => handleFollowInList(u)}
+                          >
+                            {u.isFollowedByMe ? 'Following' : 'Follow'}
+                          </button>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {reporting && profileUser?.id && (
+            <ReportModal
+              type={2}
+              reportedItemId={profileUser.id}
+              label='User'
+              token={token}
+              onClose={() => setReporting(false)}
+            />
+          )}
 
           {isPrivateToViewer ? (
             <section
