@@ -15,8 +15,9 @@ export const Signup = () => {
   const [confirmPassword, setConfirmPassword] = useState('')
 
   const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
   const [loading, setLoading] = useState(false)
+  const [submittedEmail, setSubmittedEmail] = useState('')
+  const [resendInfo, setResendInfo] = useState('')
 
   const handleGoogleSignup = useGoogleLogin({
     flow: 'implicit',
@@ -50,7 +51,6 @@ export const Signup = () => {
   const handleSubmit = async (event) => {
     event.preventDefault()
     setError('')
-    setSuccess('')
 
     // Validare pe frontend
     if (password !== confirmPassword) {
@@ -82,9 +82,8 @@ export const Signup = () => {
       })
 
       if (response.status === 201) {
-        setSuccess('Cont creat cu succes! Vei fi redirectionat...')
-        // Redirect catre Login dupa 1.5 secunde
-        setTimeout(() => navigate('/login'), 1500)
+        // Contul NU e creat încă — îl ținem aici până confirmă pe email.
+        setSubmittedEmail(email)
       } else if (response.status === 400) {
         const data = await response.json()
         setError(data.message || 'Email-ul sau username-ul este deja folosit.')
@@ -95,6 +94,20 @@ export const Signup = () => {
       setError('Nu s-a putut contacta serverul. Verifica conexiunea.')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleResend = async () => {
+    setResendInfo('')
+    try {
+      await fetch('/api/auth/resend-confirmation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: submittedEmail }),
+      })
+      setResendInfo('Ți-am retrimis emailul de confirmare.')
+    } catch {
+      setResendInfo('Nu s-a putut retrimite. Verifică conexiunea.')
     }
   }
 
@@ -125,6 +138,46 @@ export const Signup = () => {
         </section>
 
         <section className='signup-card'>
+          {submittedEmail ? (
+            <>
+              <h2 className='signup-title'>Verifică-ți emailul</h2>
+              <p className='signup-subtitle'>
+                Ți-am trimis un link de confirmare la{' '}
+                <strong>{submittedEmail}</strong>. Deschide-l ca să-ți activezi
+                contul — abia după confirmare contul este creat.
+              </p>
+
+              <div className='signup-message signup-success'>
+                Nu închide pagina până nu confirmi. Verifică și folderul Spam.
+              </div>
+
+              {resendInfo && (
+                <div
+                  className='signup-message signup-success'
+                  style={{ marginTop: '0.6rem' }}
+                >
+                  {resendInfo}
+                </div>
+              )}
+
+              <button
+                type='button'
+                className='signup-btn'
+                style={{ marginTop: '0.8rem' }}
+                onClick={handleResend}
+              >
+                Retrimite emailul de confirmare
+              </button>
+
+              <section className='auth-section auth-section-login'>
+                <p className='auth-section-text'>Ai confirmat deja?</p>
+                <Link to='/Login' className='auth-section-btn'>
+                  Mergi la autentificare
+                </Link>
+              </section>
+            </>
+          ) : (
+            <>
           <h2 className='signup-title'>Creeaza cont</h2>
           <p className='signup-subtitle'>
             Completeaza campurile pentru a te inregistra.
@@ -186,9 +239,6 @@ export const Signup = () => {
             {error && (
               <div className='signup-message signup-error'>{error}</div>
             )}
-            {success && (
-              <div className='signup-message signup-success'>{success}</div>
-            )}
 
             <button type='submit' className='signup-btn' disabled={loading}>
               {loading ? 'Se creeaza contul...' : 'Creeaza cont'}
@@ -213,6 +263,8 @@ export const Signup = () => {
               Autentifica-te
             </Link>
           </section>
+            </>
+          )}
         </section>
       </div>
     </main>

@@ -7,6 +7,9 @@ import { Home } from './Home'
 import { CreatePost } from './CreatePost'
 import { Login } from './Login'
 import { Signup } from './Signup'
+import { ForgotPassword } from './ForgotPassword'
+import { ResetPassword } from './ResetPassword'
+import { ConfirmEmail } from './ConfirmEmail'
 import { Notification } from './Notification'
 import { Popular } from './Popular'
 import { AboutUs } from './AboutUs'
@@ -68,6 +71,9 @@ function App() {
         <Route path='/Login' element={<Login />} />
         <Route path='/login' element={<Login />} />
         <Route path='/register' element={<Signup />} />
+        <Route path='/forgot-password' element={<ForgotPassword />} />
+        <Route path='/reset-password' element={<ResetPassword />} />
+        <Route path='/confirm-email' element={<ConfirmEmail />} />
 
         <Route
           path='/start-community'
