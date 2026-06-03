@@ -254,7 +254,7 @@ namespace ForumApp.BusinessLayer.Core
             var comments = await _context.Comments.Where(c => commentIds.Contains(c.Id))
                 .Include(c => c.Author).ToDictionaryAsync(c => c.Id, ct);
             var reportedUsers = await _context.Users.Where(u => reportedUserIds.Contains(u.Id))
-                .ToDictionaryAsync(u => u.Id, u => u.UserName, ct);
+                .ToDictionaryAsync(u => u.Id, u => new { u.UserName, u.Role }, ct);
 
             var communityIds = reports.Where(r => r.CommunityId.HasValue).Select(r => r.CommunityId!.Value).Distinct().ToList();
             var communities = await _context.Communities.Where(c => communityIds.Contains(c.Id))
@@ -301,7 +301,10 @@ namespace ForumApp.BusinessLayer.Core
                 else if (r.Type == ReportType.User)
                 {
                     dto.TypeName = "User";
-                    dto.ContentAuthorUserName = reportedUsers.GetValueOrDefault(r.ReportedItemId);
+                    var ru = reportedUsers.GetValueOrDefault(r.ReportedItemId);
+                    dto.ContentAuthorUserName = ru?.UserName;
+                    dto.ContentAuthorId = r.ReportedItemId;
+                    dto.ContentAuthorIsAdmin = ru?.Role == "Admin";
                 }
                 else
                 {

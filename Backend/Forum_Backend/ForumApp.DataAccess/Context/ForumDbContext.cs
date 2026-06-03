@@ -12,6 +12,8 @@ using ForumApp.Domain.Entities.SavedItem;
 using ForumApp.Domain.Entities.CommunityMember;
 using ForumApp.Domain.Entities.ModLog;
 using ForumApp.Domain.Entities.AdminLog;
+using ForumApp.Domain.Entities.Follow;
+using ForumApp.Domain.Entities.Chat;
 
 
 
@@ -38,6 +40,9 @@ namespace ForumApp.DataAccess
         public DbSet<CommunityMemberData> CommunityMembers { get; set; }
         public DbSet<ModLogEntryData> ModLogs { get; set; }
         public DbSet<AdminLogData> AdminLogs { get; set; }
+        public DbSet<FollowData> Follows { get; set; }
+        public DbSet<ConversationData> Conversations { get; set; }
+        public DbSet<MessageData> Messages { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -151,6 +156,55 @@ namespace ForumApp.DataAccess
                 .HasIndex(s => new { s.AuthorId, s.CommentId })
                 .IsUnique()
                 .HasFilter("[CommentId] IS NOT NULL");
+
+            // ===== Follow =====
+            // Both FKs point at Users; NoAction avoids multiple cascade paths.
+            modelBuilder.Entity<FollowData>()
+                .HasOne(f => f.Follower)
+                .WithMany()
+                .HasForeignKey(f => f.FollowerId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            modelBuilder.Entity<FollowData>()
+                .HasOne(f => f.Following)
+                .WithMany()
+                .HasForeignKey(f => f.FollowingId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            // A user can follow another user only once.
+            modelBuilder.Entity<FollowData>()
+                .HasIndex(f => new { f.FollowerId, f.FollowingId })
+                .IsUnique();
+
+            // ===== Chat =====
+            modelBuilder.Entity<ConversationData>()
+                .HasOne(c => c.User1)
+                .WithMany()
+                .HasForeignKey(c => c.User1Id)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            modelBuilder.Entity<ConversationData>()
+                .HasOne(c => c.User2)
+                .WithMany()
+                .HasForeignKey(c => c.User2Id)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            // One conversation per unordered pair (we always store the smaller id as User1).
+            modelBuilder.Entity<ConversationData>()
+                .HasIndex(c => new { c.User1Id, c.User2Id })
+                .IsUnique();
+
+            modelBuilder.Entity<MessageData>()
+                .HasOne(m => m.Conversation)
+                .WithMany(c => c.Messages)
+                .HasForeignKey(m => m.ConversationId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<MessageData>()
+                .HasOne(m => m.Sender)
+                .WithMany()
+                .HasForeignKey(m => m.SenderId)
+                .OnDelete(DeleteBehavior.NoAction);
         }
     }
 }

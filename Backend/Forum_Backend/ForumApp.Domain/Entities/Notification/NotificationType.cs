@@ -11,6 +11,7 @@ namespace ForumApp.Domain.Entities.Notification
         PostDeletedByMod = 6,
         CommentDeletedByMod = 7,
         ContactReply = 8,
-        Kicked = 9
+        Kicked = 9,
+        NewFollower = 10
     }
 }

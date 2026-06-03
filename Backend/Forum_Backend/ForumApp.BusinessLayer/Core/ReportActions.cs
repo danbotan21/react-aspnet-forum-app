@@ -55,6 +55,21 @@ namespace ForumApp.BusinessLayer.Core
                         .FirstOrDefaultAsync(c => c.Id == reportData.ReportedItemId, ct);
                     communityId = comment?.Post?.CommunityId;
                 }
+                else if (reportData.Type == ReportType.User)
+                {
+                    if (reportData.ReportedItemId == reporterId)
+                        return new ActionResponse { IsSuccess = false, Message = "You cannot report yourself." };
+
+                    var targetRole = await _context.Users
+                        .Where(u => u.Id == reportData.ReportedItemId)
+                        .Select(u => (string?)u.Role)
+                        .FirstOrDefaultAsync(ct);
+
+                    if (targetRole == null)
+                        return new ActionResponse { IsSuccess = false, Message = "User not found." };
+                    if (targetRole == "Admin")
+                        return new ActionResponse { IsSuccess = false, Message = "You cannot report an administrator." };
+                }
 
                 if (communityId.HasValue)
                 {

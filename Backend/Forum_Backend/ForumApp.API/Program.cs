@@ -20,7 +20,13 @@ builder.Services.AddControllers()
         o.JsonSerializerOptions.Converters.Add(new ForumApp.API.UtcDateTimeConverter());
     });
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSignalR();
+builder.Services.AddSignalR()
+    .AddJsonProtocol(options =>
+    {
+        // Serialize DateTimes the same way as the REST API (UTC with a trailing 'Z'),
+        // otherwise real-time payloads emit local-looking times and the browser shifts them.
+        options.PayloadSerializerOptions.Converters.Add(new ForumApp.API.UtcDateTimeConverter());
+    });
 
 //  Swagger cu suport Bearer JWT
 builder.Services.AddSwaggerGen(c =>
@@ -86,6 +92,8 @@ builder.Services.AddScoped<IContactAction, ContactActionExecution>();
 builder.Services.AddScoped<IReportAction, ReportActionExecution>();
 builder.Services.AddScoped<IAdminAction, AdminActionExecution>();
 builder.Services.AddScoped<ISubscriptionAction, SubscriptionActionExecution>();
+builder.Services.AddScoped<IFollowAction, FollowActionExecution>();
+builder.Services.AddScoped<IChatAction, ChatActionExecution>();
 
 //  Ads: the business action lives in the BusinessLayer (logic only); the external HTTP
 //  provider is infrastructure and lives in the API layer, behind IAdProviderAction —
