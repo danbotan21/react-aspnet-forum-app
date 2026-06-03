@@ -5,6 +5,7 @@ import avatar from './img/avatar.webp'
 import { FaCaretUp, FaCaretDown, FaComment, FaEdit, FaTrash } from 'react-icons/fa'
 import { normalizeImageSrc } from './utils/media'
 import { useAuth } from './AuthContext'
+import { useToast } from './ToastContext'
 import {
   deletePostVote,
   fetchUserPostVotes,
@@ -23,6 +24,7 @@ const getPostRoute = (post) =>
 export const Popular = () => {
   const PAGE_SIZE = 15
   const { user, token } = useAuth()
+  const toast = useToast()
   const navigate = useNavigate()
   const [openMorePostId, setOpenMorePostId] = useState(null)
   const [reportingPost, setReportingPost] = useState(null)
@@ -240,7 +242,7 @@ export const Popular = () => {
       setPosts((prev) => prev.filter((p) => p.id !== postId))
       setOpenMorePostId(null)
     } catch (err) {
-      alert(err.message)
+      toast.error(err.message)
     } finally {
       setDeletingPostId(null)
     }
@@ -248,7 +250,7 @@ export const Popular = () => {
 
   const handlePostVote = async (postId, direction) => {
     if (!token) {
-      alert('Please login to vote.')
+      toast.error('Please login to vote.')
       return
     }
     if (pendingPostVotes[postId]) return
@@ -291,7 +293,7 @@ export const Popular = () => {
           ...currentVotes,
           [postId]: previousVote,
         }))
-        alert(voteError.message)
+        toast.error(voteError.message)
       } finally {
         setPendingPostVotes((currentPending) => ({
           ...currentPending,
@@ -338,7 +340,7 @@ export const Popular = () => {
         ...currentVotes,
         [postId]: { ...(currentVotes[postId] || {}), type: previousVoteType },
       }))
-      alert(voteError.message)
+      toast.error(voteError.message)
     } finally {
       setPendingPostVotes((currentPending) => ({
         ...currentPending,
@@ -349,7 +351,7 @@ export const Popular = () => {
 
   const handleToggleSavePost = async (postId) => {
     if (!token) {
-      alert('Please login to save posts.')
+      toast.error('Please login to save posts.')
       return
     }
     if (pendingSavedPosts[postId]) return
@@ -383,7 +385,7 @@ export const Popular = () => {
         ...currentSaved,
         [postId]: previousSavedItem,
       }))
-      alert(error.message)
+      toast.error(error.message)
     } finally {
       setPendingSavedPosts((currentPending) => ({
         ...currentPending,
@@ -503,7 +505,7 @@ export const Popular = () => {
                               role='menuitem'
                               onClick={() => {
                                 setOpenMorePostId(null)
-                                if (!token) { alert('Please log in to report.'); return }
+                                if (!token) { toast.error('Please log in to report.'); return }
                                 setReportingPost({ id: post.id })
                               }}
                             >

@@ -13,6 +13,7 @@ import './Styles/PostPage.css'
 import avatar from './img/avatar.webp'
 import { normalizeImageSrc } from './utils/media'
 import { useAuth } from './AuthContext'
+import { useToast } from './ToastContext'
 import {
   deleteCommentVote,
   deletePostVote,
@@ -48,6 +49,7 @@ export function PostPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
   const { user, token } = useAuth()
+  const toast = useToast()
 
   const [post, setPost] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -363,11 +365,11 @@ export function PostPage() {
 
   const handlePostVote = async (direction) => {
     if (!token || !post?.id) {
-      alert('Please login to vote.')
+      toast.error('Please login to vote.')
       return
     }
     if (isBanned) {
-      alert('You are banned from this community and cannot interact.')
+      toast.error('You are banned from this community and cannot interact.')
       return
     }
     if (isPostVotePending) return
@@ -403,7 +405,7 @@ export function PostPage() {
             : currentPost,
         )
         setPostVote(previousVote)
-        alert(voteError.message)
+        toast.error(voteError.message)
       } finally {
         setIsPostVotePending(false)
       }
@@ -433,7 +435,7 @@ export function PostPage() {
           : currentPost,
       )
       setPostVote((currentVote) => ({ ...currentVote, type: previousVoteType }))
-      alert(voteError.message)
+      toast.error(voteError.message)
     } finally {
       setIsPostVotePending(false)
     }
@@ -441,11 +443,11 @@ export function PostPage() {
 
   const handleCommentVote = async (commentId, direction) => {
     if (!token) {
-      alert('Please login to vote.')
+      toast.error('Please login to vote.')
       return
     }
     if (isBanned) {
-      alert('You are banned from this community and cannot interact.')
+      toast.error('You are banned from this community and cannot interact.')
       return
     }
     if (pendingCommentVotes[commentId]) return
@@ -488,7 +490,7 @@ export function PostPage() {
           ...currentVotes,
           [commentId]: previousVote,
         }))
-        alert(voteError.message)
+        toast.error(voteError.message)
       } finally {
         setPendingCommentVotes((currentPending) => ({
           ...currentPending,
@@ -537,7 +539,7 @@ export function PostPage() {
           type: previousVoteType,
         },
       }))
-      alert(voteError.message)
+      toast.error(voteError.message)
     } finally {
       setPendingCommentVotes((currentPending) => ({
         ...currentPending,
@@ -548,11 +550,11 @@ export function PostPage() {
 
   const handleToggleSavePost = async () => {
     if (!token || !post?.id) {
-      alert('Please login to save posts.')
+      toast.error('Please login to save posts.')
       return
     }
     if (isBanned) {
-      alert('You are banned from this community.')
+      toast.error('You are banned from this community.')
       return
     }
     if (isPostSavePending) return
@@ -573,7 +575,7 @@ export function PostPage() {
       }
     } catch (saveError) {
       setSavedPostEntry(previousSavedEntry)
-      alert(saveError.message)
+      toast.error(saveError.message)
     } finally {
       setIsPostSavePending(false)
     }
@@ -697,17 +699,17 @@ export function PostPage() {
 
   const handleCreateComment = async (parentCommentId = null) => {
     if (!token) {
-      alert('Please login to comment.')
+      toast.error('Please login to comment.')
       return
     }
 
     if (isBanned) {
-      alert('You are banned from this community and cannot comment.')
+      toast.error('You are banned from this community and cannot comment.')
       return
     }
 
     if (!isCommunityMember) {
-      alert('You need to join this community before commenting.')
+      toast.error('You need to join this community before commenting.')
       return
     }
 
@@ -776,7 +778,7 @@ export function PostPage() {
         setNewCommentText('')
       }
     } catch (submitError) {
-      alert(submitError.message)
+      toast.error(submitError.message)
     } finally {
       if (parentCommentId) {
         setSubmittingReplyByCommentId((current) => ({
@@ -835,7 +837,7 @@ export function PostPage() {
           : current,
       )
     } catch (err) {
-      alert(err.message)
+      toast.error(err.message)
     } finally {
       setIsDeletingComment(false)
     }

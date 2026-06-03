@@ -24,6 +24,7 @@ import {
   FaReply,
 } from 'react-icons/fa'
 import { useAuth } from './AuthContext'
+import { useToast } from './ToastContext'
 import {
   fetchAdminStats,
   fetchAdminUsers,
@@ -243,6 +244,7 @@ function OverviewTab({ token, onNavigate }) {
 // ─── USERS TAB ───────────────────────────────────────────────────────────────
 
 function UsersTab({ token, currentUserName }) {
+  const toast = useToast()
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -279,7 +281,7 @@ function UsersTab({ token, currentUserName }) {
       await fn()
       await load(search.trim())
     } catch (e) {
-      alert(e.message)
+      toast.error(e.message)
     } finally {
       setPending((p) => ({ ...p, [id]: false }))
     }
@@ -287,7 +289,7 @@ function UsersTab({ token, currentUserName }) {
 
   const handleBan = (id) => {
     if (!banReason.trim()) {
-      alert('Please provide a ban reason.')
+      toast.error('Please provide a ban reason.')
       return
     }
     withPending(id, async () => {
@@ -449,6 +451,7 @@ function UsersTab({ token, currentUserName }) {
 // ─── COMMUNITIES TAB ──────────────────────────────────────────────────────────
 
 function CommunitiesTab({ token }) {
+  const toast = useToast()
   const [communities, setCommunities] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -484,7 +487,7 @@ function CommunitiesTab({ token }) {
       await deleteCommunityAdmin(c.id, token)
       await load()
     } catch (e) {
-      alert(e.message)
+      toast.error(e.message)
     } finally {
       setPending((p) => ({ ...p, [c.id]: false }))
     }
@@ -574,6 +577,7 @@ function CommunitiesTab({ token }) {
 const STATUS_FILTERS = ['pending', 'actioned', 'dismissed', 'all']
 
 function ReportsTab({ token, currentUserId }) {
+  const toast = useToast()
   const [reports, setReports] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -604,7 +608,7 @@ function ReportsTab({ token, currentUserId }) {
       await fn()
       await load(status)
     } catch (e) {
-      alert(e.message)
+      toast.error(e.message)
     } finally {
       setPending((p) => ({ ...p, [id]: false }))
     }
@@ -777,6 +781,7 @@ function ReportsTab({ token, currentUserId }) {
 // ─── CONTENT TAB ──────────────────────────────────────────────────────────────
 
 function ContentTab({ token }) {
+  const toast = useToast()
   const [kind, setKind] = useState('posts') // 'posts' | 'comments'
   const [search, setSearch] = useState('')
   const [data, setData] = useState({ items: [], total: 0, page: 1, pageSize: 20 })
@@ -823,7 +828,7 @@ function ContentTab({ token }) {
       else await deleteCommentAdmin(item.id, token)
       await load(kind, search, page)
     } catch (e) {
-      alert(e.message)
+      toast.error(e.message)
     } finally {
       setPending((p) => ({ ...p, [item.id]: false }))
     }
@@ -981,6 +986,7 @@ function ContentTab({ token }) {
 // ─── MESSAGES TAB ──────────────────────────────────────────────────────────────
 
 function MessagesTab({ token }) {
+  const toast = useToast()
   const [messages, setMessages] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -1013,7 +1019,7 @@ function MessagesTab({ token }) {
       await deleteMessageAdmin(id, token)
       await load()
     } catch (e) {
-      alert(e.message)
+      toast.error(e.message)
     } finally {
       setPending((p) => ({ ...p, [id]: false }))
     }
@@ -1021,7 +1027,7 @@ function MessagesTab({ token }) {
 
   const handleReply = async (id) => {
     if (!replyText.trim()) {
-      alert('Reply cannot be empty.')
+      toast.error('Reply cannot be empty.')
       return
     }
     const key = `reply-${id}`
@@ -1032,9 +1038,9 @@ function MessagesTab({ token }) {
       setReplyingId(null)
       setReplyText('')
       await load()
-      if (msg) alert(msg)
+      if (msg) toast.success(msg)
     } catch (e) {
-      alert(e.message)
+      toast.error(e.message)
     } finally {
       setPending((p) => ({ ...p, [key]: false }))
     }

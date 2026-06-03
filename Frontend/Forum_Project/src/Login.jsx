@@ -115,16 +115,16 @@ export const Login = () => {
 
           <form className='login-form' onSubmit={handleSubmit}>
             <label className='login-label' htmlFor='email'>
-              Email sau nume de utilizator
+              Email
             </label>
             <input
               id='email'
-              type='text'
+              type='email'
               className='login-input'
               placeholder='ex: nume@email.com'
               value={email}
               onChange={(event) => setEmail(event.target.value)}
-              autoComplete='username'
+              autoComplete='email'
             />
 
             <label className='login-label' htmlFor='password'>

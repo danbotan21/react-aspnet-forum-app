@@ -1,8 +1,8 @@
-import { useState, useCallback, useRef, useEffect } from 'react'
-import { FaCloudUploadAlt, FaTimes } from 'react-icons/fa'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from './AuthContext'
 import { uploadImage } from './utils/imageUpload'
+import { ImageDropzone } from './ImageDropzone'
 import './Styles/StartCommunity.css'
 
 export const StartCommunity = () => {
@@ -48,91 +48,35 @@ export const StartCommunity = () => {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState(null)
 
-  const [dragActive, setDragActive] = useState(false)
   const [avatarPreviewUrl, setAvatarPreviewUrl] = useState('')
   const [bannerPreviewUrl, setBannerPreviewUrl] = useState('')
-  const dragCounterRef = useRef(0)
-  const fileInputRef = useRef(null)
 
-  const handleImageChange = useCallback(
-    (file) => {
-      if (!file || !file.type.startsWith('image/')) {
-        setSelectedAvatarImageName('')
-        setAvatarFile(null)
-        return
-      }
-      setSelectedAvatarImageName(file.name)
-      setAvatarFile(file)
-      if (avatarPreviewUrl) URL.revokeObjectURL(avatarPreviewUrl)
-      setAvatarPreviewUrl(URL.createObjectURL(file))
-    },
-    [avatarPreviewUrl],
-  )
+  const handleAvatarFile = (file) => {
+    if (avatarPreviewUrl) URL.revokeObjectURL(avatarPreviewUrl)
+    setSelectedAvatarImageName(file.name)
+    setAvatarFile(file)
+    setAvatarPreviewUrl(URL.createObjectURL(file))
+  }
 
-  const handleDragEnter = useCallback((e) => {
-    e.preventDefault()
-    e.stopPropagation()
-    if (e.dataTransfer?.items?.length) {
-      dragCounterRef.current += 1
-      setDragActive(true)
-    }
-  }, [])
+  const clearAvatar = () => {
+    if (avatarPreviewUrl) URL.revokeObjectURL(avatarPreviewUrl)
+    setSelectedAvatarImageName('')
+    setAvatarFile(null)
+    setAvatarPreviewUrl('')
+  }
 
-  const handleDragOver = useCallback((e) => {
-    e.preventDefault()
-    e.stopPropagation()
-  }, [])
-
-  const handleDragLeave = useCallback((e) => {
-    e.preventDefault()
-    e.stopPropagation()
-    dragCounterRef.current -= 1
-    if (dragCounterRef.current <= 0) {
-      dragCounterRef.current = 0
-      setDragActive(false)
-    }
-  }, [])
-
-  const handleDrop = useCallback(
-    (e) => {
-      e.preventDefault()
-      e.stopPropagation()
-      dragCounterRef.current = 0
-      setDragActive(false)
-
-      if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-        handleImageChange(e.dataTransfer.files[0])
-      }
-    },
-    [handleImageChange],
-  )
-
-  const handleFileSelect = useCallback(
-    (e) => {
-      if (e.target.files && e.target.files[0]) {
-        handleImageChange(e.target.files[0])
-      }
-    },
-    [handleImageChange],
-  )
-
-  const handleUploadClick = useCallback(() => {
-    fileInputRef.current?.click()
-  }, [])
-
-  const handleBannerFileSelect = (e) => {
-    const file = e.target.files?.[0]
-
-    if (!file || !file.type.startsWith('image/')) {
-      setSelectedBannerImageName('')
-      setBannerFile(null)
-      return
-    }
-
+  const handleBannerFile = (file) => {
+    if (bannerPreviewUrl) URL.revokeObjectURL(bannerPreviewUrl)
     setSelectedBannerImageName(file.name)
     setBannerFile(file)
-    if (bannerPreviewUrl) URL.revokeObjectURL(bannerPreviewUrl)
     setBannerPreviewUrl(URL.createObjectURL(file))
+  }
+
+  const clearBanner = () => {
+    if (bannerPreviewUrl) URL.revokeObjectURL(bannerPreviewUrl)
+    setSelectedBannerImageName('')
+    setBannerFile(null)
+    setBannerPreviewUrl('')
   }
 
   useEffect(() => {
@@ -298,132 +242,35 @@ export const StartCommunity = () => {
           </div>
 
           <div className='start-community-field'>
-            <span className='start-community-label'>Image</span>
-            <div
-              className={`start-community-dropzone ${dragActive ? 'start-community-dropzone-active' : ''}`}
-              onDragEnter={handleDragEnter}
-              onDragLeave={handleDragLeave}
-              onDragOver={handleDragOver}
-              onDrop={handleDrop}
-              onClick={handleUploadClick}
-              role='button'
-              tabIndex={0}
-              style={{
-                border: dragActive
-                  ? '2px dashed var(--accent)'
-                  : '2px dashed var(--border)',
-                borderRadius: '8px',
-                padding: '2rem',
-                textAlign: 'center',
-                cursor: 'pointer',
-                background: dragActive
-                  ? 'var(--bg-card-hover)'
-                  : 'var(--bg-card)',
-                transition: 'all 0.2s ease',
-                position: 'relative',
-              }}
-            >
-              <input
-                type='file'
-                ref={fileInputRef}
-                onChange={handleFileSelect}
-                accept='image/*'
-                style={{ display: 'none' }}
-                aria-hidden='true'
-              />
-              {avatarPreviewUrl ? (
-                <div style={{ position: 'relative', display: 'inline-block' }}>
-                  <img
-                    src={avatarPreviewUrl}
-                    alt='Avatar preview'
-                    style={{ maxHeight: '150px', borderRadius: '4px' }}
-                  />
-                  <button
-                    type='button'
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setAvatarPreviewUrl('')
-                      setSelectedAvatarImageName('')
-                      setAvatarFile(null)
-                    }}
-                    style={{
-                      position: 'absolute',
-                      top: '-10px',
-                      right: '-10px',
-                      background: 'var(--bg-elevated)',
-                      color: 'var(--text-primary)',
-                      border: '1px solid var(--border)',
-                      borderRadius: '50%',
-                      width: '24px',
-                      height: '24px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      cursor: 'pointer',
-                    }}
-                    aria-label='Remove image'
-                  >
-                    <FaTimes size={12} />
-                  </button>
-                </div>
-              ) : (
-                <div
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    color: 'var(--text-secondary)',
-                  }}
-                >
-                  <FaCloudUploadAlt size={32} />
-                  <p style={{ margin: 0 }}>
-                    Drag and drop an image or{' '}
-                    <span style={{ color: 'var(--accent)', fontWeight: '500' }}>
-                      Upload
-                    </span>
-                  </p>
-                </div>
-              )}
-            </div>
-            {selectedAvatarImageName && (
-              <p
-                style={{ marginTop: '0.5rem', color: 'var(--text-secondary)' }}
-              >
-                Avatar: {selectedAvatarImageName}
-              </p>
-            )}
+            <span className='start-community-label'>Community icon</span>
+            <ImageDropzone
+              variant='avatar'
+              previewUrl={avatarPreviewUrl}
+              fileName={
+                selectedAvatarImageName
+                  ? `Icon: ${selectedAvatarImageName}`
+                  : ''
+              }
+              onFile={handleAvatarFile}
+              onRemove={clearAvatar}
+            />
           </div>
 
           <div className='start-community-field'>
-            <label htmlFor='community-banner' className='start-community-label'>
+            <span className='start-community-label'>
               Banner image (optional)
-            </label>
-            <input
-              id='community-banner'
-              type='file'
-              accept='image/*'
-              className='start-community-input'
-              onChange={handleBannerFileSelect}
+            </span>
+            <ImageDropzone
+              variant='banner'
+              previewUrl={bannerPreviewUrl}
+              fileName={
+                selectedBannerImageName
+                  ? `Banner: ${selectedBannerImageName}`
+                  : ''
+              }
+              onFile={handleBannerFile}
+              onRemove={clearBanner}
             />
-            {selectedBannerImageName && (
-              <p
-                style={{ marginTop: '0.5rem', color: 'var(--text-secondary)' }}
-              >
-                Banner: {selectedBannerImageName}
-              </p>
-            )}
-            {bannerPreviewUrl && (
-              <img
-                src={bannerPreviewUrl}
-                alt='Banner preview'
-                style={{
-                  maxHeight: '120px',
-                  marginTop: '0.75rem',
-                  borderRadius: '6px',
-                }}
-              />
-            )}
           </div>
         </section>
 

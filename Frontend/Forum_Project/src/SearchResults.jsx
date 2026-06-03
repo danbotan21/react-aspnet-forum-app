@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { FaCaretUp, FaCaretDown, FaComment, FaUsers, FaEdit, FaTrash } from 'react-icons/fa'
 import { normalizeImageSrc } from './utils/media'
 import { useAuth, apiFetch } from './AuthContext'
+import { useToast } from './ToastContext'
 import {
   deletePostVote,
   fetchUserPostVotes,
@@ -21,6 +22,7 @@ export const SearchResults = () => {
   const navigate = useNavigate()
   const query = searchParams.get('q') || ''
   const { user, token } = useAuth()
+  const toast = useToast()
 
   const [activeTab, setActiveTab] = useState('posts')
   const [posts, setPosts] = useState([])
@@ -134,14 +136,14 @@ export const SearchResults = () => {
       setPosts((prev) => prev.filter((p) => p.id !== postId))
       setOpenMorePostId(null)
     } catch (err) {
-      alert(err.message)
+      toast.error(err.message)
     } finally {
       setDeletingPostId(null)
     }
   }
 
   const handlePostVote = async (postId, direction) => {
-    if (!token) { alert('Please login to vote.'); return }
+    if (!token) { toast.error('Please login to vote.'); return }
     if (pendingPostVotes[postId]) return
 
     const nextVoteType = voteValueFromDirection(direction)
@@ -181,7 +183,7 @@ export const SearchResults = () => {
   }
 
   const handleToggleSavePost = async (postId) => {
-    if (!token) { alert('Please login to save posts.'); return }
+    if (!token) { toast.error('Please login to save posts.'); return }
     if (pendingSavedPosts[postId]) return
 
     const previous = savedPostsById[postId] ?? null
@@ -323,7 +325,7 @@ export const SearchResults = () => {
                               role='menuitem'
                               onClick={() => {
                                 setOpenMorePostId(null)
-                                if (!token) { alert('Please log in to report.'); return }
+                                if (!token) { toast.error('Please log in to report.'); return }
                                 setReportingPost({ id: post.id })
                               }}
                             >

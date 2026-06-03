@@ -79,6 +79,13 @@ export const Settings = () => {
   const [showCheckout, setShowCheckout] = useState(false)
   const [isPaying, setIsPaying] = useState(false)
 
+  // Inline feedback for the privacy / notifications / preferences sections
+  // (same green-success / red-error style as Account Information).
+  const [privacyError, setPrivacyError] = useState('')
+  const [privacySuccess, setPrivacySuccess] = useState('')
+  const [notifSuccess, setNotifSuccess] = useState('')
+  const [prefSuccess, setPrefSuccess] = useState('')
+
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target
     setFormData((prev) => ({
@@ -409,13 +416,15 @@ export const Settings = () => {
   const handleSavePreferences = (e) => {
     e.preventDefault()
     console.log('Saving preferences:', formData)
-    alert('Preferences saved!')
+    setPrefSuccess('Preferences saved.')
   }
 
   const handleSavePrivacy = async (e) => {
     e.preventDefault()
+    setPrivacyError('')
+    setPrivacySuccess('')
     if (!token) {
-      alert('Please login before updating privacy settings.')
+      setPrivacyError('Please login before updating privacy settings.')
       return
     }
     try {
@@ -432,14 +441,14 @@ export const Settings = () => {
         }),
       )
       if (!response || !response.ok) {
-        alert('Failed to save privacy settings.')
+        setPrivacyError('Failed to save privacy settings.')
         return
       }
       const updatedUser = await response.json()
       updateUser(updatedUser)
-      alert('Privacy settings saved!')
+      setPrivacySuccess('Privacy settings saved successfully.')
     } catch {
-      alert('Failed to save privacy settings.')
+      setPrivacyError('Failed to save privacy settings.')
     }
   }
 
@@ -452,7 +461,7 @@ export const Settings = () => {
       JSON.stringify(formData.pushNotifications),
     )
     window.dispatchEvent(new Event('push-notifications-changed'))
-    alert('Notification settings saved!')
+    setNotifSuccess('Notification settings saved successfully.')
   }
 
   const handleDeleteAccount = async (e) => {
@@ -911,6 +920,12 @@ export const Settings = () => {
                   </select>
                 </div>
 
+                {prefSuccess && (
+                  <p className='settings-status settings-status-success'>
+                    {prefSuccess}
+                  </p>
+                )}
+
                 <button
                   type='submit'
                   className='settings-btn settings-btn-primary'
@@ -969,6 +984,17 @@ export const Settings = () => {
                     </label>
                   </div>
                 </div>
+
+                {privacyError && (
+                  <p className='settings-status settings-status-error'>
+                    {privacyError}
+                  </p>
+                )}
+                {privacySuccess && (
+                  <p className='settings-status settings-status-success'>
+                    {privacySuccess}
+                  </p>
+                )}
 
                 <button
                   type='submit'
@@ -1037,6 +1063,12 @@ export const Settings = () => {
                     </label>
                   </div>
                 </div>
+
+                {notifSuccess && (
+                  <p className='settings-status settings-status-success'>
+                    {notifSuccess}
+                  </p>
+                )}
 
                 <button
                   type='submit'

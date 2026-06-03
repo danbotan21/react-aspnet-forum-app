@@ -5,6 +5,7 @@ import { GoogleOAuthProvider } from '@react-oauth/google'
 import { AuthProvider } from './AuthContext'
 import { NotificationProvider } from './NotificationContext'
 import { ChatProvider } from './ChatContext'
+import { ToastProvider } from './ToastContext'
 
 import App from './App.jsx'
 
@@ -18,7 +19,9 @@ createRoot(document.getElementById('root')).render(
         <AuthProvider>
           <NotificationProvider>
             <ChatProvider>
-              <App />
+              <ToastProvider>
+                <App />
+              </ToastProvider>
             </ChatProvider>
           </NotificationProvider>
         </AuthProvider>

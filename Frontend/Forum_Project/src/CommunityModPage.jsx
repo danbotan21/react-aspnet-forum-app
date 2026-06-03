@@ -22,6 +22,7 @@ import {
   FaSpinner,
 } from 'react-icons/fa'
 import { useAuth } from './AuthContext'
+import { useToast } from './ToastContext'
 import {
   fetchCommunityBySlug,
   fetchMyRole,
@@ -302,6 +303,7 @@ function ReportsTab({
   myRole,
   currentUserName,
 }) {
+  const toast = useToast()
   const [reports, setReports] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -335,7 +337,7 @@ function ReportsTab({
       await fn()
       await load()
     } catch (e) {
-      alert(e.message)
+      toast.error(e.message)
     } finally {
       setPending((p) => ({ ...p, [id]: false }))
     }
@@ -360,7 +362,7 @@ function ReportsTab({
 
   const handleBanAuthor = async (report) => {
     if (!banReason.trim()) {
-      alert('Please provide a ban reason.')
+      toast.error('Please provide a ban reason.')
       return
     }
     const key = `ban-${report.id}`
@@ -372,21 +374,21 @@ function ReportsTab({
         (m) => m.userName === report.contentAuthorUserName,
       )
       if (!target) {
-        alert(
+        toast.error(
           'Could not find user in community members. They may have already left.',
         )
         return
       }
       if (target.role === 'owner') {
-        alert('Cannot ban the community owner.')
+        toast.error('Cannot ban the community owner.')
         return
       }
       if (target.role === 'moderator' && myRole !== 'owner') {
-        alert('Only the community owner can ban moderators.')
+        toast.error('Only the community owner can ban moderators.')
         return
       }
       if (target.userId === userId) {
-        alert('You cannot ban yourself.')
+        toast.error('You cannot ban yourself.')
         return
       }
       await banMember(communityId, target.userId, banReason, token)
@@ -401,7 +403,7 @@ function ReportsTab({
       setBanReason('')
       await load()
     } catch (e) {
-      alert(e.message)
+      toast.error(e.message)
     } finally {
       setPending((p) => ({ ...p, [key]: false }))
     }
@@ -618,6 +620,7 @@ function ReportsTab({
 // ─── MEMBERS TAB ─────────────────────────────────────────────────────────────
 
 function MembersTab({ communityId, token, myRole, currentUserId }) {
+  const toast = useToast()
   const [members, setMembers] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -651,7 +654,7 @@ function MembersTab({ communityId, token, myRole, currentUserId }) {
       await fn()
       await load()
     } catch (e) {
-      alert(e.message)
+      toast.error(e.message)
     } finally {
       setPending((p) => ({ ...p, [userId]: false }))
     }
@@ -670,7 +673,7 @@ function MembersTab({ communityId, token, myRole, currentUserId }) {
 
   const handleBanSubmit = (userId) => {
     if (!banReason.trim()) {
-      alert('Please provide a ban reason.')
+      toast.error('Please provide a ban reason.')
       return
     }
     withPending(userId, async () => {
@@ -861,6 +864,7 @@ function MembersTab({ communityId, token, myRole, currentUserId }) {
 // ─── BANNED MEMBERS TAB ──────────────────────────────────────────────────────
 
 function BannedMembersTab({ communityId, token }) {
+  const toast = useToast()
   const [banned, setBanned] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -890,7 +894,7 @@ function BannedMembersTab({ communityId, token }) {
       await unbanMember(communityId, userId, token)
       await load()
     } catch (e) {
-      alert(e.message)
+      toast.error(e.message)
     } finally {
       setPending((p) => ({ ...p, [userId]: false }))
     }
@@ -977,6 +981,7 @@ function BannedMembersTab({ communityId, token }) {
 // ─── PINNED POSTS TAB ────────────────────────────────────────────────────────
 
 function PinnedTab({ communityId, token }) {
+  const toast = useToast()
   const [pinnedPosts, setPinnedPosts] = useState([])
   const [allPosts, setAllPosts] = useState([])
   const [loading, setLoading] = useState(true)
@@ -1011,7 +1016,7 @@ function PinnedTab({ communityId, token }) {
   const handlePin = async (postId) => {
     if (pending[postId]) return
     if (pinnedCount >= MAX_PINS) {
-      alert(`Maximum ${MAX_PINS} posts can be pinned at the same time.`)
+      toast.error(`Maximum ${MAX_PINS} posts can be pinned at the same time.`)
       return
     }
     setPending((p) => ({ ...p, [postId]: true }))
@@ -1019,7 +1024,7 @@ function PinnedTab({ communityId, token }) {
       await pinPost(communityId, postId, token)
       await load()
     } catch (e) {
-      alert(e.message)
+      toast.error(e.message)
     } finally {
       setPending((p) => ({ ...p, [postId]: false }))
     }
@@ -1032,7 +1037,7 @@ function PinnedTab({ communityId, token }) {
       await unpinPost(communityId, postId, token)
       await load()
     } catch (e) {
-      alert(e.message)
+      toast.error(e.message)
     } finally {
       setPending((p) => ({ ...p, [postId]: false }))
     }
@@ -1145,6 +1150,7 @@ function CommunitySettingsTab({
   onCommunityUpdate,
 }) {
   const navigate = useNavigate()
+  const toast = useToast()
   const { communityname } = useParams()
 
   const [form, setForm] = useState({})
@@ -1275,7 +1281,7 @@ function CommunitySettingsTab({
       setSavedMsg('Settings saved successfully!')
       setTimeout(() => setSavedMsg(''), 3000)
     } catch (e) {
-      alert('Failed to save: ' + e.message)
+      toast.error('Failed to save: ' + e.message)
     } finally {
       setSaving(false)
     }
@@ -1286,12 +1292,12 @@ function CommunitySettingsTab({
     setTransferring(true)
     try {
       await transferOwnership(communityId, parseInt(transferTarget), token)
-      alert('Ownership transferred successfully.')
+      toast.success('Ownership transferred successfully.')
       setShowTransfer(false)
       setTransferTarget('')
       navigate(`/community/${communityname}`)
     } catch (e) {
-      alert(e.message)
+      toast.error(e.message)
     } finally {
       setTransferring(false)
     }
@@ -1311,10 +1317,10 @@ function CommunitySettingsTab({
         headers: { Authorization: `Bearer ${token}` },
       })
       if (!res.ok) throw new Error(await res.text())
-      alert('Community deleted.')
+      toast.success('Community deleted.')
       navigate('/')
     } catch (e) {
-      alert('Failed to delete: ' + e.message)
+      toast.error('Failed to delete: ' + e.message)
     } finally {
       setDeleting(false)
     }

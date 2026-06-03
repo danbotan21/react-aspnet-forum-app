@@ -189,16 +189,32 @@
   margin: 16px 4px 0;
 }
 
-/* Only show the rail when the viewport is wide enough to fit feed + gap + rail.
-   Crucially, when the rail IS shown we also lock the feed at a rigid 800px (flex: 0 0)
-   so increasing the gap pushes the rail further right INSTEAD of shrinking the posts.
-   Rule of thumb: keep min-width >= max-width(of .feed-layout) + 340. */
-@media (min-width: 1600px) {
+/* Show the rail as soon as there is room for feed + gap + rail. The feed sits
+   inside a 296px-left-padded content area, so available width ≈ viewport − 320.
+   When the rail IS shown we lock the feed at a rigid 800px (flex: 0 0) so the gap
+   absorbs extra width INSTEAD of shrinking the posts.
+
+   First tier (1500px): a tighter gap so the rail already fits on common laptops
+   (e.g. 1536px-wide screens) where it previously vanished until you zoomed out. */
+@media (min-width: 1500px) {
   .ad-rail {
     display: block;
   }
 
   .feed-main {
     flex: 0 0 800px;
+  }
+
+  .feed-layout {
+    gap: 56px;
+    max-width: 1136px; /* 800 + 56 + 280 */
+  }
+}
+
+/* On genuinely wide screens, restore the generous gap so the rail breathes. */
+@media (min-width: 1680px) {
+  .feed-layout {
+    gap: 140px;
+    max-width: 1220px; /* 800 + 140 + 280 */
   }
 }

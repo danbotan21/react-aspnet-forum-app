@@ -1,24 +1,20 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import {
-  FaTimes,
-  FaPen,
-  FaTrash,
-  FaCloudUploadAlt,
-  FaUserShield,
-} from 'react-icons/fa'
+import { FaTimes, FaPen, FaTrash, FaUserShield } from 'react-icons/fa'
 import { useAuth } from './AuthContext'
+import { useToast } from './ToastContext'
 import { uploadImage } from './utils/imageUpload'
 import { normalizeImageSrc } from './utils/media'
 import { fetchMyBannedStatus } from './utils/modApi'
+import { ImageDropzone } from './ImageDropzone'
 import './Styles/CreatePost.css'
 
 export const CreatePost = () => {
   const navigate = useNavigate()
   const { user, token } = useAuth()
+  const toast = useToast()
   const [activeTab, setActiveTab] = useState('Text')
   const [isDraftsOpen, setIsDraftsOpen] = useState(false)
-  const [dragActive, setDragActive] = useState(false)
 
   // States for backend data
   const [communities, setCommunities] = useState([])
@@ -40,8 +36,6 @@ export const CreatePost = () => {
   const [myRoleInSelected, setMyRoleInSelected] = useState(null)
   const [isBannedInSelected, setIsBannedInSelected] = useState(false)
 
-  const dragCounterRef = useRef(0)
-  const fileInputRef = useRef(null)
   const blobUrlRef = useRef(null)
 
   const revokeBlobUrl = useCallback(() => {
@@ -70,56 +64,13 @@ export const CreatePost = () => {
     [revokeBlobUrl],
   )
 
-  const handleDragEnter = useCallback((e) => {
-    e.preventDefault()
-    e.stopPropagation()
-    if (e.dataTransfer?.items?.length) {
-      dragCounterRef.current += 1
-      setDragActive(true)
-    }
-  }, [])
-
-  const handleDragOver = useCallback((e) => {
-    e.preventDefault()
-    e.stopPropagation()
-  }, [])
-
-  const handleDragLeave = useCallback((e) => {
-    e.preventDefault()
-    e.stopPropagation()
-    dragCounterRef.current -= 1
-    if (dragCounterRef.current <= 0) {
-      dragCounterRef.current = 0
-      setDragActive(false)
-    }
-  }, [])
-
-  const handleDrop = useCallback(
-    (e) => {
-      e.preventDefault()
-      e.stopPropagation()
-      dragCounterRef.current = 0
-      setDragActive(false)
-
-      if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-        handleFile(e.dataTransfer.files[0])
-      }
-    },
-    [handleFile],
-  )
-
-  const handleFileSelect = useCallback(
-    (e) => {
-      if (e.target.files && e.target.files[0]) {
-        handleFile(e.target.files[0])
-      }
-    },
-    [handleFile],
-  )
-
-  const handleUploadClick = useCallback(() => {
-    fileInputRef.current?.click()
-  }, [])
+  const handleRemoveImage = useCallback(() => {
+    revokeBlobUrl()
+    setSelectedImageFile(null)
+    setSelectedImageName('')
+    setPreviewUrl('')
+    setUploadError('')
+  }, [revokeBlobUrl])
 
   useEffect(() => {
     return () => revokeBlobUrl()
@@ -221,11 +172,11 @@ export const CreatePost = () => {
 
   const handleSaveDraft = async () => {
     if (!token) {
-      alert('Please login to save drafts.')
+      toast.error('Please login to save drafts.')
       return
     }
     if (!postTitle.trim()) {
-      alert('Add a title before saving a draft.')
+      toast.error('Add a title before saving a draft.')
       return
     }
     if (isSavingDraft) return
@@ -284,7 +235,7 @@ export const CreatePost = () => {
 
       setIsDraftsOpen(true)
     } catch (err) {
-      alert(err.message)
+      toast.error(err.message)
     } finally {
       setIsSavingDraft(false)
     }
@@ -308,7 +259,7 @@ export const CreatePost = () => {
       )
       if (draftId === currentDraftId) setCurrentDraftId(null)
     } catch (err) {
-      alert(err.message)
+      toast.error(err.message)
     }
   }
 
@@ -582,52 +533,21 @@ export const CreatePost = () => {
             )}
 
             {activeTab === 'Images' && (
-              <div
-                id='panel-images'
-                className={`create-post-upload-wrap ${dragActive ? 'drag-active' : ''}`}
-                onDragEnter={handleDragEnter}
-                onDragLeave={handleDragLeave}
-                onDragOver={handleDragOver}
-                onDrop={handleDrop}
-              >
-                <div className='create-post-upload-content'>
-                  <span className='create-post-upload-text'>
-                    Drag and drop or upload media
-                  </span>
-                  {selectedImageName && (
-                    <span className='create-post-upload-file'>
-                      {selectedImageName}
-                    </span>
-                  )}
-                  <input
-                    type='file'
-                    id='file-upload'
-                    accept='image/*'
-                    onChange={handleFileSelect}
-                    ref={fileInputRef}
-                    className='create-post-file-input'
-                  />
-                  <button
-                    type='button'
-                    className='create-post-upload-btn'
-                    onClick={handleUploadClick}
-                  >
-                    <FaCloudUploadAlt />
-                  </button>
-                </div>
-
+              <div id='panel-images'>
+                <ImageDropzone
+                  variant='post'
+                  previewUrl={
+                    previewUrl
+                      ? (normalizeImageSrc(previewUrl) ?? previewUrl)
+                      : ''
+                  }
+                  fileName={selectedImageName}
+                  onFile={handleFile}
+                  onRemove={handleRemoveImage}
+                  hint='Drag and drop media or'
+                />
                 {uploadError && (
                   <p className='create-post-upload-error'>{uploadError}</p>
-                )}
-
-                {previewUrl && (
-                  <div className='create-post-preview-wrap'>
-                    <img
-                      src={normalizeImageSrc(previewUrl) ?? previewUrl}
-                      alt='Selected upload preview'
-                      className='create-post-preview'
-                    />
-                  </div>
                 )}
               </div>
             )}

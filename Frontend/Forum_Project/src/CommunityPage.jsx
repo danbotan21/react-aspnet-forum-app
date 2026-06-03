@@ -14,6 +14,7 @@ import {
   FaTrash,
 } from 'react-icons/fa'
 import { useAuth } from './AuthContext'
+import { useToast } from './ToastContext'
 import './Styles/CommunityPage.css'
 import avatar from './img/avatar.webp'
 import coding from './img/coding.jpg'
@@ -62,6 +63,9 @@ export function CommunityPage() {
   const [banReason, setBanReason] = useState(null)
   const [reportingPost, setReportingPost] = useState(null)
   const [pendingDeletePosts, setPendingDeletePosts] = useState({})
+  const toast = useToast()
+  const showToast = (message, type = 'success') =>
+    type === 'error' ? toast.error(message) : toast.success(message)
 
   const [posts, setPosts] = useState([])
   const [isLoadingPosts, setIsLoadingPosts] = useState(true)
@@ -325,11 +329,17 @@ export function CommunityPage() {
 
   const handleToggleMembership = async () => {
     if (!token || !community?.id) {
-      alert(
-        'Trebuie sa fii logat pentru a putea intra sau iesi dintr-o comunitate.',
+      showToast(
+        'Trebuie să fii logat pentru a intra sau ieși dintr-o comunitate.',
+        'error',
       )
       return
     }
+
+    const communityLabel = `c/${community.slug ?? community.name ?? ''}`.replace(
+      /\/$/,
+      '',
+    )
 
     try {
       if (isMember) {
@@ -338,7 +348,6 @@ export function CommunityPage() {
           headers: { Authorization: `Bearer ${token}` },
         })
         if (response.ok) {
-          const text = await response.text()
           setIsMember(false)
           setIsBanned(false)
           setBanReason(null)
@@ -347,10 +356,10 @@ export function CommunityPage() {
             membersCount: Math.max(0, prev.membersCount - 1),
           }))
           window.dispatchEvent(new Event('communities-membership-updated'))
-          if (text) alert(text)
+          showToast(`Ai părăsit ${communityLabel}`)
         } else {
           const errorMessage = await response.text()
-          alert(errorMessage || 'Failed to leave community.')
+          showToast(errorMessage || 'Nu s-a putut părăsi comunitatea.', 'error')
         }
       } else {
         const response = await fetch(`/api/Communities/${community.id}/join`, {
@@ -358,21 +367,23 @@ export function CommunityPage() {
           headers: { Authorization: `Bearer ${token}` },
         })
         if (response.ok) {
-          const text = await response.text()
           setIsMember(true)
           setCommunity((prev) => ({
             ...prev,
             membersCount: prev.membersCount + 1,
           }))
           window.dispatchEvent(new Event('communities-membership-updated'))
-          if (text) alert(text)
+          showToast(`Te-ai alăturat ${communityLabel}`)
         } else {
           const errorMessage = await response.text()
-          alert(errorMessage || 'Failed to join community.')
+          showToast(
+            errorMessage || 'Nu s-a putut intra în comunitate.',
+            'error',
+          )
         }
       }
     } catch (err) {
-      alert('Membership toggle failed.')
+      showToast('Acțiunea de membru a eșuat.', 'error')
       console.error('Membership toggle failed:', err)
     }
   }
@@ -386,7 +397,7 @@ export function CommunityPage() {
       setPosts((prev) => prev.filter((p) => p.id !== postId))
       setOpenMorePostId(null)
     } catch (err) {
-      alert(err.message)
+      toast.error(err.message)
     } finally {
       setPendingDeletePosts((prev) => ({ ...prev, [postId]: false }))
     }
@@ -412,11 +423,11 @@ export function CommunityPage() {
 
   const handlePostVote = async (postId, direction) => {
     if (!token) {
-      alert('Please login to vote.')
+      toast.error('Please login to vote.')
       return
     }
     if (isBanned) {
-      alert('You are banned from this community and cannot interact.')
+      toast.error('You are banned from this community and cannot interact.')
       return
     }
     if (pendingPostVotes[postId]) return
@@ -459,7 +470,7 @@ export function CommunityPage() {
           ...currentVotes,
           [postId]: previousVote,
         }))
-        alert(voteError.message)
+        toast.error(voteError.message)
       } finally {
         setPendingPostVotes((currentPending) => ({
           ...currentPending,
@@ -506,7 +517,7 @@ export function CommunityPage() {
         ...currentVotes,
         [postId]: { ...(currentVotes[postId] || {}), type: previousVoteType },
       }))
-      alert(error.message)
+      toast.error(error.message)
     } finally {
       setPendingPostVotes((currentPending) => ({
         ...currentPending,
@@ -517,11 +528,11 @@ export function CommunityPage() {
 
   const handleToggleSavePost = async (postId) => {
     if (!token) {
-      alert('Please login to save posts.')
+      toast.error('Please login to save posts.')
       return
     }
     if (isBanned) {
-      alert('You are banned from this community.')
+      toast.error('You are banned from this community.')
       return
     }
     if (pendingSavedPosts[postId]) return
@@ -555,7 +566,7 @@ export function CommunityPage() {
         ...currentSaved,
         [postId]: previousSavedItem,
       }))
-      alert(error.message)
+      toast.error(error.message)
     } finally {
       setPendingSavedPosts((currentPending) => ({
         ...currentPending,
@@ -855,7 +866,7 @@ export function CommunityPage() {
                                       onClick={() => {
                                         setOpenMorePostId(null)
                                         if (!token) {
-                                          alert('Please log in to report.')
+                                          toast.error('Please log in to report.')
                                           return
                                         }
                                         setReportingPost({ id: post.id })
@@ -1060,6 +1071,7 @@ export function CommunityPage() {
           onClose={() => setReportingPost(null)}
         />
       )}
+
     </main>
   )
 }

@@ -17,6 +17,7 @@ import {
 import './Styles/Messages.css'
 import defaultAvatar from './img/avatar.webp'
 import { useAuth } from './AuthContext'
+import { useToast } from './ToastContext'
 import { useChat } from './ChatContext'
 import { normalizeImageSrc } from './utils/media'
 import { uploadImage, uploadFile } from './utils/imageUpload'
@@ -74,6 +75,7 @@ const ChatAvatar = ({ url, isPremium }) => (
 
 export const Messages = () => {
   const { user } = useAuth()
+  const toast = useToast()
   const { subscribe, refreshUnread, notifyTyping } = useChat()
   const location = useLocation()
   const navigate = useNavigate()
@@ -303,7 +305,7 @@ export const Messages = () => {
       setPendingImage(url)
       setPendingFile(null)
     } catch {
-      alert('Image upload failed.')
+      toast.error('Image upload failed.')
     } finally {
       setUploading(false)
     }
@@ -319,7 +321,7 @@ export const Messages = () => {
       setPendingFile(result)
       setPendingImage(null)
     } catch {
-      alert('File upload failed.')
+      toast.error('File upload failed.')
     } finally {
       setUploading(false)
     }
@@ -354,7 +356,7 @@ export const Messages = () => {
         return updated
       })
     } catch (err) {
-      alert(err.message || 'Failed to send message.')
+      toast.error(err.message || 'Failed to send message.')
     } finally {
       setSending(false)
     }
@@ -376,7 +378,7 @@ export const Messages = () => {
       setEditingId(null)
       setEditDraft('')
     } catch (err) {
-      alert(err.message || 'Failed to edit message.')
+      toast.error(err.message || 'Failed to edit message.')
     }
   }
 
@@ -388,7 +390,7 @@ export const Messages = () => {
       setMessages((prev) => prev.filter((x) => x.id !== m.id))
       loadConversations()
     } catch (err) {
-      alert(err.message || 'Failed to delete message.')
+      toast.error(err.message || 'Failed to delete message.')
     }
   }
 
@@ -402,7 +404,7 @@ export const Messages = () => {
       setActive(null)
       setMessages([])
     } catch (err) {
-      alert(err.message || 'Failed to delete conversation.')
+      toast.error(err.message || 'Failed to delete conversation.')
     }
   }
 

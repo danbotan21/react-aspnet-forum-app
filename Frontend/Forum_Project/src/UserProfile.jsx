@@ -15,6 +15,7 @@ import { ProfileCommentsTab } from './ProfileCommentsTab'
 import { ProfileSavedTab } from './ProfileSavedTab'
 import { ProfileVotedTab } from './ProfileVotedTab'
 import { useAuth, apiFetch } from './AuthContext'
+import { useToast } from './ToastContext'
 import { PremiumBadge } from './PremiumBadge'
 import { ReportModal } from './ReportModal'
 import { normalizeImageSrc } from './utils/media'
@@ -97,6 +98,7 @@ export function UserProfile() {
   const { username } = useParams()
   const navigate = useNavigate()
   const { user: authUser, token, updateUser } = useAuth()
+  const toast = useToast()
   const bannerInputRef = useRef(null)
   const [bannerUploading, setBannerUploading] = useState(false)
 
@@ -158,7 +160,7 @@ export function UserProfile() {
         }))
       }
     } catch (e) {
-      alert(e.message)
+      toast.error(e.message)
     } finally {
       setFollowBusy(false)
     }
@@ -199,7 +201,7 @@ export function UserProfile() {
         fetchFollowStatus(profileUser.id).then(setFollowStatus).catch(() => {})
       }
     } catch (e) {
-      alert(e.message)
+      toast.error(e.message)
     }
   }
   const [posts, setPosts] = useState([])
@@ -792,7 +794,7 @@ export function UserProfile() {
 
   const handlePostVote = async (postId, direction) => {
     if (!token) {
-      alert('Please login to vote.')
+      toast.error('Please login to vote.')
       return
     }
     if (pendingPostVotes[postId]) return
@@ -826,7 +828,7 @@ export function UserProfile() {
           ),
         )
         setPostVotesById((prev) => ({ ...prev, [postId]: previousVote }))
-        alert(err.message)
+        toast.error(err.message)
       } finally {
         setPendingPostVotes((prev) => ({ ...prev, [postId]: false }))
       }
@@ -860,7 +862,7 @@ export function UserProfile() {
         ...prev,
         [postId]: { ...(prev[postId] || {}), type: previousVoteType },
       }))
-      alert(err.message)
+      toast.error(err.message)
     } finally {
       setPendingPostVotes((prev) => ({ ...prev, [postId]: false }))
     }
@@ -900,7 +902,7 @@ export function UserProfile() {
       if (!response.ok) throw new Error('Failed to delete comment')
       setComments((prev) => prev.filter((c) => c.id !== commentId))
     } catch (err) {
-      alert(err.message)
+      toast.error(err.message)
     }
   }
 
@@ -929,13 +931,13 @@ export function UserProfile() {
           [item.postId]: item.savedItemId,
         }))
       }
-      alert(err.message)
+      toast.error(err.message)
     }
   }
 
   const handleToggleSavePostInProfile = async (postId) => {
     if (!token) {
-      alert('Please login to save posts.')
+      toast.error('Please login to save posts.')
       return
     }
     setOpenMorePostId(null)
@@ -958,7 +960,7 @@ export function UserProfile() {
           ...prev,
           [postId]: existingSavedItemId,
         }))
-        alert(err.message)
+        toast.error(err.message)
       }
     } else {
       try {
@@ -985,7 +987,7 @@ export function UserProfile() {
           ])
         }
       } catch (err) {
-        alert(err.message)
+        toast.error(err.message)
       }
     }
   }
@@ -1267,7 +1269,7 @@ export function UserProfile() {
       updateUser(updated)
       setProfileUser((prev) => (prev ? { ...prev, bannerUrl } : prev))
     } catch (err) {
-      alert(err.message || 'Failed to update banner.')
+      toast.error(err.message || 'Failed to update banner.')
     } finally {
       setBannerUploading(false)
     }
@@ -1379,7 +1381,7 @@ export function UserProfile() {
                         className='profile-btn profile-btn-danger'
                         onClick={() => {
                           if (!token) {
-                            alert('Please log in to report.')
+                            toast.error('Please log in to report.')
                             return
                           }
                           setReporting(true)

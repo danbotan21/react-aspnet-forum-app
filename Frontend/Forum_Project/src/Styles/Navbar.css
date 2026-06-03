@@ -392,7 +392,11 @@ a {
 
 /* ===== Premium styling inside the profile dropdown ===== */
 .profile-dropdown-header--premium {
-  background: linear-gradient(180deg, #fff7e6 0%, #ffffff 72%);
+  /* Pull up over the dropdown's 8px top padding so the gold gradient reaches the
+     very top edge (no white strip); compensate with extra top padding. */
+  margin-top: -8px;
+  padding-top: 28px;
+  background: linear-gradient(180deg, #fff7e6 0%, #ffffff 100%);
   border-bottom: 1px solid #f1e2bb;
 }
 .profile-dropdown-avatar-wrap {
