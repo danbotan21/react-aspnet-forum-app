@@ -5,7 +5,6 @@ import './Styles/SideBar.css'
 import { normalizeImageSrc } from './utils/media'
 import { fetchMyCommunities } from './utils/modApi'
 import {
-  FaRegStar,
   FaHome,
   FaFire,
   FaCompass,
@@ -116,13 +115,11 @@ export const SideBar = () => {
                         ></div>
                       )}
                       <p className='name_community'>{c.title}</p>
-                      {c.isBanned ? (
+                      {c.isBanned && (
                         <FaBan
                           className='star-icon'
                           style={{ color: '#dc2626' }}
                         />
-                      ) : (
-                        <FaRegStar className='star-icon' />
                       )}
                     </div>
                   )

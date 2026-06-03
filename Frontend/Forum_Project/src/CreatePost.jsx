@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { FaTimes, FaPen, FaTrash, FaUserShield } from 'react-icons/fa'
 import { useAuth } from './AuthContext'
 import { useToast } from './ToastContext'
@@ -11,6 +11,9 @@ import './Styles/CreatePost.css'
 
 export const CreatePost = () => {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const preselectCommunity = searchParams.get('community')
+  const didPreselectRef = useRef(false)
   const { user, token } = useAuth()
   const toast = useToast()
   const [activeTab, setActiveTab] = useState('Text')
@@ -145,6 +148,16 @@ export const CreatePost = () => {
       })
       .catch((err) => console.error(err))
   }, [user?.id, token])
+
+  // Pre-select a community when arriving from a community page
+  // (e.g. /create-post?community=<id>). Runs once, after the list loads.
+  useEffect(() => {
+    if (didPreselectRef.current || !preselectCommunity) return
+    if (communities.some((c) => String(c.id) === String(preselectCommunity))) {
+      setCommunityId(String(preselectCommunity))
+      didPreselectRef.current = true
+    }
+  }, [communities, preselectCommunity])
 
   // When a community is selected, fetch role and banned status
   useEffect(() => {

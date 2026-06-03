@@ -32,7 +32,14 @@ function AppLayout({ children }) {
   // logged-in user would be bounced to /login while their session is still loading.
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div
+        style={{
+          minHeight: '100vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
         Loading…
       </div>
     )

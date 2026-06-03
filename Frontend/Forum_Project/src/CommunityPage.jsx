@@ -12,6 +12,7 @@ import {
   FaThumbtack,
   FaBan,
   FaTrash,
+  FaPlus,
 } from 'react-icons/fa'
 import { useAuth } from './AuthContext'
 import { useToast } from './ToastContext'
@@ -654,35 +655,49 @@ export function CommunityPage() {
                   </span>
                 )}
               </div>
-              {isBanned ? (
-                <div
-                  className='community-private-badge'
-                  style={{ background: '#dc2626', borderColor: '#dc2626', color: '#fff' }}
-                >
-                  <FaBan /> Banned
-                </div>
-              ) : community.type?.toLowerCase() !== 'private' || isMember ? (
-                <button
-                  type='button'
-                  className={`community-join-btn ${isMember ? 'community-leave-btn' : ''}`}
-                  onClick={handleToggleMembership}
-                  style={
-                    isMember
-                      ? {
-                          backgroundColor: 'transparent',
-                          color: 'white',
-                          border: '1px solid white',
-                        }
-                      : {}
-                  }
-                >
-                  {isMember ? 'Leave' : 'Join'}
-                </button>
-              ) : (
-                <div className='community-private-badge'>
-                  <FaLock /> Private Community
-                </div>
-              )}
+              <div className='community-head-actions'>
+                {!isBanned &&
+                  isMember &&
+                  (community.type?.toLowerCase() !== 'restricted' ||
+                    myRole === 'owner' ||
+                    myRole === 'moderator') && (
+                    <Link
+                      to={`/create-post?community=${community.id}`}
+                      className='community-create-post-btn'
+                    >
+                      <FaPlus /> Create Post
+                    </Link>
+                  )}
+                {isBanned ? (
+                  <div
+                    className='community-private-badge'
+                    style={{ background: '#dc2626', borderColor: '#dc2626', color: '#fff' }}
+                  >
+                    <FaBan /> Banned
+                  </div>
+                ) : community.type?.toLowerCase() !== 'private' || isMember ? (
+                  <button
+                    type='button'
+                    className={`community-join-btn ${isMember ? 'community-leave-btn' : ''}`}
+                    onClick={handleToggleMembership}
+                    style={
+                      isMember
+                        ? {
+                            backgroundColor: 'transparent',
+                            color: 'white',
+                            border: '1px solid white',
+                          }
+                        : {}
+                    }
+                  >
+                    {isMember ? 'Leave' : 'Join'}
+                  </button>
+                ) : (
+                  <div className='community-private-badge'>
+                    <FaLock /> Private Community
+                  </div>
+                )}
+              </div>
             </div>
           </header>
 
@@ -821,6 +836,19 @@ export function CommunityPage() {
                             <span className='time-posted'>
                               {new Date(post.createdAt).toLocaleDateString()}
                             </span>
+                            {post.editedAt && (
+                              <>
+                                <span className='meta-separator'>&middot;</span>
+                                <span
+                                  className='time-posted'
+                                  style={{ fontStyle: 'italic' }}
+                                  title={`Edited ${new Date(post.editedAt).toLocaleString()}`}
+                                >
+                                  edited{' '}
+                                  {new Date(post.editedAt).toLocaleDateString()}
+                                </span>
+                              </>
+                            )}
                           </div>
 
                           <div className='post-header-actions'>

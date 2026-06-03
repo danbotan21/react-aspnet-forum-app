@@ -249,6 +249,7 @@ function UsersTab({ token, currentUserName }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [search, setSearch] = useState('')
+  const [filter, setFilter] = useState('All')
   const [pending, setPending] = useState({})
   const [banningId, setBanningId] = useState(null)
   const [banReason, setBanReason] = useState('')
@@ -303,6 +304,12 @@ function UsersTab({ token, currentUserName }) {
   const handleToggleRole = (u) =>
     withPending(u.id, () => changeUserRole(u.id, u.role === 'Admin' ? 'User' : 'Admin', token))
 
+  const filteredUsers = users.filter((u) => {
+    if (filter === 'Admins') return u.role === 'Admin'
+    if (filter === 'Banned') return u.isBanned
+    return true
+  })
+
   return (
     <div className='admin-tab-content'>
       <div className='admin-section-header'>
@@ -322,18 +329,42 @@ function UsersTab({ token, currentUserName }) {
         />
       </div>
 
+      <div className='admin-filter-bar'>
+        {['All', 'Admins', 'Banned'].map((f) => (
+          <button
+            key={f}
+            className={`admin-filter-btn ${filter === f ? 'admin-filter-active' : ''}`}
+            onClick={() => setFilter(f)}
+          >
+            {f}
+            {f === 'Admins' && (
+              <span className='admin-filter-count'>
+                {' '}
+                ({users.filter((u) => u.role === 'Admin').length})
+              </span>
+            )}
+            {f === 'Banned' && (
+              <span className='admin-filter-count'>
+                {' '}
+                ({users.filter((u) => u.isBanned).length})
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+
       {loading ? (
         <LoadingState />
       ) : error ? (
         <ErrorState message={error} />
-      ) : users.length === 0 ? (
+      ) : filteredUsers.length === 0 ? (
         <div className='admin-empty-state'>
           <FaUsers className='admin-empty-icon' />
           <p>No users found.</p>
         </div>
       ) : (
         <div className='admin-user-list'>
-          {users.map((u) => {
+          {filteredUsers.map((u) => {
             // Only the supreme (parent) admin may grant/revoke the Admin role.
             const amSupreme = users.some(
               (x) => x.userName === currentUserName && x.isSupremeAdmin,

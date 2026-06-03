@@ -523,6 +523,18 @@ export const Home = () => {
                       <span className='time-posted'>
                         {new Date(post.createdAt).toLocaleDateString()}
                       </span>
+                      {post.editedAt && (
+                        <>
+                          <span className='meta-separator'>&middot;</span>
+                          <span
+                            className='time-posted'
+                            style={{ fontStyle: 'italic' }}
+                            title={`Edited ${new Date(post.editedAt).toLocaleString()}`}
+                          >
+                            edited {new Date(post.editedAt).toLocaleDateString()}
+                          </span>
+                        </>
+                      )}
                       <span className='meta-separator'>&middot;</span>
                       {post.authorName === '[deleted]' ? (
                         <span className='author'>Posted by u/[deleted]</span>

@@ -657,6 +657,15 @@ export function UserProfile() {
               if (item.type === 'post') postSavedMap[item.postId] = item.savedItemId
             })
             setProfilePostSavedMap(postSavedMap)
+
+            // Seed the current user's known vote state for these posts so the
+            // up/down chips highlight correctly and toggling can delete the vote.
+            const seededVotes = {}
+            userPostVotes.forEach((vote) => {
+              if (vote.postId)
+                seededVotes[vote.postId] = { id: vote.id, type: vote.type }
+            })
+            setPostVotesById((prev) => ({ ...prev, ...seededVotes }))
           }
         }
       } catch {
@@ -792,6 +801,31 @@ export function UserProfile() {
     setOpenMoreDownvotedId(itemId)
   }
 
+  // Apply a vote-count delta to a post wherever it appears across the profile
+  // tabs (own posts, upvoted, downvoted, saved) so the displayed count stays in
+  // sync no matter which list the user is voting from.
+  const applyVoteDelta = (postId, delta) => {
+    if (!delta) return
+    const bump = (list) =>
+      list.map((it) =>
+        it.postId === postId ? { ...it, votes: (it.votes ?? 0) + delta } : it,
+      )
+    setPosts((prev) =>
+      prev.map((p) =>
+        p.id === postId ? { ...p, votes: (p.votes ?? 0) + delta } : p,
+      ),
+    )
+    setUpvotedPosts(bump)
+    setDownvotedPosts(bump)
+    setSavedItems((prev) =>
+      prev.map((it) =>
+        it.type === 'post' && it.postId === postId
+          ? { ...it, votes: (it.votes ?? 0) + delta }
+          : it,
+      ),
+    )
+  }
+
   const handlePostVote = async (postId, direction) => {
     if (!token) {
       toast.error('Please login to vote.')
@@ -808,25 +842,13 @@ export function UserProfile() {
     setPendingPostVotes((prev) => ({ ...prev, [postId]: true }))
 
     if (previousVoteType === nextVoteType && previousVote.id) {
-      setPosts((prev) =>
-        prev.map((p) =>
-          p.id === postId
-            ? { ...p, votes: (p.votes ?? 0) - previousVoteType }
-            : p,
-        ),
-      )
+      applyVoteDelta(postId, -previousVoteType)
       setPostVotesById((prev) => ({ ...prev, [postId]: { id: null, type: 0 } }))
 
       try {
         await deletePostVote({ voteId: previousVote.id, token })
       } catch (err) {
-        setPosts((prev) =>
-          prev.map((p) =>
-            p.id === postId
-              ? { ...p, votes: (p.votes ?? 0) + previousVoteType }
-              : p,
-          ),
-        )
+        applyVoteDelta(postId, previousVoteType)
         setPostVotesById((prev) => ({ ...prev, [postId]: previousVote }))
         toast.error(err.message)
       } finally {
@@ -837,11 +859,7 @@ export function UserProfile() {
 
     const voteDelta = nextVoteType - previousVoteType
 
-    setPosts((prev) =>
-      prev.map((p) =>
-        p.id === postId ? { ...p, votes: (p.votes ?? 0) + voteDelta } : p,
-      ),
-    )
+    applyVoteDelta(postId, voteDelta)
     setPostVotesById((prev) => ({
       ...prev,
       [postId]: { ...(prev[postId] || {}), type: nextVoteType },
@@ -851,13 +869,7 @@ export function UserProfile() {
       const vote = await submitPostVote({ postId, voteType: nextVoteType, token })
       setPostVotesById((prev) => ({ ...prev, [postId]: { id: vote.id, type: vote.type } }))
     } catch (err) {
-      setPosts((prev) =>
-        prev.map((p) =>
-          p.id === postId
-            ? { ...p, votes: (p.votes ?? 0) - voteDelta }
-            : p,
-        ),
-      )
+      applyVoteDelta(postId, -voteDelta)
       setPostVotesById((prev) => ({
         ...prev,
         [postId]: { ...(prev[postId] || {}), type: previousVoteType },
@@ -1090,6 +1102,10 @@ export function UserProfile() {
           hasSaved={hasSaved}
           openMoreSavedId={openMoreSavedId}
           onMenuOpen={handleSavedMenu}
+          token={isOwnProfile ? token : null}
+          postVotesById={postVotesById}
+          pendingPostVotes={pendingPostVotes}
+          onVote={isOwnProfile ? handlePostVote : undefined}
         />
       )
 
@@ -1108,6 +1124,10 @@ export function UserProfile() {
           filterLabel='Upvoted posts'
           openId={openMoreUpvotedId}
           onMenuOpen={handleUpvotedMenu}
+          token={isOwnProfile ? token : null}
+          postVotesById={postVotesById}
+          pendingPostVotes={pendingPostVotes}
+          onVote={isOwnProfile ? handlePostVote : undefined}
         />
       )
 
@@ -1126,6 +1146,10 @@ export function UserProfile() {
           filterLabel='Downvoted posts'
           openId={openMoreDownvotedId}
           onMenuOpen={handleDownvotedMenu}
+          token={isOwnProfile ? token : null}
+          postVotesById={postVotesById}
+          pendingPostVotes={pendingPostVotes}
+          onVote={isOwnProfile ? handlePostVote : undefined}
         />
       )
 
@@ -1630,45 +1654,61 @@ export function UserProfile() {
           ) : null
         })()}
 
-      {openMoreUpvotedId !== null && (
-        <div
-          className='pp-more-menu pp-global-menu'
-          role='menu'
-          style={{
-            position: 'fixed',
-            top: upvotedMenuPos.top,
-            right: upvotedMenuPos.right,
-          }}
-        >
-          <button
-            className='pp-more-item'
-            role='menuitem'
-            onClick={() => setOpenMoreUpvotedId(null)}
-          >
-            Save
-          </button>
-        </div>
-      )}
+      {openMoreUpvotedId !== null &&
+        (() => {
+          const item = upvotedPosts.find((i) => i.id === openMoreUpvotedId)
+          if (!item) return null
+          return (
+            <div
+              className='pp-more-menu pp-global-menu'
+              role='menu'
+              style={{
+                position: 'fixed',
+                top: upvotedMenuPos.top,
+                right: upvotedMenuPos.right,
+              }}
+            >
+              <button
+                className='pp-more-item'
+                role='menuitem'
+                onClick={() => {
+                  setOpenMoreUpvotedId(null)
+                  handleToggleSavePostInProfile(item.postId)
+                }}
+              >
+                {profilePostSavedMap[item.postId] ? 'Unsave' : 'Save'}
+              </button>
+            </div>
+          )
+        })()}
 
-      {openMoreDownvotedId !== null && (
-        <div
-          className='pp-more-menu pp-global-menu'
-          role='menu'
-          style={{
-            position: 'fixed',
-            top: downvotedMenuPos.top,
-            right: downvotedMenuPos.right,
-          }}
-        >
-          <button
-            className='pp-more-item'
-            role='menuitem'
-            onClick={() => setOpenMoreDownvotedId(null)}
-          >
-            Save
-          </button>
-        </div>
-      )}
+      {openMoreDownvotedId !== null &&
+        (() => {
+          const item = downvotedPosts.find((i) => i.id === openMoreDownvotedId)
+          if (!item) return null
+          return (
+            <div
+              className='pp-more-menu pp-global-menu'
+              role='menu'
+              style={{
+                position: 'fixed',
+                top: downvotedMenuPos.top,
+                right: downvotedMenuPos.right,
+              }}
+            >
+              <button
+                className='pp-more-item'
+                role='menuitem'
+                onClick={() => {
+                  setOpenMoreDownvotedId(null)
+                  handleToggleSavePostInProfile(item.postId)
+                }}
+              >
+                {profilePostSavedMap[item.postId] ? 'Unsave' : 'Save'}
+              </button>
+            </div>
+          )
+        })()}
 
       {showDeletePostModal && (
         <div className='post-delete-overlay'>

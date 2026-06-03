@@ -32,6 +32,7 @@ const normalizeComment = (rawComment) => ({
   body: rawComment.body ?? rawComment.Body ?? '',
   votes: rawComment.votes ?? rawComment.Votes ?? 0,
   createdAt: rawComment.createdAt ?? rawComment.CreatedAt ?? null,
+  editedAt: rawComment.editedAt ?? rawComment.EditedAt ?? null,
   authorName: rawComment.authorName ?? rawComment.AuthorName ?? 'unknown',
   postId: rawComment.postId ?? rawComment.PostId,
   parentCommentId:
@@ -871,6 +872,14 @@ export function PostPage() {
               </Link>
             )}
             <span>{new Date(comment.createdAt).toLocaleString()}</span>
+            {comment.editedAt && (
+              <span
+                style={{ fontStyle: 'italic', opacity: 0.85 }}
+                title={`Edited ${new Date(comment.editedAt).toLocaleString()}`}
+              >
+                · edited {new Date(comment.editedAt).toLocaleString()}
+              </span>
+            )}
           </header>
 
           {hasReplies ? (
@@ -1095,6 +1104,17 @@ export function PostPage() {
                 </Link>
                 <span>&middot;</span>
                 <span>{new Date(post.createdAt).toLocaleDateString()}</span>
+                {post.editedAt && (
+                  <>
+                    <span>&middot;</span>
+                    <span
+                      style={{ fontStyle: 'italic', opacity: 0.85 }}
+                      title={`Edited ${new Date(post.editedAt).toLocaleString()}`}
+                    >
+                      edited {new Date(post.editedAt).toLocaleString()}
+                    </span>
+                  </>
+                )}
                 <span>&middot;</span>
                 {post.authorName === '[deleted]' ? (
                   <span>Posted by u/[deleted]</span>

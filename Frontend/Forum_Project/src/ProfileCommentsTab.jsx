@@ -26,8 +26,8 @@ export function ProfileCommentsTab({
             When you share your thoughts on a post in any community, your
             comments will appear here.
           </p>
-          <Link to='/' className='profile-btn profile-btn-primary'>
-            Browse communities
+          <Link to='/home' className='profile-btn profile-btn-primary'>
+            Explore Feed
           </Link>
         </div>
       </section>

@@ -14,6 +14,10 @@ export function ProfileVotedTab({
   filterLabel,
   openId,
   onMenuOpen,
+  token,
+  postVotesById,
+  pendingPostVotes,
+  onVote,
 }) {
   if (!hasVoted) {
     return (
@@ -33,8 +37,8 @@ export function ProfileVotedTab({
               ? 'Posts you upvote will appear here so you can find them again easily.'
               : 'Posts you downvote will appear here so you can track your votes.'}
           </p>
-          <Link to='/' className='profile-btn profile-btn-primary'>
-            Browse communities
+          <Link to='/home' className='profile-btn profile-btn-primary'>
+            Explore Feed
           </Link>
         </div>
       </section>
@@ -112,29 +116,45 @@ export function ProfileVotedTab({
               </div>
 
               <footer className='pp-post-footer'>
-                <div
-                  className={`pp-action-chip pp-vote-chip ${
-                    voteType === 'up'
-                      ? 'vote-chip-upvoted'
-                      : 'vote-chip-downvoted'
-                  }`}
-                >
-                  <FaCaretUp
-                    className={`pp-vote-icon ${
-                      voteType === 'up'
-                        ? 'pp-upvote pp-upvote-active'
-                        : 'pp-upvote'
-                    }`}
-                  />
-                  <span className='pp-vote-count'>{item.votes}</span>
-                  <FaCaretDown
-                    className={`pp-vote-icon ${
-                      voteType === 'down'
-                        ? 'pp-downvote pp-downvote-active'
-                        : 'pp-downvote'
-                    }`}
-                  />
-                </div>
+                {(() => {
+                  const currentType =
+                    postVotesById?.[item.postId]?.type ??
+                    (voteType === 'up' ? 1 : -1)
+                  const interactive = Boolean(token && onVote)
+                  const isPending = pendingPostVotes?.[item.postId]
+                  const chipStyle = interactive
+                    ? {
+                        pointerEvents: isPending ? 'none' : 'auto',
+                        opacity: isPending ? 0.4 : 1,
+                        cursor: 'pointer',
+                      }
+                    : undefined
+                  return (
+                    <div
+                      className={`pp-action-chip pp-vote-chip ${
+                        currentType === 1
+                          ? 'vote-chip-upvoted'
+                          : currentType === -1
+                            ? 'vote-chip-downvoted'
+                            : ''
+                      }`}
+                    >
+                      <FaCaretUp
+                        className={`pp-vote-icon pp-upvote ${currentType === 1 ? 'pp-upvote-active' : ''}`}
+                        onClick={() => interactive && onVote(item.postId, 'up')}
+                        style={chipStyle}
+                      />
+                      <span className='pp-vote-count'>{item.votes}</span>
+                      <FaCaretDown
+                        className={`pp-vote-icon pp-downvote ${currentType === -1 ? 'pp-downvote-active' : ''}`}
+                        onClick={() =>
+                          interactive && onVote(item.postId, 'down')
+                        }
+                        style={chipStyle}
+                      />
+                    </div>
+                  )
+                })()}
                 <Link to={getVotedPostRoute(item)} className='pp-action-chip'>
                   <FaComment className='pp-comment-icon' />
                   <span className='pp-comment-count'>{item.comments}</span>

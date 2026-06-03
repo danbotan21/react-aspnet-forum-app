@@ -12,6 +12,10 @@ export function ProfileSavedTab({
   hasSaved,
   openMoreSavedId,
   onMenuOpen,
+  token,
+  postVotesById,
+  pendingPostVotes,
+  onVote,
 }) {
   if (!hasSaved) {
     return (
@@ -26,8 +30,8 @@ export function ProfileSavedTab({
             When you save a post or comment, it will appear here so you can find
             it easily later.
           </p>
-          <Link to='/' className='profile-btn profile-btn-primary'>
-            Explore communities
+          <Link to='/home' className='profile-btn profile-btn-primary'>
+            Explore Feed
           </Link>
         </div>
       </section>
@@ -107,11 +111,45 @@ export function ProfileSavedTab({
                 </div>
 
                 <footer className='pp-post-footer'>
-                  <div className='pp-action-chip pp-vote-chip'>
-                    <FaCaretUp className='pp-vote-icon pp-upvote' />
-                    <span className='pp-vote-count'>{item.votes}</span>
-                    <FaCaretDown className='pp-vote-icon pp-downvote' />
-                  </div>
+                  {(() => {
+                    const currentType = postVotesById?.[item.postId]?.type ?? 0
+                    const interactive = Boolean(token && onVote)
+                    const isPending = pendingPostVotes?.[item.postId]
+                    const chipStyle = interactive
+                      ? {
+                          pointerEvents: isPending ? 'none' : 'auto',
+                          opacity: isPending ? 0.4 : 1,
+                          cursor: 'pointer',
+                        }
+                      : undefined
+                    return (
+                      <div
+                        className={`pp-action-chip pp-vote-chip ${
+                          currentType === 1
+                            ? 'vote-chip-upvoted'
+                            : currentType === -1
+                              ? 'vote-chip-downvoted'
+                              : ''
+                        }`}
+                      >
+                        <FaCaretUp
+                          className={`pp-vote-icon pp-upvote ${currentType === 1 ? 'pp-upvote-active' : ''}`}
+                          onClick={() =>
+                            interactive && onVote(item.postId, 'up')
+                          }
+                          style={chipStyle}
+                        />
+                        <span className='pp-vote-count'>{item.votes}</span>
+                        <FaCaretDown
+                          className={`pp-vote-icon pp-downvote ${currentType === -1 ? 'pp-downvote-active' : ''}`}
+                          onClick={() =>
+                            interactive && onVote(item.postId, 'down')
+                          }
+                          style={chipStyle}
+                        />
+                      </div>
+                    )
+                  })()}
                   <Link to={getSavedPostRoute(item)} className='pp-action-chip'>
                     <FaComment className='pp-comment-icon' />
                     <span className='pp-comment-count'>{item.comments}</span>
