@@ -72,6 +72,20 @@ namespace ForumApp.Domain.Entities.User
         public string? RefreshToken { get; set; }
         public DateTime? RefreshTokenExpiry { get; set; }
 
+        // "Forgot password": we store only the HASH of the single-use reset token
+        // plus its expiry. Cleared once the password is reset.
+        public string? PasswordResetTokenHash { get; set; }
+        public DateTime? PasswordResetTokenExpiry { get; set; }
+
+        // Email confirmation at sign-up: account is inactive for login until confirmed.
+        public bool EmailConfirmed { get; set; } = false;
+        public string? EmailConfirmTokenHash { get; set; }
+        public DateTime? EmailConfirmTokenExpiry { get; set; }
+
+        // Two-step login: a short numeric code emailed after the password check.
+        public string? LoginCodeHash { get; set; }
+        public DateTime? LoginCodeExpiry { get; set; }
+
 
         // Relatia cu Post: (one to many)
         public ICollection<PostData> Posts { get; set; } = new List<PostData>();

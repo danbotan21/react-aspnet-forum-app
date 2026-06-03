@@ -1,6 +1,7 @@
 ﻿using ForumApp.API.Hubs;
 using ForumApp.BusinessLayer.Interfaces;
 using ForumApp.API.Infrastructure;
+using ForumApp.BusinessLayer.Core;
 using ForumApp.BusinessLayer.Structure;
 using ForumApp.DataAccess;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -108,6 +109,7 @@ builder.Services.AddHttpClient<IAdProviderAction, DummyJsonAdProvider>(client =>
 //  Auth services
 builder.Services.AddScoped<ITokenAction, TokenActionExecution>();
 builder.Services.AddScoped<IUserAction, UserActionExecution>();
+builder.Services.AddScoped<IEmailAction, SmtpEmailService>();
 builder.Services.AddScoped<IImageAction, ImageActionExecution>();
 builder.Services.AddScoped<IImageStorageAction, LocalImageStorageService>();
 

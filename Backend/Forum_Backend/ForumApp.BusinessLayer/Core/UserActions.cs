@@ -17,12 +17,14 @@ namespace ForumApp.BusinessLayer.Core
         protected readonly ForumDbContext _context;
         protected readonly ITokenAction _tokenService;
         protected readonly IConfiguration _configuration;
+        protected readonly IEmailAction _emailService;
 
-        public UserActions(ForumDbContext context, ITokenAction tokenService, IConfiguration configuration)
+        public UserActions(ForumDbContext context, ITokenAction tokenService, IConfiguration configuration, IEmailAction emailService)
         {
             _context = context;
             _tokenService = tokenService;
             _configuration = configuration;
+            _emailService = emailService;
         }
 
         // Full mapping — includes email. Used only for authenticated user's own profile.
@@ -84,30 +86,62 @@ namespace ForumApp.BusinessLayer.Core
 
         private sealed record GoogleUserInfo(string Sub, string Email, string? Name, string? Picture);
 
-        internal async Task<UserResponseDto?> RegisterExecution(UserRegisterDto userData, CancellationToken ct = default)
+        internal async Task<ActionResponse> RegisterExecution(UserRegisterDto userData, CancellationToken ct = default)
         {
-            if (await _context.Users.AnyAsync(u => u.Email == userData.Email, ct))
-                return null;
+            var email = userData.Email.Trim();
+            var userName = userData.UserName.Trim();
 
-            if (await _context.Users.AnyAsync(u => u.UserName == userData.UserName, ct))
-                return null;
+            // A confirmed account already owns this email/username.
+            if (await _context.Users.AnyAsync(u => u.Email == email, ct))
+                return new ActionResponse { IsSuccess = false, Message = "Email or username already in use." };
+            if (await _context.Users.AnyAsync(u => u.UserName == userName, ct))
+                return new ActionResponse { IsSuccess = false, Message = "Email or username already in use." };
 
-            var user = new UserData
+            // IMPORTANT: we do NOT create the account here. We store a pending
+            // registration and only materialize the real user once the email link is
+            // clicked (see ConfirmEmailExecution). Drop any stale pending rows for the
+            // same email/username so a re-submit just refreshes the link.
+            var stale = await _context.PendingRegistrations
+                .Where(p => p.Email == email || p.UserName == userName)
+                .ToListAsync(ct);
+            if (stale.Count > 0)
+                _context.PendingRegistrations.RemoveRange(stale);
+
+            var confirmToken = Convert.ToHexString(RandomNumberGenerator.GetBytes(32)).ToLowerInvariant();
+
+            _context.PendingRegistrations.Add(new PendingRegistrationData
             {
-                UserName = userData.UserName,
-                Email = userData.Email,
+                UserName = userName,
+                Email = email,
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(userData.Password),
-                Role = "User",
-                ProfileVisibility = "Public",
-                Theme = "Light",
-                Language = "en",
+                TokenHash = HashToken(confirmToken),
+                ExpiresAt = DateTime.UtcNow.AddHours(24),
                 CreatedAt = DateTime.UtcNow
-            };
-
-            _context.Users.Add(user);
+            });
             await _context.SaveChangesAsync(ct);
 
-            return MapToDto(user);
+            var baseUrl = (_configuration["Email:FrontendBaseUrl"] ?? "http://localhost:5173").TrimEnd('/');
+            var confirmLink = $"{baseUrl}/confirm-email?token={confirmToken}";
+            try
+            {
+                await _emailService.SendEmailConfirmationAsync(email, confirmLink, ct);
+            }
+            catch
+            {
+                // The pending row exists; the user can re-submit to get a fresh link.
+            }
+
+            return new ActionResponse
+            {
+                IsSuccess = true,
+                Message = "Confirmation email sent. Confirm your email to finish creating your account."
+            };
+        }
+
+        private static string GenerateNumericCode()
+        {
+            // 6-digit code, zero-padded (000000–999999).
+            return RandomNumberGenerator.GetInt32(0, 1_000_000).ToString("D6");
         }
 
         internal async Task<LoginResponseDto?> LoginExecution(UserLoginDto userData, CancellationToken ct = default)
@@ -125,12 +159,70 @@ namespace ForumApp.BusinessLayer.Core
                         ? $"Your account has been banned. Reason: {reason}"
                         : "Your account has been banned.");
 
+            // Account must be confirmed (via the sign-up email) before logging in.
+            if (!user.EmailConfirmed)
+                return new LoginResponseDto
+                {
+                    RequiresEmailConfirmation = true,
+                    PendingEmail = user.Email
+                };
+
+            // Two-step login: password is correct, but we don't issue tokens yet.
+            // We email a short code that must be verified via VerifyLoginCode.
+            var code = GenerateNumericCode();
+            user.LoginCodeHash = HashToken(code);
+            user.LoginCodeExpiry = DateTime.UtcNow.AddMinutes(10);
+            await _context.SaveChangesAsync(ct);
+
+            try
+            {
+                await _emailService.SendLoginCodeAsync(user.Email, code, ct);
+            }
+            catch
+            {
+                // Surface a soft failure: the client still moves to the code step and
+                // the user can request a resend by submitting the login form again.
+            }
+
+            return new LoginResponseDto
+            {
+                RequiresEmailCode = true,
+                PendingEmail = user.Email
+            };
+        }
+
+        internal async Task<LoginResponseDto?> VerifyLoginCodeExecution(string email, string code, CancellationToken ct = default)
+        {
+            var normalizedEmail = email?.Trim();
+            var normalizedCode = code?.Trim();
+            if (string.IsNullOrWhiteSpace(normalizedEmail) || string.IsNullOrWhiteSpace(normalizedCode))
+                return null;
+
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == normalizedEmail, ct);
+            if (user == null
+                || user.LoginCodeHash == null
+                || user.LoginCodeExpiry == null
+                || user.LoginCodeExpiry < DateTime.UtcNow
+                || user.LoginCodeHash != HashToken(normalizedCode))
+            {
+                return null;
+            }
+
+            if (user.IsBanned)
+                throw new InvalidOperationException(
+                    user.BanReason is { Length: > 0 } reason
+                        ? $"Your account has been banned. Reason: {reason}"
+                        : "Your account has been banned.");
+
             var accessToken = _tokenService.GenerateToken(user.Id, user.UserName, user.Role);
             var refreshToken = _tokenService.GenerateRefreshToken();
 
             var expiryDays = int.Parse(_configuration["JwtSettings:RefreshTokenExpiryDays"]!);
             user.RefreshToken = HashToken(refreshToken);
             user.RefreshTokenExpiry = DateTime.UtcNow.AddDays(expiryDays);
+            // Consume the login code so it can't be reused.
+            user.LoginCodeHash = null;
+            user.LoginCodeExpiry = null;
             await _context.SaveChangesAsync(ct);
 
             return new LoginResponseDto
@@ -139,6 +231,103 @@ namespace ForumApp.BusinessLayer.Core
                 RefreshToken = refreshToken,
                 User = MapToDto(user)
             };
+        }
+
+        internal async Task<ActionResponse> ConfirmEmailExecution(string token, CancellationToken ct = default)
+        {
+            if (string.IsNullOrWhiteSpace(token))
+                return new ActionResponse { IsSuccess = false, Message = "Invalid or expired confirmation link." };
+
+            var tokenHash = HashToken(token.Trim());
+
+            // Primary path: a pending registration → NOW we create the real account.
+            var pending = await _context.PendingRegistrations
+                .FirstOrDefaultAsync(p => p.TokenHash == tokenHash, ct);
+
+            if (pending != null)
+            {
+                if (pending.ExpiresAt < DateTime.UtcNow)
+                {
+                    _context.PendingRegistrations.Remove(pending);
+                    await _context.SaveChangesAsync(ct);
+                    return new ActionResponse { IsSuccess = false, Message = "This confirmation link has expired. Please sign up again." };
+                }
+
+                // Guard against the email/username being taken between sign-up and confirm.
+                if (await _context.Users.AnyAsync(u => u.Email == pending.Email || u.UserName == pending.UserName, ct))
+                {
+                    _context.PendingRegistrations.Remove(pending);
+                    await _context.SaveChangesAsync(ct);
+                    return new ActionResponse { IsSuccess = false, Message = "This email or username is already in use." };
+                }
+
+                _context.Users.Add(new UserData
+                {
+                    UserName = pending.UserName,
+                    Email = pending.Email,
+                    PasswordHash = pending.PasswordHash,
+                    Role = "User",
+                    ProfileVisibility = "Public",
+                    Theme = "Light",
+                    Language = "en",
+                    CreatedAt = DateTime.UtcNow,
+                    EmailConfirmed = true
+                });
+                _context.PendingRegistrations.Remove(pending);
+                await _context.SaveChangesAsync(ct);
+
+                return new ActionResponse { IsSuccess = true, Message = "Your account has been created. You can now log in." };
+            }
+
+            // Fallback: a legacy unconfirmed account (created before pending-registration flow).
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.EmailConfirmTokenHash == tokenHash, ct);
+            if (user != null
+                && user.EmailConfirmTokenExpiry != null
+                && user.EmailConfirmTokenExpiry >= DateTime.UtcNow)
+            {
+                user.EmailConfirmed = true;
+                user.EmailConfirmTokenHash = null;
+                user.EmailConfirmTokenExpiry = null;
+                await _context.SaveChangesAsync(ct);
+                return new ActionResponse { IsSuccess = true, Message = "Your email has been confirmed. You can now log in." };
+            }
+
+            return new ActionResponse { IsSuccess = false, Message = "Invalid or expired confirmation link." };
+        }
+
+        internal async Task<ActionResponse> ResendConfirmationExecution(string email, CancellationToken ct = default)
+        {
+            // Neutral response (no account enumeration).
+            var neutral = new ActionResponse
+            {
+                IsSuccess = true,
+                Message = "If an unconfirmed account exists for that email, a new confirmation link has been sent."
+            };
+
+            var normalizedEmail = email?.Trim();
+            if (string.IsNullOrWhiteSpace(normalizedEmail)) return neutral;
+
+            var pending = await _context.PendingRegistrations
+                .FirstOrDefaultAsync(p => p.Email == normalizedEmail, ct);
+            if (pending == null) return neutral;
+
+            var confirmToken = Convert.ToHexString(RandomNumberGenerator.GetBytes(32)).ToLowerInvariant();
+            pending.TokenHash = HashToken(confirmToken);
+            pending.ExpiresAt = DateTime.UtcNow.AddHours(24);
+            await _context.SaveChangesAsync(ct);
+
+            var baseUrl = (_configuration["Email:FrontendBaseUrl"] ?? "http://localhost:5173").TrimEnd('/');
+            var confirmLink = $"{baseUrl}/confirm-email?token={confirmToken}";
+            try
+            {
+                await _emailService.SendEmailConfirmationAsync(pending.Email, confirmLink, ct);
+            }
+            catch
+            {
+                // Keep the neutral response.
+            }
+
+            return neutral;
         }
 
         internal async Task<LoginResponseDto?> RefreshTokenExecution(string refreshToken, CancellationToken ct = default)
@@ -208,7 +397,8 @@ namespace ForumApp.BusinessLayer.Core
                     ProfileVisibility = "Public",
                     Theme = "Light",
                     Language = "en",
-                    CreatedAt = DateTime.UtcNow
+                    CreatedAt = DateTime.UtcNow,
+                    EmailConfirmed = true // Google has already verified the address
                 };
                 _context.Users.Add(user);
                 await _context.SaveChangesAsync(ct);
@@ -217,6 +407,9 @@ namespace ForumApp.BusinessLayer.Core
             {
                 user.GoogleId = googleUser.Sub;
             }
+
+            // Signing in through Google proves email ownership → mark confirmed.
+            user.EmailConfirmed = true;
 
             // Globally banned users cannot obtain a session.
             if (user.IsBanned)
@@ -340,6 +533,75 @@ namespace ForumApp.BusinessLayer.Core
             await _context.SaveChangesAsync(ct);
 
             return new ActionResponse { IsSuccess = true, Message = "Password changed successfully." };
+        }
+
+        internal async Task<ActionResponse> RequestPasswordResetExecution(string email, CancellationToken ct = default)
+        {
+            // Neutral response on purpose: we must NOT reveal whether an email is registered,
+            // otherwise this endpoint becomes an account-enumeration oracle.
+            var neutral = new ActionResponse
+            {
+                IsSuccess = true,
+                Message = "If an account exists for that email, a reset link has been sent."
+            };
+
+            var normalizedEmail = email?.Trim();
+            if (string.IsNullOrWhiteSpace(normalizedEmail)) return neutral;
+
+            var user = await _context.Users
+                .FirstOrDefaultAsync(u => u.Email == normalizedEmail, ct);
+
+            // Only accounts created with a password get a reset email. Google-only accounts
+            // (no PasswordHash) are left untouched — they sign in via Google.
+            if (user == null || string.IsNullOrEmpty(user.PasswordHash))
+                return neutral;
+
+            // Generate a cryptographically-random, single-use token. Only its hash is stored.
+            var rawToken = Convert.ToHexString(RandomNumberGenerator.GetBytes(32)).ToLowerInvariant();
+            user.PasswordResetTokenHash = HashToken(rawToken);
+            user.PasswordResetTokenExpiry = DateTime.UtcNow.AddMinutes(30);
+            await _context.SaveChangesAsync(ct);
+
+            var baseUrl = (_configuration["Email:FrontendBaseUrl"] ?? "http://localhost:5173").TrimEnd('/');
+            var resetLink = $"{baseUrl}/reset-password?token={rawToken}";
+
+            try
+            {
+                await _emailService.SendPasswordResetAsync(user.Email, resetLink, ct);
+            }
+            catch
+            {
+                // Don't leak delivery failures to the caller; the neutral response stands.
+            }
+
+            return neutral;
+        }
+
+        internal async Task<ActionResponse> ResetPasswordExecution(ResetPasswordDto data, CancellationToken ct = default)
+        {
+            if (string.IsNullOrWhiteSpace(data.Token))
+                return new ActionResponse { IsSuccess = false, Message = "Invalid or expired reset link." };
+
+            var tokenHash = HashToken(data.Token.Trim());
+            var user = await _context.Users
+                .FirstOrDefaultAsync(u => u.PasswordResetTokenHash == tokenHash, ct);
+
+            if (user == null
+                || user.PasswordResetTokenExpiry == null
+                || user.PasswordResetTokenExpiry < DateTime.UtcNow)
+            {
+                return new ActionResponse { IsSuccess = false, Message = "Invalid or expired reset link." };
+            }
+
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(data.NewPassword);
+            // Consume the token and invalidate existing sessions for safety.
+            user.PasswordResetTokenHash = null;
+            user.PasswordResetTokenExpiry = null;
+            user.RefreshToken = null;
+            user.RefreshTokenExpiry = null;
+            await _context.SaveChangesAsync(ct);
+
+            return new ActionResponse { IsSuccess = true, Message = "Your password has been reset. You can now log in." };
         }
 
         internal async Task<ActionResponse> DeleteAccountExecution(int userId, DeleteAccountDto dto, CancellationToken ct = default)

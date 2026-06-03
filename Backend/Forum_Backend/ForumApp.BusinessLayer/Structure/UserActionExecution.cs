@@ -9,10 +9,10 @@ namespace ForumApp.BusinessLayer.Structure
 {
     public class UserActionExecution : UserActions, IUserAction
     {
-        public UserActionExecution(ForumDbContext context, ITokenAction tokenService, IConfiguration configuration)
-            : base(context, tokenService, configuration) { }
+        public UserActionExecution(ForumDbContext context, ITokenAction tokenService, IConfiguration configuration, IEmailAction emailService)
+            : base(context, tokenService, configuration, emailService) { }
 
-        public Task<UserResponseDto?> RegisterAsync(UserRegisterDto userData, CancellationToken ct = default)
+        public Task<ActionResponse> RegisterAsync(UserRegisterDto userData, CancellationToken ct = default)
             => RegisterExecution(userData, ct);
 
         public Task<LoginResponseDto?> LoginAsync(UserLoginDto userData, CancellationToken ct = default)
@@ -35,6 +35,21 @@ namespace ForumApp.BusinessLayer.Structure
 
         public Task<ActionResponse> DeleteAccountAsync(int userId, DeleteAccountDto dto, CancellationToken ct = default)
             => DeleteAccountExecution(userId, dto, ct);
+
+        public Task<ActionResponse> RequestPasswordResetAsync(string email, CancellationToken ct = default)
+            => RequestPasswordResetExecution(email, ct);
+
+        public Task<ActionResponse> ResetPasswordAsync(ResetPasswordDto data, CancellationToken ct = default)
+            => ResetPasswordExecution(data, ct);
+
+        public Task<ActionResponse> ConfirmEmailAsync(string token, CancellationToken ct = default)
+            => ConfirmEmailExecution(token, ct);
+
+        public Task<ActionResponse> ResendConfirmationAsync(string email, CancellationToken ct = default)
+            => ResendConfirmationExecution(email, ct);
+
+        public Task<LoginResponseDto?> VerifyLoginCodeAsync(string email, string code, CancellationToken ct = default)
+            => VerifyLoginCodeExecution(email, code, ct);
 
         public Task<IReadOnlyList<UserResponseDto>> GetAllUsersAsync(CancellationToken ct = default)
             => GetAllUsersExecution(ct);

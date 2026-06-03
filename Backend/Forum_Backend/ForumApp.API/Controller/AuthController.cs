@@ -26,10 +26,12 @@ namespace ForumApp.API.Controller
                 return BadRequest(ModelState);
 
             var result = await _userService.RegisterAsync(registerDto, ct);
-            if (result == null)
-                return BadRequest(new { message = "Email or username already in use." });
+            if (!result.IsSuccess)
+                return BadRequest(new { message = result.Message });
 
-            return StatusCode(201, result);
+            // No account is created yet — only a pending registration. The account is
+            // materialized when the user confirms via the emailed link.
+            return StatusCode(201, new { message = result.Message });
         }
 
         [HttpPost("login")]
@@ -52,9 +54,74 @@ namespace ForumApp.API.Controller
             if (result == null)
                 return Unauthorized(new { message = "Invalid email or password." });
 
+            // Account exists but its email was never confirmed → block and tell the client.
+            if (result.RequiresEmailConfirmation)
+                return StatusCode(403, new
+                {
+                    requiresEmailConfirmation = true,
+                    email = result.PendingEmail,
+                    message = "Please confirm your email first. Check your inbox for the confirmation link."
+                });
+
+            // Password OK → a login code was emailed; the client must verify it next.
+            if (result.RequiresEmailCode)
+                return Ok(new
+                {
+                    requiresCode = true,
+                    email = result.PendingEmail,
+                    message = "We sent a login code to your email."
+                });
+
             SetRefreshTokenCookie(result.RefreshToken);
 
             return Ok(new { token = result.Token, user = result.User });
+        }
+
+        [HttpPost("verify-login-code")]
+        public async Task<IActionResult> VerifyLoginCode([FromBody] VerifyLoginCodeDto dto, CancellationToken ct)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            LoginResponseDto? result;
+            try
+            {
+                result = await _userService.VerifyLoginCodeAsync(dto.Email, dto.Code, ct);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return StatusCode(403, new { message = ex.Message });
+            }
+
+            if (result == null)
+                return Unauthorized(new { message = "Invalid or expired code." });
+
+            SetRefreshTokenCookie(result.RefreshToken);
+
+            return Ok(new { token = result.Token, user = result.User });
+        }
+
+        [HttpPost("confirm-email")]
+        public async Task<IActionResult> ConfirmEmail([FromBody] ConfirmEmailDto dto, CancellationToken ct)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var action = await _userService.ConfirmEmailAsync(dto.Token, ct);
+            if (!action.IsSuccess)
+                return BadRequest(new { message = action.Message });
+
+            return Ok(new { message = action.Message });
+        }
+
+        [HttpPost("resend-confirmation")]
+        public async Task<IActionResult> ResendConfirmation([FromBody] ResendConfirmationDto dto, CancellationToken ct)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var action = await _userService.ResendConfirmationAsync(dto.Email, ct);
+            return Ok(new { message = action.Message });
         }
 
         [HttpPost("refresh")]
@@ -147,6 +214,30 @@ namespace ForumApp.API.Controller
                 return NotFound();
 
             return Ok(updated);
+        }
+
+        [HttpPost("forgot-password")]
+        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto dto, CancellationToken ct)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            // Always returns a neutral success — never reveals whether the email exists.
+            var action = await _userService.RequestPasswordResetAsync(dto.Email, ct);
+            return Ok(new { message = action.Message });
+        }
+
+        [HttpPost("reset-password")]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto dto, CancellationToken ct)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var action = await _userService.ResetPasswordAsync(dto, ct);
+            if (!action.IsSuccess)
+                return BadRequest(new { message = action.Message });
+
+            return Ok(new { message = action.Message });
         }
 
         [Authorize]

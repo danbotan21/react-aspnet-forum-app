@@ -28,6 +28,7 @@ namespace ForumApp.DataAccess
 
 
         public DbSet<UserData> Users { get; set; }
+        public DbSet<PendingRegistrationData> PendingRegistrations { get; set; }
         public DbSet<CommunityData> Communities { get; set; }
         public DbSet<PostData> Posts { get; set; }
         public DbSet<CommentData> Comments { get; set; }
