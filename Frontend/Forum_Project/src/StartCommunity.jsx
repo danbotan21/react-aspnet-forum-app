@@ -127,8 +127,8 @@ export const StartCommunity = () => {
       })
 
       if (!response.ok) {
-        const errorText = await response.text()
-        throw new Error(errorText || 'Failed to create community')
+        const data = await response.json().catch(() => ({}))
+        throw new Error(data.message || 'Failed to create community')
       }
 
       const createdCommunity = await response.json()
@@ -163,9 +163,9 @@ export const StartCommunity = () => {
         )
 
         if (!imageUpdateResponse.ok) {
-          const imageErrorText = await imageUpdateResponse.text()
+          const data = await imageUpdateResponse.json().catch(() => ({}))
           throw new Error(
-            imageErrorText || 'Community created, but image upload failed',
+            data.message || 'Community created, but image upload failed',
           )
         }
       }

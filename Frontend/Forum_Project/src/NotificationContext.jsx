@@ -1,4 +1,11 @@
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from 'react'
 import * as signalR from '@microsoft/signalr'
 import { useAuth } from './AuthContext'
 import {
@@ -141,7 +148,14 @@ export const NotificationProvider = ({ children }) => {
 
   return (
     <NotificationContext.Provider
-      value={{ notifications, unreadCount, loading, markAsRead, markAllAsRead, removeNotification }}
+      value={{
+        notifications,
+        unreadCount,
+        loading,
+        markAsRead,
+        markAllAsRead,
+        removeNotification,
+      }}
     >
       {children}
     </NotificationContext.Provider>
@@ -150,6 +164,7 @@ export const NotificationProvider = ({ children }) => {
 
 export const useNotifications = () => {
   const ctx = useContext(NotificationContext)
-  if (!ctx) throw new Error('useNotifications must be used within NotificationProvider')
+  if (!ctx)
+    throw new Error('useNotifications must be used within NotificationProvider')
   return ctx
 }

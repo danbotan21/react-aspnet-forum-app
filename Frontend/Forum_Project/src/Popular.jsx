@@ -2,10 +2,17 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import './Styles/Popular.css'
 import avatar from './img/avatar.webp'
-import { FaCaretUp, FaCaretDown, FaComment, FaEdit, FaTrash } from 'react-icons/fa'
+import {
+  FaCaretUp,
+  FaCaretDown,
+  FaComment,
+  FaEdit,
+  FaTrash,
+} from 'react-icons/fa'
 import { normalizeImageSrc } from './utils/media'
 import { useAuth } from './AuthContext'
 import { useToast } from './ToastContext'
+import { useConfirm } from './ConfirmContext'
 import {
   deletePostVote,
   fetchUserPostVotes,
@@ -25,6 +32,7 @@ export const Popular = () => {
   const PAGE_SIZE = 15
   const { user, token } = useAuth()
   const toast = useToast()
+  const confirm = useConfirm()
   const navigate = useNavigate()
   const [openMorePostId, setOpenMorePostId] = useState(null)
   const [reportingPost, setReportingPost] = useState(null)
@@ -235,7 +243,14 @@ export const Popular = () => {
   }
 
   const handleDeletePost = async (postId) => {
-    if (!token || !window.confirm('Delete this post permanently? This cannot be undone.')) return
+    if (!token) return
+    const ok = await confirm({
+      title: 'Delete post?',
+      message: 'This post will be permanently deleted. This cannot be undone.',
+      confirmText: 'Delete',
+      danger: true,
+    })
+    if (!ok) return
     setDeletingPostId(postId)
     try {
       await deletePost(postId, token)
@@ -399,230 +414,252 @@ export const Popular = () => {
     <div className='popular-page'>
       <div className='feed-layout'>
         <div className='feed-main'>
-      <div ref={postsWrapRef}>
-        {loading ? (
-          <p style={{ textAlign: 'center', padding: '2rem' }}>
-            Loading popular posts...
-          </p>
-        ) : error ? (
-          <p style={{ textAlign: 'center', padding: '2rem', color: 'red' }}>
-            {error}
-          </p>
-        ) : posts.length === 0 ? (
-          <p style={{ textAlign: 'center', padding: '2rem' }}>
-            No posts found.
-          </p>
-        ) : (
-          posts.map((post) => {
-            const postImageSrc = normalizeImageSrc(
-              post.imageUrl ?? post.ImageUrl,
-            )
-            return (
-              <article className='post' key={post.id}>
-                <div className='post-main'>
-                  <header className='post-header'>
-                    <Link to={`/community/${encodeURIComponent(post.communitySlug)}`}>
-                      <img
-                        src={normalizeImageSrc(post.communityAvatarUrl) || avatar}
-                        alt='Community Avatar'
-                        className='avatar'
-                      />
-                    </Link>
-                    <div className='post-meta'>
-                      <Link
-                        to={`/community/${encodeURIComponent(post.communitySlug)}`}
-                        className='community-name community-link'
-                      >
-                        r/{post.communitySlug}
-                      </Link>
-                      <span className='meta-separator'>&middot;</span>
-                      <span className='time-posted'>
-                        {new Date(post.createdAt).toLocaleDateString()}
-                      </span>
-                      {post.editedAt && (
-                        <>
-                          <span className='meta-separator'>&middot;</span>
-                          <span
-                            className='time-posted'
-                            style={{ fontStyle: 'italic' }}
-                            title={`Edited ${new Date(post.editedAt).toLocaleString()}`}
-                          >
-                            edited {new Date(post.editedAt).toLocaleDateString()}
-                          </span>
-                        </>
-                      )}
-                      <span className='meta-separator'>&middot;</span>
-                      {post.authorName === '[deleted]' ? (
-                        <span className='author'>Posted by u/[deleted]</span>
-                      ) : (
+          <div ref={postsWrapRef}>
+            {loading ? (
+              <p style={{ textAlign: 'center', padding: '2rem' }}>
+                Loading popular posts...
+              </p>
+            ) : error ? (
+              <p style={{ textAlign: 'center', padding: '2rem', color: 'red' }}>
+                {error}
+              </p>
+            ) : posts.length === 0 ? (
+              <p style={{ textAlign: 'center', padding: '2rem' }}>
+                No posts found.
+              </p>
+            ) : (
+              posts.map((post) => {
+                const postImageSrc = normalizeImageSrc(
+                  post.imageUrl ?? post.ImageUrl,
+                )
+                return (
+                  <article className='post' key={post.id}>
+                    <div className='post-main'>
+                      <header className='post-header'>
                         <Link
-                          to={`/user/${encodeURIComponent(post.authorName)}`}
-                          className='author author-link'
+                          to={`/community/${encodeURIComponent(post.communitySlug)}`}
                         >
-                          Posted by u/{post.authorName}
+                          <img
+                            src={
+                              normalizeImageSrc(post.communityAvatarUrl) ||
+                              avatar
+                            }
+                            alt='Community Avatar'
+                            className='avatar'
+                          />
                         </Link>
-                      )}
-                    </div>
-
-                    <div className='post-header-actions'>
-                      <button
-                        type='button'
-                        className='more-button'
-                        onClick={() =>
-                          setOpenMorePostId((prev) =>
-                            prev === post.id ? null : post.id,
-                          )
-                        }
-                        aria-expanded={openMorePostId === post.id}
-                        aria-haspopup='menu'
-                        aria-label='Open post options'
-                      >
-                        ...
-                      </button>
-                      {openMorePostId === post.id && (
-                        <div className='more-menu' role='menu'>
-                          <button
-                            className='more-menu-item'
-                            role='menuitem'
-                            onClick={() => handleToggleSavePost(post.id)}
-                            disabled={pendingSavedPosts[post.id]}
+                        <div className='post-meta'>
+                          <Link
+                            to={`/community/${encodeURIComponent(post.communitySlug)}`}
+                            className='community-name community-link'
                           >
-                            {savedPostsById[post.id]?.id ? 'Unsave' : 'Save'}
-                          </button>
-                          {token && post.authorName === user?.userName && (
+                            r/{post.communitySlug}
+                          </Link>
+                          <span className='meta-separator'>&middot;</span>
+                          <span className='time-posted'>
+                            {new Date(post.createdAt).toLocaleDateString()}
+                          </span>
+                          {post.editedAt && (
+                            <>
+                              <span className='meta-separator'>&middot;</span>
+                              <span
+                                className='time-posted'
+                                style={{ fontStyle: 'italic' }}
+                                title={`Edited ${new Date(post.editedAt).toLocaleString()}`}
+                              >
+                                edited{' '}
+                                {new Date(post.editedAt).toLocaleDateString()}
+                              </span>
+                            </>
+                          )}
+                          <span className='meta-separator'>&middot;</span>
+                          {post.authorName === '[deleted]' ? (
+                            <span className='author'>
+                              Posted by u/[deleted]
+                            </span>
+                          ) : (
                             <Link
-                              to={`/community/${encodeURIComponent(post.communitySlug)}/post/${post.id}?edit=true`}
-                              className='more-menu-item more-menu-link'
-                              role='menuitem'
-                              onClick={() => setOpenMorePostId(null)}
+                              to={`/user/${encodeURIComponent(post.authorName)}`}
+                              className='author author-link'
                             >
-                              <FaEdit style={{ marginRight: 6 }} />
-                              Edit
+                              Posted by u/{post.authorName}
                             </Link>
                           )}
-                          {token && canModeratePost(post) && (
-                            <button
-                              className='more-menu-item more-menu-danger'
-                              role='menuitem'
-                              onClick={() => handleDeletePost(post.id)}
-                              disabled={deletingPostId === post.id}
-                            >
-                              <FaTrash style={{ marginRight: 6 }} />
-                              {deletingPostId === post.id ? 'Deleting...' : 'Delete'}
-                            </button>
-                          )}
-                          {post.authorName !== user?.userName && (
-                            <button
-                              className='more-menu-item more-menu-danger'
-                              role='menuitem'
-                              onClick={() => {
-                                setOpenMorePostId(null)
-                                if (!token) { toast.error('Please log in to report.'); return }
-                                setReportingPost({ id: post.id })
-                              }}
-                            >
-                              Report
-                            </button>
+                        </div>
+
+                        <div className='post-header-actions'>
+                          <button
+                            type='button'
+                            className='more-button'
+                            onClick={() =>
+                              setOpenMorePostId((prev) =>
+                                prev === post.id ? null : post.id,
+                              )
+                            }
+                            aria-expanded={openMorePostId === post.id}
+                            aria-haspopup='menu'
+                            aria-label='Open post options'
+                          >
+                            ...
+                          </button>
+                          {openMorePostId === post.id && (
+                            <div className='more-menu' role='menu'>
+                              <button
+                                className='more-menu-item'
+                                role='menuitem'
+                                onClick={() => handleToggleSavePost(post.id)}
+                                disabled={pendingSavedPosts[post.id]}
+                              >
+                                {savedPostsById[post.id]?.id
+                                  ? 'Unsave'
+                                  : 'Save'}
+                              </button>
+                              {token && post.authorName === user?.userName && (
+                                <Link
+                                  to={`/community/${encodeURIComponent(post.communitySlug)}/post/${post.id}?edit=true`}
+                                  className='more-menu-item more-menu-link'
+                                  role='menuitem'
+                                  onClick={() => setOpenMorePostId(null)}
+                                >
+                                  <FaEdit style={{ marginRight: 6 }} />
+                                  Edit
+                                </Link>
+                              )}
+                              {token && canModeratePost(post) && (
+                                <button
+                                  className='more-menu-item more-menu-danger'
+                                  role='menuitem'
+                                  onClick={() => handleDeletePost(post.id)}
+                                  disabled={deletingPostId === post.id}
+                                >
+                                  <FaTrash style={{ marginRight: 6 }} />
+                                  {deletingPostId === post.id
+                                    ? 'Deleting...'
+                                    : 'Delete'}
+                                </button>
+                              )}
+                              {post.authorName !== user?.userName && (
+                                <button
+                                  className='more-menu-item more-menu-danger'
+                                  role='menuitem'
+                                  onClick={() => {
+                                    setOpenMorePostId(null)
+                                    if (!token) {
+                                      toast.error('Please log in to report.')
+                                      return
+                                    }
+                                    setReportingPost({ id: post.id })
+                                  }}
+                                >
+                                  Report
+                                </button>
+                              )}
+                            </div>
                           )}
                         </div>
-                      )}
-                    </div>
-                  </header>
+                      </header>
 
-                  <div className='post-body'>
-                    <h3 className='post-title'>
-                      <Link to={getPostRoute(post)} className='post-title-link'>
-                        {post.title}
-                      </Link>
-                    </h3>
-                    {post.body && <p className='post-text'>{post.body}</p>}
-
-                    {(postImageSrc || post.linkUrl) && (
-                      <div className='post-media'>
-                        {postImageSrc && (
+                      <div className='post-body'>
+                        <h3 className='post-title'>
                           <Link
                             to={getPostRoute(post)}
-                            className='post-media-link'
+                            className='post-title-link'
                           >
-                            <div className='media-placeholder'>
-                              <img src={postImageSrc} alt='Post content' />
-                            </div>
+                            {post.title}
                           </Link>
-                        )}
-                        {post.linkUrl && (
-                          <div className='media-placeholder'>
-                            <a
-                              href={post.linkUrl}
-                              target='_blank'
-                              rel='noopener noreferrer'
-                              style={{
-                                color: '#0066cc',
-                                textDecoration: 'underline',
-                              }}
-                            >
-                              {post.linkUrl}
-                            </a>
+                        </h3>
+                        {post.body && <p className='post-text'>{post.body}</p>}
+
+                        {(postImageSrc || post.linkUrl) && (
+                          <div className='post-media'>
+                            {postImageSrc && (
+                              <Link
+                                to={getPostRoute(post)}
+                                className='post-media-link'
+                              >
+                                <div className='media-placeholder'>
+                                  <img src={postImageSrc} alt='Post content' />
+                                </div>
+                              </Link>
+                            )}
+                            {post.linkUrl && (
+                              <div className='media-placeholder'>
+                                <a
+                                  href={post.linkUrl}
+                                  target='_blank'
+                                  rel='noopener noreferrer'
+                                  style={{
+                                    color: '#0066cc',
+                                    textDecoration: 'underline',
+                                  }}
+                                >
+                                  {post.linkUrl}
+                                </a>
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
-                    )}
-                  </div>
 
-                  <footer className='post-footer'>
-                    <div className='action-chip vote-chip'>
-                      <FaCaretUp
-                        className={`vote-icon upvote ${postVotesById[post.id]?.type === 1 ? 'active' : ''}`}
-                        onClick={() => handlePostVote(post.id, 'up')}
-                        style={{
-                          pointerEvents: pendingPostVotes[post.id]
-                            ? 'none'
-                            : 'auto',
-                          opacity: pendingPostVotes[post.id] ? 0.6 : 1,
-                        }}
-                      />
-                      <span className='vote-count'>{post.votes}</span>
-                      <FaCaretDown
-                        className={`vote-icon downvote ${postVotesById[post.id]?.type === -1 ? 'active' : ''}`}
-                        onClick={() => handlePostVote(post.id, 'down')}
-                        style={{
-                          pointerEvents: pendingPostVotes[post.id]
-                            ? 'none'
-                            : 'auto',
-                          opacity: pendingPostVotes[post.id] ? 0.6 : 1,
-                        }}
-                      />
+                      <footer className='post-footer'>
+                        <div className='action-chip vote-chip'>
+                          <FaCaretUp
+                            className={`vote-icon upvote ${postVotesById[post.id]?.type === 1 ? 'active' : ''}`}
+                            onClick={() => handlePostVote(post.id, 'up')}
+                            style={{
+                              pointerEvents: pendingPostVotes[post.id]
+                                ? 'none'
+                                : 'auto',
+                              opacity: pendingPostVotes[post.id] ? 0.6 : 1,
+                            }}
+                          />
+                          <span className='vote-count'>{post.votes}</span>
+                          <FaCaretDown
+                            className={`vote-icon downvote ${postVotesById[post.id]?.type === -1 ? 'active' : ''}`}
+                            onClick={() => handlePostVote(post.id, 'down')}
+                            style={{
+                              pointerEvents: pendingPostVotes[post.id]
+                                ? 'none'
+                                : 'auto',
+                              opacity: pendingPostVotes[post.id] ? 0.6 : 1,
+                            }}
+                          />
+                        </div>
+
+                        <Link to={getPostRoute(post)} className='action-chip'>
+                          <FaComment className='comment-icon' />
+                          <span className='comment-count'>
+                            {post.commentsCount}
+                          </span>
+                        </Link>
+                      </footer>
                     </div>
-
-                    <Link to={getPostRoute(post)} className='action-chip'>
-                      <FaComment className='comment-icon' />
-                      <span className='comment-count'>
-                        {post.commentsCount}
-                      </span>
-                    </Link>
-                  </footer>
-                </div>
-              </article>
-            )
-          })
-        )}
-        {!loading && !error && posts.length > 0 && (
-          <>
-            <div ref={loadMoreTriggerRef} style={{ height: '1px' }} />
-            {isLoadingMore && (
-              <p style={{ textAlign: 'center', padding: '1rem 0' }}>
-                Loading more posts...
-              </p>
+                  </article>
+                )
+              })
             )}
-            {!hasMore && (
-              <p
-                style={{ textAlign: 'center', padding: '1rem 0', opacity: 0.7 }}
-              >
-                You reached the end.
-              </p>
+            {!loading && !error && posts.length > 0 && (
+              <>
+                <div ref={loadMoreTriggerRef} style={{ height: '1px' }} />
+                {isLoadingMore && (
+                  <p style={{ textAlign: 'center', padding: '1rem 0' }}>
+                    Loading more posts...
+                  </p>
+                )}
+                {!hasMore && (
+                  <p
+                    style={{
+                      textAlign: 'center',
+                      padding: '1rem 0',
+                      opacity: 0.7,
+                    }}
+                  >
+                    You reached the end.
+                  </p>
+                )}
+              </>
             )}
-          </>
-        )}
-      </div>
+          </div>
         </div>
         <AdSidebar />
       </div>

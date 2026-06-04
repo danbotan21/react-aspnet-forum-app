@@ -42,6 +42,13 @@ const normalizeComment = (rawComment) => ({
 const parseErrorText = async (response, fallbackMessage) => {
   const text = (await response.text()).trim()
   if (!text) return fallbackMessage
+  // The API returns JSON { message: "..." } for errors; fall back to raw text.
+  try {
+    const data = JSON.parse(text)
+    if (data && typeof data === 'object' && data.message) return data.message
+  } catch {
+    /* not JSON — use the raw text below */
+  }
   return text.replace(/^"+|"+$/g, '')
 }
 
@@ -230,95 +237,99 @@ export function PostPage() {
   useEffect(() => {
     if (!post?.communitySlug) return
 
-        if (!user?.id) {
+    if (!user?.id) {
+      setIsCommunityMember(false)
+      setIsCommunityOwner(false)
+      setIsCommunityModerator(false)
+      setIsBanned(false)
+      setIsMembershipResolved(true)
+      return
+    }
+
+    let cancelled = false
+    setIsMembershipResolved(false)
+
+    const resolveMembership = async () => {
+      try {
+        const communityResponse = await fetch(
+          `/api/communities/${encodeURIComponent(post.communitySlug)}`,
+        )
+        if (!communityResponse.ok) {
+          if (!cancelled) {
+            setIsCommunityMember(false)
+            setIsCommunityOwner(false)
+            setIsCommunityModerator(false)
+            setIsBanned(false)
+            setIsMembershipResolved(true)
+          }
+          return
+        }
+
+        const community = await communityResponse.json()
+        const [memberResponse, ownerResponse, roleResponse, banResponse] =
+          await Promise.all([
+            fetch(
+              `/api/communities/${community.id}/ismember?userId=${user.id}`,
+            ),
+            fetch(`/api/communities/${community.id}/isowner?userId=${user.id}`),
+            token
+              ? fetch(`/api/communities/${community.id}/myrole`, {
+                  headers: { Authorization: `Bearer ${token}` },
+                })
+              : Promise.resolve({ ok: false }),
+            token
+              ? fetch(`/api/communities/${community.id}/mybannedstatus`, {
+                  headers: { Authorization: `Bearer ${token}` },
+                })
+              : Promise.resolve({ ok: false }),
+          ])
+
+        if (!memberResponse.ok || !ownerResponse.ok) {
+          if (!cancelled) {
+            setIsCommunityMember(false)
+            setIsCommunityOwner(false)
+            setIsCommunityModerator(false)
+            setIsBanned(false)
+            setIsMembershipResolved(true)
+          }
+          return
+        }
+
+        const [membershipValue, ownerValue] = await Promise.all([
+          memberResponse.json(),
+          ownerResponse.json(),
+        ])
+
+        let moderatorValue = false
+        if (roleResponse.ok) {
+          const roleData = await roleResponse.json()
+          moderatorValue =
+            roleData?.role === 'moderator' || roleData?.role === 'owner'
+        }
+
+        let bannedValue = false
+        if (banResponse.ok) {
+          const banData = await banResponse.json()
+          bannedValue = banData?.isBanned === true
+        }
+
+        if (!cancelled) {
+          setIsCommunityMember(membershipValue === true)
+          setIsCommunityOwner(ownerValue === true)
+          setIsCommunityModerator(moderatorValue)
+          setIsBanned(bannedValue)
+          setIsMembershipResolved(true)
+        }
+      } catch {
+        if (!cancelled) {
           setIsCommunityMember(false)
           setIsCommunityOwner(false)
           setIsCommunityModerator(false)
           setIsBanned(false)
           setIsMembershipResolved(true)
-          return
         }
-
-        let cancelled = false
-        setIsMembershipResolved(false)
-
-        const resolveMembership = async () => {
-          try {
-            const communityResponse = await fetch(
-              `/api/communities/${encodeURIComponent(post.communitySlug)}`,
-            )
-            if (!communityResponse.ok) {
-              if (!cancelled) {
-                setIsCommunityMember(false)
-                setIsCommunityOwner(false)
-                setIsCommunityModerator(false)
-                setIsBanned(false)
-                setIsMembershipResolved(true)
-              }
-              return
-            }
-
-            const community = await communityResponse.json()
-            const [memberResponse, ownerResponse, roleResponse, banResponse] = await Promise.all([
-              fetch(`/api/communities/${community.id}/ismember?userId=${user.id}`),
-              fetch(`/api/communities/${community.id}/isowner?userId=${user.id}`),
-              token
-                ? fetch(`/api/communities/${community.id}/myrole`, {
-                    headers: { Authorization: `Bearer ${token}` },
-                  })
-                : Promise.resolve({ ok: false }),
-              token
-                ? fetch(`/api/communities/${community.id}/mybannedstatus`, {
-                    headers: { Authorization: `Bearer ${token}` },
-                  })
-                : Promise.resolve({ ok: false }),
-            ])
-
-            if (!memberResponse.ok || !ownerResponse.ok) {
-              if (!cancelled) {
-                setIsCommunityMember(false)
-                setIsCommunityOwner(false)
-                setIsCommunityModerator(false)
-                setIsBanned(false)
-                setIsMembershipResolved(true)
-              }
-              return
-            }
-
-            const [membershipValue, ownerValue] = await Promise.all([
-              memberResponse.json(),
-              ownerResponse.json(),
-            ])
-
-            let moderatorValue = false
-            if (roleResponse.ok) {
-              const roleData = await roleResponse.json()
-              moderatorValue = roleData?.role === 'moderator' || roleData?.role === 'owner'
-            }
-
-            let bannedValue = false
-            if (banResponse.ok) {
-              const banData = await banResponse.json()
-              bannedValue = banData?.isBanned === true
-            }
-
-            if (!cancelled) {
-              setIsCommunityMember(membershipValue === true)
-              setIsCommunityOwner(ownerValue === true)
-              setIsCommunityModerator(moderatorValue)
-              setIsBanned(bannedValue)
-              setIsMembershipResolved(true)
-            }
-          } catch {
-            if (!cancelled) {
-              setIsCommunityMember(false)
-              setIsCommunityOwner(false)
-              setIsCommunityModerator(false)
-              setIsBanned(false)
-              setIsMembershipResolved(true)
-            }
-          }
-        }
+      }
+    }
 
     resolveMembership()
 
@@ -660,8 +671,7 @@ export function PostPage() {
       })
 
       if (!response.ok) {
-        const text = await response.text()
-        throw new Error(text || 'Failed to update post.')
+        throw new Error(await parseErrorText(response, 'Failed to update post.'))
       }
 
       const updatedPost = await response.json()
@@ -971,7 +981,10 @@ export function PostPage() {
               </button>
             )}
 
-            {(isOwnComment || isCommunityOwner || isCommunityModerator || isAdmin) &&
+            {(isOwnComment ||
+              isCommunityOwner ||
+              isCommunityModerator ||
+              isAdmin) &&
               (confirmDeleteCommentId === comment.id ? (
                 <span className='post-comment-delete-confirm'>
                   <span className='post-comment-delete-label'>Delete?</span>
@@ -1328,7 +1341,9 @@ export function PostPage() {
                 <button
                   type='button'
                   className='post-chip post-chip-danger'
-                  onClick={() => setReportTarget({ type: 0, id: post.id, label: 'Post' })}
+                  onClick={() =>
+                    setReportTarget({ type: 0, id: post.id, label: 'Post' })
+                  }
                 >
                   <FaFlag /> Report
                 </button>
@@ -1354,7 +1369,9 @@ export function PostPage() {
                   value={newCommentText}
                   onChange={(event) => setNewCommentText(event.target.value)}
                   disabled={
-                    !user?.id || isBanned || (isMembershipResolved && !isCommunityMember)
+                    !user?.id ||
+                    isBanned ||
+                    (isMembershipResolved && !isCommunityMember)
                   }
                   style={{
                     width: '100%',

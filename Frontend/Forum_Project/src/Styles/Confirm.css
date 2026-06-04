@@ -1,0 +1,100 @@
+/* Reusable confirmation dialog (replaces native window.confirm popups). */
+.confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 5000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(12, 28, 61, 0.45);
+  backdrop-filter: blur(2px);
+  animation: confirm-fade 0.15s ease-out;
+}
+
+.confirm-modal {
+  width: 100%;
+  max-width: 380px;
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 22px 22px 18px;
+  box-shadow: 0 24px 60px rgba(12, 28, 61, 0.3);
+  font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+  animation: confirm-pop 0.18s cubic-bezier(0.21, 1, 0.32, 1);
+}
+
+.confirm-title {
+  margin: 0 0 8px;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #173464;
+}
+
+.confirm-message {
+  margin: 0 0 20px;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  color: #5f7394;
+}
+
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.confirm-btn {
+  border: none;
+  border-radius: 10px;
+  padding: 9px 18px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    transform 0.12s ease,
+    opacity 0.15s ease;
+}
+
+.confirm-btn:hover {
+  transform: translateY(-1px);
+}
+
+.confirm-btn-cancel {
+  background: #eef2f8;
+  color: #44546e;
+}
+
+.confirm-btn-cancel:hover {
+  background: #e2e8f2;
+}
+
+.confirm-btn-primary {
+  background: linear-gradient(135deg, #0e4ad2 0%, #1a68ff 100%);
+  color: #ffffff;
+}
+
+.confirm-btn-danger {
+  background: linear-gradient(135deg, #e0533d 0%, #c0392b 100%);
+  color: #ffffff;
+}
+
+@keyframes confirm-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes confirm-pop {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}

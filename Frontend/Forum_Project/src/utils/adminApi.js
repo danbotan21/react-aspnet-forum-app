@@ -216,3 +216,15 @@ export const fetchAdminLogs = async (token, limit = 100) => {
   if (!res.ok) throw new Error('Failed to load audit log')
   return res.json()
 }
+
+export const clearAdminLogs = async (token) => {
+  const res = await fetch('/api/admin/logs', {
+    method: 'DELETE',
+    headers: authHeaders(token),
+  })
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}))
+    throw new Error(data.message || 'Failed to clear audit log')
+  }
+  return res.json()
+}

@@ -826,6 +826,17 @@ export function UserProfile() {
     )
   }
 
+  // After a vote changes, drop the post from the Upvoted/Downvoted tab it no longer
+  // belongs to — so the UI matches the filter immediately, without a refresh.
+  const reconcileVoteLists = (postId, newType) => {
+    setUpvotedPosts((prev) =>
+      newType === 1 ? prev : prev.filter((it) => it.postId !== postId),
+    )
+    setDownvotedPosts((prev) =>
+      newType === -1 ? prev : prev.filter((it) => it.postId !== postId),
+    )
+  }
+
   const handlePostVote = async (postId, direction) => {
     if (!token) {
       toast.error('Please login to vote.')
@@ -847,6 +858,7 @@ export function UserProfile() {
 
       try {
         await deletePostVote({ voteId: previousVote.id, token })
+        reconcileVoteLists(postId, 0)
       } catch (err) {
         applyVoteDelta(postId, previousVoteType)
         setPostVotesById((prev) => ({ ...prev, [postId]: previousVote }))
@@ -868,6 +880,7 @@ export function UserProfile() {
     try {
       const vote = await submitPostVote({ postId, voteType: nextVoteType, token })
       setPostVotesById((prev) => ({ ...prev, [postId]: { id: vote.id, type: vote.type } }))
+      reconcileVoteLists(postId, nextVoteType)
     } catch (err) {
       applyVoteDelta(postId, -voteDelta)
       setPostVotesById((prev) => ({
@@ -1372,7 +1385,7 @@ export function UserProfile() {
                       Create Post
                     </Link>
                     <Link
-                      to='/edit-avatar'
+                      to='/settings'
                       className='profile-btn profile-btn-secondary'
                     >
                       Update Profile

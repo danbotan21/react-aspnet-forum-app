@@ -23,6 +23,7 @@ import {
 } from 'react-icons/fa'
 import { useAuth } from './AuthContext'
 import { useToast } from './ToastContext'
+import { useConfirm } from './ConfirmContext'
 import {
   fetchCommunityBySlug,
   fetchMyRole,
@@ -304,6 +305,7 @@ function ReportsTab({
   currentUserName,
 }) {
   const toast = useToast()
+  const confirm = useConfirm()
   const [reports, setReports] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -344,11 +346,14 @@ function ReportsTab({
   }
 
   const handleDismiss = (id) => withPending(id, () => dismissReport(id, token))
-  const handleRemove = (report) => {
-    if (
-      !window.confirm('Remove this content permanently? This cannot be undone.')
-    )
-      return
+  const handleRemove = async (report) => {
+    const ok = await confirm({
+      title: 'Remove content?',
+      message: 'This content will be permanently removed. This cannot be undone.',
+      confirmText: 'Remove',
+      danger: true,
+    })
+    if (!ok) return
     withPending(report.id, async () => {
       await removeReportedContent(report.id, token)
       const postId = report.postId ?? report.reportedItemId
@@ -621,6 +626,7 @@ function ReportsTab({
 
 function MembersTab({ communityId, token, myRole, currentUserId }) {
   const toast = useToast()
+  const confirm = useConfirm()
   const [members, setMembers] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -666,8 +672,14 @@ function MembersTab({ communityId, token, myRole, currentUserId }) {
   const handleDemote = (userId) =>
     withPending(userId, () => demoteModerator(communityId, userId, token))
 
-  const handleKick = (userId) => {
-    if (!window.confirm('Are you sure you want to kick this member?')) return
+  const handleKick = async (userId) => {
+    const ok = await confirm({
+      title: 'Kick member?',
+      message: 'This member will be removed from the community.',
+      confirmText: 'Kick',
+      danger: true,
+    })
+    if (!ok) return
     withPending(userId, () => kickMember(communityId, userId, token))
   }
 
@@ -865,6 +877,7 @@ function MembersTab({ communityId, token, myRole, currentUserId }) {
 
 function BannedMembersTab({ communityId, token }) {
   const toast = useToast()
+  const confirm = useConfirm()
   const [banned, setBanned] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -982,6 +995,7 @@ function BannedMembersTab({ communityId, token }) {
 
 function PinnedTab({ communityId, token }) {
   const toast = useToast()
+  const confirm = useConfirm()
   const [pinnedPosts, setPinnedPosts] = useState([])
   const [allPosts, setAllPosts] = useState([])
   const [loading, setLoading] = useState(true)
@@ -1151,6 +1165,7 @@ function CommunitySettingsTab({
 }) {
   const navigate = useNavigate()
   const toast = useToast()
+  const confirm = useConfirm()
   const { communityname } = useParams()
 
   const [form, setForm] = useState({})
@@ -1275,7 +1290,10 @@ function CommunitySettingsTab({
           rules: rules.length > 0 ? rules.join('\n') : null,
         }),
       })
-      if (!res.ok) throw new Error(await res.text())
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.message || 'Failed to save settings.')
+      }
       const updated = await res.json()
       onCommunityUpdate(updated)
       setSavedMsg('Settings saved successfully!')
@@ -1304,12 +1322,14 @@ function CommunitySettingsTab({
   }
 
   const handleDelete = async () => {
-    if (
-      !window.confirm(
-        `Are you sure you want to permanently delete this community? This cannot be undone.`,
-      )
-    )
-      return
+    const ok = await confirm({
+      title: 'Delete community?',
+      message:
+        'This community and all its posts will be permanently deleted. This cannot be undone.',
+      confirmText: 'Delete',
+      danger: true,
+    })
+    if (!ok) return
     setDeleting(true)
     try {
       const res = await fetch(`/api/Communities/${communityId}`, {

@@ -18,6 +18,7 @@ import './Styles/Messages.css'
 import defaultAvatar from './img/avatar.webp'
 import { useAuth } from './AuthContext'
 import { useToast } from './ToastContext'
+import { useConfirm } from './ConfirmContext'
 import { useChat } from './ChatContext'
 import { normalizeImageSrc } from './utils/media'
 import { uploadImage, uploadFile } from './utils/imageUpload'
@@ -76,6 +77,7 @@ const ChatAvatar = ({ url, isPremium }) => (
 export const Messages = () => {
   const { user } = useAuth()
   const toast = useToast()
+  const confirm = useConfirm()
   const { subscribe, refreshUnread, notifyTyping } = useChat()
   const location = useLocation()
   const navigate = useNavigate()
@@ -384,7 +386,13 @@ export const Messages = () => {
 
   const handleDeleteMessage = async (m) => {
     setMenuMsgId(null)
-    if (!window.confirm('Delete this message?')) return
+    const ok = await confirm({
+      title: 'Delete message?',
+      message: 'This message will be permanently deleted.',
+      confirmText: 'Delete',
+      danger: true,
+    })
+    if (!ok) return
     try {
       await deleteMessage(m.id)
       setMessages((prev) => prev.filter((x) => x.id !== m.id))
@@ -397,7 +405,14 @@ export const Messages = () => {
   const handleDeleteConversation = async () => {
     setConvMenuOpen(false)
     if (!active) return
-    if (!window.confirm('Delete this entire conversation for both of you?')) return
+    const ok = await confirm({
+      title: 'Delete conversation?',
+      message:
+        'This will delete the entire conversation for both of you. This cannot be undone.',
+      confirmText: 'Delete',
+      danger: true,
+    })
+    if (!ok) return
     try {
       await deleteConversation(active.id)
       setConversations((prev) => prev.filter((c) => c.id !== active.id))

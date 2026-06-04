@@ -73,7 +73,9 @@ export const Navbar = () => {
       if (term !== '') {
         try {
           const [commRes, postRes] = await Promise.all([
-            apiFetch(`/api/Communities/search?term=${encodeURIComponent(term)}`),
+            apiFetch(
+              `/api/Communities/search?term=${encodeURIComponent(term)}`,
+            ),
             fetch(`/api/Posts/search?term=${encodeURIComponent(term)}&limit=3`),
           ])
           if (currentId !== searchRequestId.current) return
@@ -115,11 +117,7 @@ export const Navbar = () => {
   return (
     <header className='navbar'>
       <div className='navbar-inner'>
-        <Link
-          to='/home'
-          className='navbar-logo'
-          aria-label='InfoMeet - home'
-        >
+        <Link to='/home' className='navbar-logo' aria-label='InfoMeet - home'>
           InfoMeet
         </Link>
 
@@ -145,7 +143,9 @@ export const Navbar = () => {
             <div className='navbar-search-dropdown'>
               {searchCommunities.length > 0 && (
                 <>
-                  <div className='navbar-search-dropdown-label'>Communities</div>
+                  <div className='navbar-search-dropdown-label'>
+                    Communities
+                  </div>
                   {searchCommunities.map((c) => (
                     <div
                       key={c.id}
@@ -157,7 +157,9 @@ export const Navbar = () => {
                       }}
                     >
                       <strong>{c.title}</strong>
-                      <span>c/{c.slug} · {c.membersCount} members</span>
+                      <span>
+                        c/{c.slug} · {c.membersCount} members
+                      </span>
                     </div>
                   ))}
                 </>
@@ -176,7 +178,9 @@ export const Navbar = () => {
                       }}
                     >
                       <strong>{p.title}</strong>
-                      <span>c/{p.communitySlug} · by u/{p.authorName}</span>
+                      <span>
+                        c/{p.communitySlug} · by u/{p.authorName}
+                      </span>
                     </div>
                   ))}
                 </>
@@ -186,7 +190,9 @@ export const Navbar = () => {
                   className='navbar-search-dropdown-item navbar-search-dropdown-all'
                   onClick={() => {
                     setShowSearchDropdown(false)
-                    navigate(`/search?q=${encodeURIComponent(searchTerm.trim())}`)
+                    navigate(
+                      `/search?q=${encodeURIComponent(searchTerm.trim())}`,
+                    )
                   }}
                 >
                   See all results for &quot;{searchTerm}&quot;
@@ -239,27 +245,33 @@ export const Navbar = () => {
             <FaPlus />
           </Link>
 
-          <Link to='/notification' className='navbar-icon-btn' style={{ position: 'relative' }}>
+          <Link
+            to='/notification'
+            className='navbar-icon-btn'
+            style={{ position: 'relative' }}
+          >
             <FaBell />
             {pushEnabled && unreadCount > 0 && (
-              <span style={{
-                position: 'absolute',
-                top: '-4px',
-                right: '-4px',
-                backgroundColor: '#e53e3e',
-                color: '#fff',
-                borderRadius: '50%',
-                minWidth: '16px',
-                height: '16px',
-                fontSize: '10px',
-                fontWeight: '700',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: '0 2px',
-                lineHeight: 1,
-                pointerEvents: 'none',
-              }}>
+              <span
+                style={{
+                  position: 'absolute',
+                  top: '-4px',
+                  right: '-4px',
+                  backgroundColor: '#e53e3e',
+                  color: '#fff',
+                  borderRadius: '50%',
+                  minWidth: '16px',
+                  height: '16px',
+                  fontSize: '10px',
+                  fontWeight: '700',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '0 2px',
+                  lineHeight: 1,
+                  pointerEvents: 'none',
+                }}
+              >
                 {unreadCount > 99 ? '99+' : unreadCount}
               </span>
             )}

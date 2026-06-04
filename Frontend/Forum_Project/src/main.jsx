@@ -6,6 +6,7 @@ import { AuthProvider } from './AuthContext'
 import { NotificationProvider } from './NotificationContext'
 import { ChatProvider } from './ChatContext'
 import { ToastProvider } from './ToastContext'
+import { ConfirmProvider } from './ConfirmContext'
 
 import App from './App.jsx'
 
@@ -20,7 +21,9 @@ createRoot(document.getElementById('root')).render(
           <NotificationProvider>
             <ChatProvider>
               <ToastProvider>
-                <App />
+                <ConfirmProvider>
+                  <App />
+                </ConfirmProvider>
               </ToastProvider>
             </ChatProvider>
           </NotificationProvider>

@@ -4,6 +4,7 @@ import { FaCaretUp, FaCaretDown, FaComment, FaUsers, FaEdit, FaTrash } from 'rea
 import { normalizeImageSrc } from './utils/media'
 import { useAuth, apiFetch } from './AuthContext'
 import { useToast } from './ToastContext'
+import { useConfirm } from './ConfirmContext'
 import {
   deletePostVote,
   fetchUserPostVotes,
@@ -23,6 +24,7 @@ export const SearchResults = () => {
   const query = searchParams.get('q') || ''
   const { user, token } = useAuth()
   const toast = useToast()
+  const confirm = useConfirm()
 
   const [activeTab, setActiveTab] = useState('posts')
   const [posts, setPosts] = useState([])
@@ -129,7 +131,14 @@ export const SearchResults = () => {
   }
 
   const handleDeletePost = async (postId) => {
-    if (!token || !window.confirm('Delete this post permanently?')) return
+    if (!token) return
+    const ok = await confirm({
+      title: 'Delete post?',
+      message: 'This post will be permanently deleted. This cannot be undone.',
+      confirmText: 'Delete',
+      danger: true,
+    })
+    if (!ok) return
     setDeletingPostId(postId)
     try {
       await deletePost(postId, token)

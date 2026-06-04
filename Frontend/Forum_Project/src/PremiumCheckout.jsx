@@ -1,5 +1,10 @@
 import { useMemo, useState } from 'react'
-import { FaCcVisa, FaCcMastercard, FaCcAmex, FaRegCreditCard } from 'react-icons/fa'
+import {
+  FaCcVisa,
+  FaCcMastercard,
+  FaCcAmex,
+  FaRegCreditCard,
+} from 'react-icons/fa'
 import './Styles/PremiumCheckout.css'
 
 const onlyDigits = (s) => (s || '').replace(/\D/g, '')
@@ -26,14 +31,20 @@ const detectBrand = (s) => {
 
 const BrandMark = ({ brand }) => {
   if (brand === 'visa') return <FaCcVisa className='pc-brand-icon' />
-  if (brand === 'mastercard') return <FaCcMastercard className='pc-brand-icon' />
+  if (brand === 'mastercard')
+    return <FaCcMastercard className='pc-brand-icon' />
   if (brand === 'amex') return <FaCcAmex className='pc-brand-icon' />
   return <FaRegCreditCard className='pc-brand-icon' />
 }
 
 // Self-contained checkout: an interactive flip card + the input fields.
 // On submit it calls onPay(card) — the parent owns the API call and result handling.
-export const PremiumCheckout = ({ price = '4.99', isPaying = false, onPay, onCancel }) => {
+export const PremiumCheckout = ({
+  price = '4.99',
+  isPaying = false,
+  onPay,
+  onCancel,
+}) => {
   const [cardNumber, setCardNumber] = useState('')
   const [nameOnCard, setNameOnCard] = useState('')
   const [expiry, setExpiry] = useState('')
@@ -140,7 +151,9 @@ export const PremiumCheckout = ({ price = '4.99', isPaying = false, onPay, onCan
               autoComplete='cc-csc'
               placeholder='123'
               value={cvc}
-              onChange={(e) => setCvc(onlyDigits(e.target.value).slice(0, maxCvc))}
+              onChange={(e) =>
+                setCvc(onlyDigits(e.target.value).slice(0, maxCvc))
+              }
               onFocus={() => setFlipped(true)}
               onBlur={() => setFlipped(false)}
               disabled={isPaying}

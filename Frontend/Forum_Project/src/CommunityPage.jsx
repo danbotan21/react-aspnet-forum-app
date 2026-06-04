@@ -16,6 +16,7 @@ import {
 } from 'react-icons/fa'
 import { useAuth } from './AuthContext'
 import { useToast } from './ToastContext'
+import { useConfirm } from './ConfirmContext'
 import './Styles/CommunityPage.css'
 import avatar from './img/avatar.webp'
 import coding from './img/coding.jpg'
@@ -65,6 +66,7 @@ export function CommunityPage() {
   const [reportingPost, setReportingPost] = useState(null)
   const [pendingDeletePosts, setPendingDeletePosts] = useState({})
   const toast = useToast()
+  const confirm = useConfirm()
   const showToast = (message, type = 'success') =>
     type === 'error' ? toast.error(message) : toast.success(message)
 
@@ -391,7 +393,13 @@ export function CommunityPage() {
 
   const handleDeletePost = async (postId) => {
     if (!token) return
-    if (!window.confirm('Delete this post permanently?')) return
+    const ok = await confirm({
+      title: 'Delete post?',
+      message: 'This post will be permanently deleted. This cannot be undone.',
+      confirmText: 'Delete',
+      danger: true,
+    })
+    if (!ok) return
     setPendingDeletePosts((prev) => ({ ...prev, [postId]: true }))
     try {
       await deletePost(postId, token)

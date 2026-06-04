@@ -381,7 +381,8 @@ export const CreatePost = () => {
       })
 
       if (!response.ok) {
-        throw new Error('Failed to create post')
+        const data = await response.json().catch(() => ({}))
+        throw new Error(data.message || 'Failed to create post')
       }
 
       const createdPost = await response.json()
@@ -405,7 +406,7 @@ export const CreatePost = () => {
     } catch (error) {
       console.error(error)
       setSubmitError(
-        'An error occurred while creating the post. Please try again.',
+        error.message || 'An error occurred while creating the post. Please try again.',
       )
     } finally {
       setIsSubmitting(false)

@@ -25,6 +25,7 @@ import {
 } from 'react-icons/fa'
 import { useAuth } from './AuthContext'
 import { useToast } from './ToastContext'
+import { useConfirm } from './ConfirmContext'
 import {
   fetchAdminStats,
   fetchAdminUsers,
@@ -45,6 +46,7 @@ import {
   deleteMessageAdmin,
   replyToMessageAdmin,
   fetchAdminLogs,
+  clearAdminLogs,
 } from './utils/adminApi'
 import { normalizeImageSrc } from './utils/media'
 import './Styles/AdminPage.css'
@@ -483,6 +485,7 @@ function UsersTab({ token, currentUserName }) {
 
 function CommunitiesTab({ token }) {
   const toast = useToast()
+  const confirm = useConfirm()
   const [communities, setCommunities] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -506,12 +509,13 @@ function CommunitiesTab({ token }) {
   }, [token])
 
   const handleDelete = async (c) => {
-    if (
-      !window.confirm(
-        `Permanently delete c/${c.slug} and ALL its posts? This cannot be undone.`,
-      )
-    )
-      return
+    const ok = await confirm({
+      title: 'Delete community?',
+      message: `Permanently delete c/${c.slug} and ALL its posts? This cannot be undone.`,
+      confirmText: 'Delete',
+      danger: true,
+    })
+    if (!ok) return
     if (pending[c.id]) return
     setPending((p) => ({ ...p, [c.id]: true }))
     try {
@@ -609,6 +613,7 @@ const STATUS_FILTERS = ['pending', 'actioned', 'dismissed', 'all']
 
 function ReportsTab({ token, currentUserId }) {
   const toast = useToast()
+  const confirm = useConfirm()
   const [reports, setReports] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -646,12 +651,24 @@ function ReportsTab({ token, currentUserId }) {
   }
 
   const handleDismiss = (id) => withPending(id, () => dismissReportAdmin(id, token))
-  const handleRemove = (r) => {
-    if (!window.confirm('Permanently remove this content? This cannot be undone.')) return
+  const handleRemove = async (r) => {
+    const ok = await confirm({
+      title: 'Remove reported content?',
+      message: 'This content will be permanently removed. This cannot be undone.',
+      confirmText: 'Remove',
+      danger: true,
+    })
+    if (!ok) return
     withPending(r.id, () => removeReportContentAdmin(r.id, token))
   }
-  const handleDelete = (id) => {
-    if (!window.confirm('Discard this report record?')) return
+  const handleDelete = async (id) => {
+    const ok = await confirm({
+      title: 'Discard report?',
+      message: 'This report record will be discarded.',
+      confirmText: 'Discard',
+      danger: true,
+    })
+    if (!ok) return
     withPending(id, () => deleteReportAdmin(id, token))
   }
   const handleBanUser = (r) => {
@@ -813,6 +830,7 @@ function ReportsTab({ token, currentUserId }) {
 
 function ContentTab({ token }) {
   const toast = useToast()
+  const confirm = useConfirm()
   const [kind, setKind] = useState('posts') // 'posts' | 'comments'
   const [search, setSearch] = useState('')
   const [data, setData] = useState({ items: [], total: 0, page: 1, pageSize: 20 })
@@ -851,7 +869,13 @@ function ContentTab({ token }) {
 
   const handleDelete = async (item) => {
     const what = kind === 'posts' ? 'post' : 'comment'
-    if (!window.confirm(`Permanently delete this ${what}? This cannot be undone.`)) return
+    const ok = await confirm({
+      title: `Delete ${what}?`,
+      message: `This ${what} will be permanently deleted. This cannot be undone.`,
+      confirmText: 'Delete',
+      danger: true,
+    })
+    if (!ok) return
     if (pending[item.id]) return
     setPending((p) => ({ ...p, [item.id]: true }))
     try {
@@ -1018,6 +1042,7 @@ function ContentTab({ token }) {
 
 function MessagesTab({ token }) {
   const toast = useToast()
+  const confirm = useConfirm()
   const [messages, setMessages] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -1043,7 +1068,13 @@ function MessagesTab({ token }) {
   }, [token])
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Delete this message?')) return
+    const ok = await confirm({
+      title: 'Delete message?',
+      message: 'This message will be permanently deleted.',
+      confirmText: 'Delete',
+      danger: true,
+    })
+    if (!ok) return
     if (pending[id]) return
     setPending((p) => ({ ...p, [id]: true }))
     try {
@@ -1192,9 +1223,12 @@ function MessagesTab({ token }) {
 // ─── AUDIT LOG TAB ──────────────────────────────────────────────────────────────
 
 function AuditLogTab({ token }) {
+  const toast = useToast()
+  const confirm = useConfirm()
   const [logs, setLogs] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [clearing, setClearing] = useState(false)
 
   useEffect(() => {
     fetchAdminLogs(token, 200)
@@ -1203,13 +1237,45 @@ function AuditLogTab({ token }) {
       .finally(() => setLoading(false))
   }, [token])
 
+  const handleClear = async () => {
+    const ok = await confirm({
+      title: 'Clear audit log?',
+      message:
+        'This permanently deletes every recorded admin action. This cannot be undone.',
+      confirmText: 'Clear log',
+      danger: true,
+    })
+    if (!ok) return
+    setClearing(true)
+    try {
+      await clearAdminLogs(token)
+      setLogs([])
+      toast.success('Audit log cleared.')
+    } catch (e) {
+      toast.error(e.message)
+    } finally {
+      setClearing(false)
+    }
+  }
+
   return (
     <div className='admin-tab-content'>
       <div className='admin-section-header'>
         <h2 className='admin-section-title'>Audit Log</h2>
         <p className='admin-section-subtitle'>
-          A transparent, append-only record of every action taken from the admin panel.
+          A transparent record of every action taken from the admin panel.
         </p>
+        {logs.length > 0 && (
+          <button
+            type='button'
+            className='admin-btn admin-btn-sm admin-btn-danger'
+            onClick={handleClear}
+            disabled={clearing}
+            style={{ marginTop: '10px' }}
+          >
+            {clearing ? 'Clearing...' : 'Clear log'}
+          </button>
+        )}
       </div>
 
       {loading ? (

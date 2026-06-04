@@ -12,6 +12,7 @@ import {
 import { normalizeImageSrc } from './utils/media'
 import { useAuth } from './AuthContext'
 import { useToast } from './ToastContext'
+import { useConfirm } from './ConfirmContext'
 import {
   deletePostVote,
   fetchUserPostVotes,
@@ -34,6 +35,7 @@ export const Home = () => {
   const PAGE_SIZE = 15
   const { user, token } = useAuth()
   const toast = useToast()
+  const confirm = useConfirm()
   const navigate = useNavigate()
   const [openMorePostId, setOpenMorePostId] = useState(null)
   const [sortBy, setSortBy] = useState('popular')
@@ -424,11 +426,14 @@ export const Home = () => {
   }
 
   const handleDeletePost = async (postId) => {
-    if (
-      !token ||
-      !window.confirm('Delete this post permanently? This cannot be undone.')
-    )
-      return
+    if (!token) return
+    const ok = await confirm({
+      title: 'Delete post?',
+      message: 'This post will be permanently deleted. This cannot be undone.',
+      confirmText: 'Delete',
+      danger: true,
+    })
+    if (!ok) return
     setDeletingPostId(postId)
     try {
       await deletePost(postId, token)

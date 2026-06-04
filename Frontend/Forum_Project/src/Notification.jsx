@@ -181,7 +181,8 @@ export const Notification = () => {
             </div>
             <h2 className='notif-empty-title'>No notifications yet</h2>
             <p className='notif-empty-text'>
-              Explore communities and start posting to receive notifications here.
+              Explore communities and start posting to receive notifications
+              here.
             </p>
             <button
               className='notif-empty-btn'
@@ -227,7 +228,9 @@ export const Notification = () => {
                         {label}
                       </span>
                       {!n.isRead && <span className='notif-new-dot' />}
-                      <span className='notif-time'>{formatTime(n.createdAt)}</span>
+                      <span className='notif-time'>
+                        {formatTime(n.createdAt)}
+                      </span>
                     </div>
 
                     <p className='notif-message'>{n.message}</p>
