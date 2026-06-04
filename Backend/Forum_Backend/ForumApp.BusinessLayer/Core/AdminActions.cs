@@ -482,5 +482,11 @@ namespace ForumApp.BusinessLayer.Core
                 })
                 .ToListAsync(ct);
         }
+
+        internal async Task<ActionResponse> ClearLogsExecution(CancellationToken ct = default)
+        {
+            await _context.AdminLogs.ExecuteDeleteAsync(ct);
+            return new ActionResponse { IsSuccess = true, Message = "Audit log cleared." };
+        }
     }
 }

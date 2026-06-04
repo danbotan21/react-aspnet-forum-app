@@ -95,21 +95,23 @@ namespace ForumApp.BusinessLayer.Core
             return null;
         }
 
-        internal async Task<VoteResponseDto?> VoteExecution(CreateVoteRequestDto voteData, int userId, CancellationToken ct = default)
+        internal async Task<ServiceResult<VoteResponseDto>> VoteExecution(CreateVoteRequestDto voteData, int userId, CancellationToken ct = default)
         {
             if ((voteData.PostId == null && voteData.CommentId == null) ||
                 (voteData.PostId != null && voteData.CommentId != null))
-                return null;
+                return ServiceResult<VoteResponseDto>.Fail("Provide either a post or a comment to vote on.");
 
             var targetAuthorId = await GetTargetAuthorIdAsync(voteData.PostId, voteData.CommentId, ct);
-            if (!targetAuthorId.HasValue) return null;
+            if (!targetAuthorId.HasValue)
+                return ServiceResult<VoteResponseDto>.Fail("The content you're voting on no longer exists.");
 
             var communityId = await GetTargetCommunityIdAsync(voteData.PostId, voteData.CommentId, ct);
             if (communityId.HasValue)
             {
                 var isBanned = await _context.CommunityMembers
                     .AnyAsync(m => m.CommunityId == communityId.Value && m.UserId == userId && m.IsBanned, ct);
-                if (isBanned) return null;
+                if (isBanned)
+                    return ServiceResult<VoteResponseDto>.Fail("You are banned from this community and cannot vote.");
             }
 
             var existingVote = await _context.Votes
@@ -122,7 +124,7 @@ namespace ForumApp.BusinessLayer.Core
             if (existingVote != null)
             {
                 if (existingVote.Type == voteData.Type)
-                    return MapToResponseDTO(existingVote);
+                    return ServiceResult<VoteResponseDto>.Success(MapToResponseDTO(existingVote));
 
                 var oldVoteValue = (int)existingVote.Type;
                 var newVoteValue = (int)voteData.Type;
@@ -133,7 +135,7 @@ namespace ForumApp.BusinessLayer.Core
 
                 await ApplyVoteDeltaAsync(voteData.PostId, voteData.CommentId, voteDifference, userId, targetAuthorId.Value, ct);
                 await _context.SaveChangesAsync(ct);
-                return MapToResponseDTO(existingVote);
+                return ServiceResult<VoteResponseDto>.Success(MapToResponseDTO(existingVote));
             }
 
             var newVote = new VoteData
@@ -172,23 +174,26 @@ namespace ForumApp.BusinessLayer.Core
                 catch { }
             }
 
-            return MapToResponseDTO(newVote);
+            return ServiceResult<VoteResponseDto>.Success(MapToResponseDTO(newVote));
         }
 
-        internal async Task<VoteResponseDto?> UpdateVoteExecution(UpdateVoteRequestDto voteData, int voteId, int userId, CancellationToken ct = default)
+        internal async Task<ServiceResult<VoteResponseDto>> UpdateVoteExecution(UpdateVoteRequestDto voteData, int voteId, int userId, CancellationToken ct = default)
         {
             var vote = await _context.Votes
                 .Include(v => v.Author)
                 .FirstOrDefaultAsync(v => v.Id == voteId, ct);
 
-            if (vote == null) return null;
-            if (vote.AuthorId != userId) return null;
+            if (vote == null)
+                return ServiceResult<VoteResponseDto>.Fail("Vote not found.");
+            if (vote.AuthorId != userId)
+                return ServiceResult<VoteResponseDto>.Fail("You can only change your own vote.");
 
             if (vote.Type == voteData.Type)
-                return MapToResponseDTO(vote);
+                return ServiceResult<VoteResponseDto>.Success(MapToResponseDTO(vote));
 
             var targetAuthorId = await GetTargetAuthorIdAsync(vote.PostId, vote.CommentId, ct);
-            if (!targetAuthorId.HasValue) return null;
+            if (!targetAuthorId.HasValue)
+                return ServiceResult<VoteResponseDto>.Fail("The content you're voting on no longer exists.");
 
             var oldVoteValue = (int)vote.Type;
             var newVoteValue = (int)voteData.Type;
@@ -199,7 +204,7 @@ namespace ForumApp.BusinessLayer.Core
 
             await ApplyVoteDeltaAsync(vote.PostId, vote.CommentId, voteDifference, userId, targetAuthorId.Value, ct);
             await _context.SaveChangesAsync(ct);
-            return MapToResponseDTO(vote);
+            return ServiceResult<VoteResponseDto>.Success(MapToResponseDTO(vote));
         }
 
         internal async Task<ActionResponse> RemoveVoteExecution(int voteId, int userId, CancellationToken ct = default)

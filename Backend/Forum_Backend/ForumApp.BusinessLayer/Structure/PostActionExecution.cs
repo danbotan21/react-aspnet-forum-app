@@ -23,10 +23,10 @@ namespace ForumApp.BusinessLayer.Structure
         public Task<PostBatchResponseDto> GetPostsByUserAsync(int userId, int? viewerId = null, int page = 1, int pageSize = 15, CancellationToken ct = default)
             => GetPostsByUserExecution(userId, viewerId, page, pageSize, ct);
 
-        public Task<PostResponseDto?> CreatePostAsync(PostCreateDto postData, int authorId, CancellationToken ct = default)
+        public Task<ServiceResult<PostResponseDto>> CreatePostAsync(PostCreateDto postData, int authorId, CancellationToken ct = default)
             => CreatePostExecution(postData, authorId, ct);
 
-        public Task<PostResponseDto?> UpdatePostAsync(int postId, PostUpdateDto postData, int requestingUserId, CancellationToken ct = default)
+        public Task<ServiceResult<PostResponseDto>> UpdatePostAsync(int postId, PostUpdateDto postData, int requestingUserId, CancellationToken ct = default)
             => UpdatePostExecution(postId, postData, requestingUserId, ct);
 
         public Task<IReadOnlyList<PostResponseDto>> SearchPostsAsync(string term, int limit, CancellationToken ct = default)

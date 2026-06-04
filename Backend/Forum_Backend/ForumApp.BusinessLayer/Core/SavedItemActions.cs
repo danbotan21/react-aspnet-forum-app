@@ -27,22 +27,24 @@ namespace ForumApp.BusinessLayer.Core
             CreatedAt = savedItem.CreatedAt
         };
 
-        internal async Task<SavedItemResponseDto?> SaveItemExecution(CreateSavedItemRequestDto itemData, int userId, CancellationToken ct = default)
+        internal async Task<ServiceResult<SavedItemResponseDto>> SaveItemExecution(CreateSavedItemRequestDto itemData, int userId, CancellationToken ct = default)
         {
             if ((itemData.PostId == null && itemData.CommentId == null) ||
                 (itemData.PostId != null && itemData.CommentId != null))
-                return null;
+                return ServiceResult<SavedItemResponseDto>.Fail("Provide either a post or a comment to save.");
 
             if (itemData.PostId.HasValue)
             {
                 var postExists = await _context.Posts.AnyAsync(p => p.Id == itemData.PostId.Value, ct);
-                if (!postExists) return null;
+                if (!postExists)
+                    return ServiceResult<SavedItemResponseDto>.Fail("The post you're trying to save no longer exists.");
             }
 
             if (itemData.CommentId.HasValue)
             {
                 var commentExists = await _context.Comments.AnyAsync(c => c.Id == itemData.CommentId.Value, ct);
-                if (!commentExists) return null;
+                if (!commentExists)
+                    return ServiceResult<SavedItemResponseDto>.Fail("The comment you're trying to save no longer exists.");
             }
 
             var existingSavedItem = await _context.SavedItems
@@ -55,7 +57,7 @@ namespace ForumApp.BusinessLayer.Core
                     s.CommentId == itemData.CommentId, ct);
 
             if (existingSavedItem != null)
-                return MapToResponseDTO(existingSavedItem);
+                return ServiceResult<SavedItemResponseDto>.Success(MapToResponseDTO(existingSavedItem));
 
             var newSavedItem = new SavedItemData
             {
@@ -76,7 +78,7 @@ namespace ForumApp.BusinessLayer.Core
             if (newSavedItem.CommentId.HasValue)
                 await _context.Entry(newSavedItem).Reference(s => s.Comment).LoadAsync(ct);
 
-            return MapToResponseDTO(newSavedItem);
+            return ServiceResult<SavedItemResponseDto>.Success(MapToResponseDTO(newSavedItem));
         }
 
         internal async Task<ActionResponse> RemoveSavedItemExecution(int savedItemId, int userId, CancellationToken ct = default)

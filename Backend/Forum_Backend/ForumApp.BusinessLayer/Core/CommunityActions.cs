@@ -217,12 +217,13 @@ namespace ForumApp.BusinessLayer.Core
             return dto;
         }
 
-        internal async Task<CommunityResponseDto?> CreateCommunityExecution(CommunityCreateDto communityData, int authorId, CancellationToken ct = default)
+        internal async Task<ServiceResult<CommunityResponseDto>> CreateCommunityExecution(CommunityCreateDto communityData, int authorId, CancellationToken ct = default)
         {
             var slugExists = await _context.Communities
                 .AnyAsync(c => c.Slug == communityData.Slug, ct);
 
-            if (slugExists) return null;
+            if (slugExists)
+                return ServiceResult<CommunityResponseDto>.Fail("A community with this name already exists.");
 
             var community = new CommunityData
             {
@@ -243,7 +244,7 @@ namespace ForumApp.BusinessLayer.Core
             }
             catch (DbUpdateException)
             {
-                return null;
+                return ServiceResult<CommunityResponseDto>.Fail("The community could not be created. Please try again.");
             }
 
             var membership = new CommunityMemberData
@@ -262,19 +263,20 @@ namespace ForumApp.BusinessLayer.Core
             }
             catch (DbUpdateException) { }
 
-            return MapToDto(community);
+            return ServiceResult<CommunityResponseDto>.Success(MapToDto(community));
         }
 
-        internal async Task<CommunityResponseDto?> UpdateCommunityExecution(int communityId, CommunityUpdateDto communityData, int requestingUserId, CancellationToken ct = default)
+        internal async Task<ServiceResult<CommunityResponseDto>> UpdateCommunityExecution(int communityId, CommunityUpdateDto communityData, int requestingUserId, CancellationToken ct = default)
         {
             var community = await _context.Communities
                 .FirstOrDefaultAsync(c => c.Id == communityId, ct);
 
-            if (community == null) return null;
+            if (community == null)
+                return ServiceResult<CommunityResponseDto>.Fail("Community not found.");
 
             var ownerUserId = await GetOwnerUserIdAsync(communityId, ct);
             if ((ownerUserId == null || ownerUserId != requestingUserId) && !await IsGlobalAdminAsync(requestingUserId, ct))
-                return null;
+                return ServiceResult<CommunityResponseDto>.Fail("Only the community owner can edit this community.");
 
             if (communityData.Title != null) community.Title = communityData.Title;
             if (communityData.Description != null) community.Description = communityData.Description;
@@ -290,10 +292,10 @@ namespace ForumApp.BusinessLayer.Core
             }
             catch (DbUpdateException)
             {
-                return null;
+                return ServiceResult<CommunityResponseDto>.Fail("The community could not be saved. Please try again.");
             }
 
-            return MapToDto(community);
+            return ServiceResult<CommunityResponseDto>.Success(MapToDto(community));
         }
 
         internal async Task<ActionResponse> DeleteCommunityExecution(int communityId, int requestingUserId, bool isPrivileged = false, CancellationToken ct = default)

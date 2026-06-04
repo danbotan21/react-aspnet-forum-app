@@ -27,10 +27,10 @@ namespace ForumApp.BusinessLayer.Structure
         public Task<CommunityResponseDto?> GetCommunityAsync(string slug, int? requestingUserId = null, CancellationToken ct = default)
             => GetCommunityExecution(slug, requestingUserId, ct);
 
-        public Task<CommunityResponseDto?> CreateCommunityAsync(CommunityCreateDto communityData, int authorId, CancellationToken ct = default)
+        public Task<ServiceResult<CommunityResponseDto>> CreateCommunityAsync(CommunityCreateDto communityData, int authorId, CancellationToken ct = default)
             => CreateCommunityExecution(communityData, authorId, ct);
 
-        public Task<CommunityResponseDto?> UpdateCommunityAsync(int communityId, CommunityUpdateDto communityData, int requestingUserId, CancellationToken ct = default)
+        public Task<ServiceResult<CommunityResponseDto>> UpdateCommunityAsync(int communityId, CommunityUpdateDto communityData, int requestingUserId, CancellationToken ct = default)
             => UpdateCommunityExecution(communityId, communityData, requestingUserId, ct);
 
         public Task<ActionResponse> DeleteCommunityAsync(int communityId, int requestingUserId, bool isPrivileged = false, CancellationToken ct = default)

@@ -3,10 +3,12 @@ using System.Net.Mail;
 using ForumApp.BusinessLayer.Interfaces;
 using Microsoft.Extensions.Configuration;
 
-namespace ForumApp.BusinessLayer.Core
+namespace ForumApp.API.Infrastructure
 {
-    // Sends real email through an SMTP server (Gmail by default). Credentials live in
-    // configuration (appsettings.Development.json / user-secrets), never in source.
+    // Infrastructure adapter: sends real email through an SMTP server (Gmail by default).
+    // Implements the BusinessLayer's IEmailAction and lives next to the other infrastructure
+    // adapters (LocalImageStorageService, DummyJsonAdProvider). Credentials live in
+    // configuration (appsettings.Development.json), never in source.
     public class SmtpEmailService : IEmailAction
     {
         private readonly IConfiguration _configuration;

@@ -78,12 +78,12 @@ namespace ForumApp.API.Controller
                 return BadRequest(ModelState);
 
             var authorId = GetCurrentUserId();
-            var created = await _postService.CreatePostAsync(postData, authorId, ct);
+            var result = await _postService.CreatePostAsync(postData, authorId, ct);
 
-            if (created == null)
-                return BadRequest("Community not found, user is not a member, or post could not be saved.");
+            if (!result.IsSuccess)
+                return BadRequest(new { message = result.Error });
 
-            return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
+            return CreatedAtAction(nameof(GetById), new { id = result.Data!.Id }, result.Data);
         }
 
         // PUT api/posts/{id}
@@ -95,12 +95,12 @@ namespace ForumApp.API.Controller
                 return BadRequest(ModelState);
 
             var requestingUserId = GetCurrentUserId();
-            var updated = await _postService.UpdatePostAsync(id, postData, requestingUserId, ct);
+            var result = await _postService.UpdatePostAsync(id, postData, requestingUserId, ct);
 
-            if (updated == null)
-                return NotFound("Post not found or you are not the author.");
+            if (!result.IsSuccess)
+                return BadRequest(new { message = result.Error });
 
-            return Ok(updated);
+            return Ok(result.Data);
         }
 
         // DELETE api/posts/{id}

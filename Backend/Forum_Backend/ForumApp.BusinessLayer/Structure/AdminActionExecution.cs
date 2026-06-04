@@ -44,6 +44,9 @@ namespace ForumApp.BusinessLayer.Structure
         public Task<IReadOnlyList<AdminLogDto>> GetLogsAsync(int limit = 100, CancellationToken ct = default)
             => GetLogsExecution(limit, ct);
 
+        public Task<ActionResponse> ClearLogsAsync(CancellationToken ct = default)
+            => ClearLogsExecution(ct);
+
         public Task LogActionAsync(int actorId, string actionType, string? targetType, int? targetId, string? targetLabel, string? details, CancellationToken ct = default)
             => LogActionExecution(actorId, actionType, targetType, targetId, targetLabel, details, ct);
     }

@@ -201,6 +201,11 @@ namespace ForumApp.API.Controller
         public async Task<IActionResult> GetLogs([FromQuery] int limit = 100, CancellationToken ct = default)
             => Ok(await _adminService.GetLogsAsync(limit, ct));
 
+        // DELETE api/admin/logs — clears the entire audit log
+        [HttpDelete("logs")]
+        public async Task<IActionResult> ClearLogs(CancellationToken ct = default)
+            => Ok(await _adminService.ClearLogsAsync(ct));
+
         private int GetCurrentUserId()
         {
             var claim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");

@@ -28,10 +28,10 @@ namespace ForumApp.API.Controller
             var userId = GetCurrentUserId();
             var result = await _voteService.VoteAsync(voteData, userId, ct);
 
-            if (result == null)
-                return BadRequest(new { message = "Invalid vote data. Provide either PostId OR CommentId." });
+            if (!result.IsSuccess)
+                return BadRequest(new { message = result.Error });
 
-            return Ok(result);
+            return Ok(result.Data);
         }
 
         // PUT api/vote/{voteId}
@@ -45,10 +45,10 @@ namespace ForumApp.API.Controller
             var userId = GetCurrentUserId();
             var result = await _voteService.UpdateVoteAsync(voteData, voteId, userId, ct);
 
-            if (result == null)
-                return NotFound(new { message = "Vote not found or unauthorized" });
+            if (!result.IsSuccess)
+                return BadRequest(new { message = result.Error });
 
-            return Ok(result);
+            return Ok(result.Data);
         }
 
         // DELETE api/vote/{voteId}

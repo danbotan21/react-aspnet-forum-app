@@ -30,6 +30,7 @@ namespace ForumApp.BusinessLayer.Interfaces
 
         // Audit log
         Task<IReadOnlyList<AdminLogDto>> GetLogsAsync(int limit = 100, CancellationToken ct = default);
+        Task<ActionResponse> ClearLogsAsync(CancellationToken ct = default);
         Task LogActionAsync(int actorId, string actionType, string? targetType, int? targetId, string? targetLabel, string? details, CancellationToken ct = default);
     }
 }

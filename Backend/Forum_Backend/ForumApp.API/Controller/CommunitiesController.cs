@@ -113,12 +113,12 @@ namespace ForumApp.API.Controller
                 return BadRequest(ModelState);
 
             var authorId = GetCurrentUserId();
-            var created = await _communityService.CreateCommunityAsync(communityData, authorId, ct);
+            var result = await _communityService.CreateCommunityAsync(communityData, authorId, ct);
 
-            if (created == null)
-                return BadRequest("A community with this slug already exists or could not be created.");
+            if (!result.IsSuccess)
+                return BadRequest(new { message = result.Error });
 
-            return CreatedAtAction(nameof(GetBySlug), new { slug = created.Slug }, created);
+            return CreatedAtAction(nameof(GetBySlug), new { slug = result.Data!.Slug }, result.Data);
         }
 
         // PUT api/communities/{id}
@@ -130,12 +130,12 @@ namespace ForumApp.API.Controller
                 return BadRequest(ModelState);
 
             var requestingUserId = GetCurrentUserId();
-            var updated = await _communityService.UpdateCommunityAsync(id, communityData, requestingUserId, ct);
+            var result = await _communityService.UpdateCommunityAsync(id, communityData, requestingUserId, ct);
 
-            if (updated == null)
-                return NotFound("Community not found or you do not have permission to update it.");
+            if (!result.IsSuccess)
+                return BadRequest(new { message = result.Error });
 
-            return Ok(updated);
+            return Ok(result.Data);
         }
 
         // DELETE api/communities/{id}

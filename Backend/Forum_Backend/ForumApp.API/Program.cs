@@ -1,7 +1,6 @@
 ﻿using ForumApp.API.Hubs;
 using ForumApp.BusinessLayer.Interfaces;
 using ForumApp.API.Infrastructure;
-using ForumApp.BusinessLayer.Core;
 using ForumApp.BusinessLayer.Structure;
 using ForumApp.DataAccess;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -115,6 +114,23 @@ builder.Services.AddScoped<IImageStorageAction, LocalImageStorageService>();
 
 //  JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
+var jwtSecret = jwtSettings["Secret"];
+
+// In production the secret MUST be strong and set outside source control
+// (e.g. the JwtSettings__Secret environment variable). Fail fast otherwise.
+if (!builder.Environment.IsDevelopment())
+{
+    if (string.IsNullOrWhiteSpace(jwtSecret)
+        || jwtSecret.Length < 32
+        || jwtSecret == "REPLACE_IN_appsettings.Development.json_or_ENV_VAR"
+        || jwtSecret == "super-secret-key-min-32-chars-long!!")
+    {
+        throw new InvalidOperationException(
+            "JwtSettings:Secret must be a strong, unique value in production. " +
+            "Set it via the JwtSettings__Secret environment variable.");
+    }
+}
+
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -127,7 +143,10 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidIssuer = jwtSettings["Issuer"],
             ValidAudience = jwtSettings["Audience"],
             IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(jwtSettings["Secret"]!))
+                Encoding.UTF8.GetBytes(jwtSecret!)),
+            // No grace period past expiry (default is 5 minutes). Safe here because the
+            // client refreshes proactively well before the 15-min access token expires.
+            ClockSkew = TimeSpan.Zero
         };
 
         // SignalR passes the JWT as a query param for WebSocket connections

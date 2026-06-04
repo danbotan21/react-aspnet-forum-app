@@ -28,10 +28,10 @@ namespace ForumApp.API.Controller
             var userId = GetCurrentUserId();
             var result = await _savedItemService.SaveItemAsync(itemData, userId, ct);
 
-            if (result == null)
-                return BadRequest(new { message = "Invalid data. Provide either PostId OR CommentId." });
+            if (!result.IsSuccess)
+                return BadRequest(new { message = result.Error });
 
-            return Ok(result);
+            return Ok(result.Data);
         }
 
         // DELETE api/saveditem/{savedItemId}

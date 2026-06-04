@@ -13,15 +13,19 @@ namespace ForumApp.Domain.Entities.User
         public int Id { get; set; }
 
         [Required]
+        [StringLength(50)]
         public string UserName { get; set; } = string.Empty;
 
         [Required]
+        [StringLength(100)]
         public string Email { get; set; } = string.Empty;
 
         [Required]
+        [StringLength(100)]
         public string PasswordHash { get; set; } = string.Empty;
 
         [Required]
+        [StringLength(100)]
         public string TokenHash { get; set; } = string.Empty;
 
         public DateTime ExpiresAt { get; set; }

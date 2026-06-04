@@ -11,7 +11,7 @@ namespace ForumApp.BusinessLayer.Structure
         public SavedItemActionExecution(ForumDbContext context)
             : base(context) { }
 
-        public Task<SavedItemResponseDto?> SaveItemAsync(CreateSavedItemRequestDto itemData, int userId, CancellationToken ct = default)
+        public Task<ServiceResult<SavedItemResponseDto>> SaveItemAsync(CreateSavedItemRequestDto itemData, int userId, CancellationToken ct = default)
             => SaveItemExecution(itemData, userId, ct);
 
         public Task<ActionResponse> RemoveSavedItemAsync(int savedItemId, int userId, CancellationToken ct = default)

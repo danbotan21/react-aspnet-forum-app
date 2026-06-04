@@ -275,21 +275,26 @@ namespace ForumApp.BusinessLayer.Core
             };
         }
 
-        internal async Task<PostResponseDto?> CreatePostExecution(PostCreateDto postData, int authorId, CancellationToken ct = default)
+        internal async Task<ServiceResult<PostResponseDto>> CreatePostExecution(PostCreateDto postData, int authorId, CancellationToken ct = default)
         {
             var community = await _context.Communities
                 .Select(c => new { c.Id, c.Type })
                 .FirstOrDefaultAsync(c => c.Id == postData.CommunityId, ct);
 
-            if (community == null) return null;
+            if (community == null)
+                return ServiceResult<PostResponseDto>.Fail("Community not found.");
 
             var membership = await _context.CommunityMembers
                 .FirstOrDefaultAsync(m => m.CommunityId == postData.CommunityId && m.UserId == authorId, ct);
 
-            if (membership == null || membership.IsBanned) return null;
+            if (membership == null)
+                return ServiceResult<PostResponseDto>.Fail("You must join this community before posting.");
+
+            if (membership.IsBanned)
+                return ServiceResult<PostResponseDto>.Fail("You are banned from this community and cannot post.");
 
             if (community.Type == "restricted" && membership.Role != "owner" && membership.Role != "moderator")
-                return null;
+                return ServiceResult<PostResponseDto>.Fail("This is a restricted community — only moderators can post here.");
 
             var post = new PostData
             {
@@ -313,24 +318,26 @@ namespace ForumApp.BusinessLayer.Core
             }
             catch (DbUpdateException)
             {
-                return null;
+                return ServiceResult<PostResponseDto>.Fail("The post could not be saved. Please try again.");
             }
 
             await _context.Entry(post).Reference(p => p.Author).LoadAsync(ct);
             await _context.Entry(post).Reference(p => p.Community).LoadAsync(ct);
 
-            return MapToDto(post);
+            return ServiceResult<PostResponseDto>.Success(MapToDto(post));
         }
 
-        internal async Task<PostResponseDto?> UpdatePostExecution(int postId, PostUpdateDto postData, int requestingUserId, CancellationToken ct = default)
+        internal async Task<ServiceResult<PostResponseDto>> UpdatePostExecution(int postId, PostUpdateDto postData, int requestingUserId, CancellationToken ct = default)
         {
             var post = await _context.Posts
                 .Include(p => p.Author)
                 .Include(p => p.Community)
                 .FirstOrDefaultAsync(p => p.Id == postId, ct);
 
-            if (post == null) return null;
-            if (post.AuthorId != requestingUserId) return null;
+            if (post == null)
+                return ServiceResult<PostResponseDto>.Fail("Post not found.");
+            if (post.AuthorId != requestingUserId)
+                return ServiceResult<PostResponseDto>.Fail("You can only edit your own post.");
 
             post.Title = postData.Title;
             post.Body = postData.Body;
@@ -344,10 +351,10 @@ namespace ForumApp.BusinessLayer.Core
             }
             catch (DbUpdateException)
             {
-                return null;
+                return ServiceResult<PostResponseDto>.Fail("The post could not be saved. Please try again.");
             }
 
-            return MapToDto(post);
+            return ServiceResult<PostResponseDto>.Success(MapToDto(post));
         }
 
         internal async Task<IReadOnlyList<PostResponseDto>> SearchPostsExecution(string term, int limit, CancellationToken ct = default)

@@ -8,13 +8,13 @@ namespace ForumApp.BusinessLayer.Interfaces
 
     public interface ICommunityAction
     {
-        Task<CommunityResponseDto?> CreateCommunityAsync(CommunityCreateDto communityData, int authorId, CancellationToken ct = default);
+        Task<ServiceResult<CommunityResponseDto>> CreateCommunityAsync(CommunityCreateDto communityData, int authorId, CancellationToken ct = default);
         Task<IReadOnlyList<CommunityResponseDto>> GetAllCommunitiesAsync(int? requestingUserId = null, CancellationToken ct = default);
         Task<IReadOnlyList<CommunityResponseDto>> GetAllCommunitiesByTypeAsync(string type, int? requestingUserId = null, CancellationToken ct = default);
         Task<IReadOnlyList<CommunityResponseDto>> GetCommunitiesByUserAsync(int userId, CancellationToken ct = default);
         Task<IReadOnlyList<CommunityResponseDto>> SearchCommunitiesAsync(string searchTerm, int? requestingUserId = null, CancellationToken ct = default);
         Task<CommunityResponseDto?> GetCommunityAsync(string slug, int? requestingUserId = null, CancellationToken ct = default);
-        Task<CommunityResponseDto?> UpdateCommunityAsync(int communityId, CommunityUpdateDto communityData, int requestingUserId, CancellationToken ct = default);
+        Task<ServiceResult<CommunityResponseDto>> UpdateCommunityAsync(int communityId, CommunityUpdateDto communityData, int requestingUserId, CancellationToken ct = default);
         Task<ActionResponse> DeleteCommunityAsync(int communityId, int requestingUserId, bool isPrivileged = false, CancellationToken ct = default);
         Task<ActionResponse> JoinCommunityAsync(int communityId, int userId, CancellationToken ct = default);
         Task<ActionResponse> LeaveCommunityAsync(int communityId, int userId, CancellationToken ct = default);

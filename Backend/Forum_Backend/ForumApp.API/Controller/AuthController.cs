@@ -2,7 +2,9 @@ using System.Security.Claims;
 using ForumApp.BusinessLayer.Interfaces;
 using ForumApp.Domain.Models.User;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Hosting;
 
 namespace ForumApp.API.Controller
 {
@@ -12,11 +14,31 @@ namespace ForumApp.API.Controller
     {
         private readonly IUserAction _userService;
         private readonly IConfiguration _configuration;
+        // Secure cookies require HTTPS. Locally we run on http://localhost, so the flag
+        // must be OFF in Development (or the browser drops the refresh cookie) and ON
+        // everywhere else (production over HTTPS).
+        private readonly bool _useSecureCookie;
 
-        public AuthController(IUserAction userService, IConfiguration configuration)
+        public AuthController(IUserAction userService, IConfiguration configuration, IWebHostEnvironment env)
         {
             _userService = userService;
             _configuration = configuration;
+            _useSecureCookie = !env.IsDevelopment();
+        }
+
+        // Single source of truth for the refresh-token cookie options so Append and
+        // Delete always match (a cookie can only be deleted with matching attributes).
+        private CookieOptions BuildRefreshCookieOptions(DateTimeOffset? expires = null)
+        {
+            var options = new CookieOptions
+            {
+                HttpOnly = true,
+                SameSite = SameSiteMode.Lax,
+                Secure = _useSecureCookie,
+                Path = "/",
+            };
+            if (expires.HasValue) options.Expires = expires;
+            return options;
         }
 
         [HttpPost("register")]
@@ -171,12 +193,7 @@ namespace ForumApp.API.Controller
             if (!string.IsNullOrEmpty(refreshToken))
                 await _userService.LogoutAsync(refreshToken, ct);
 
-            Response.Cookies.Delete("refreshToken", new CookieOptions
-            {
-                HttpOnly = true,
-                SameSite = SameSiteMode.Lax,
-                Secure = false
-            });
+            Response.Cookies.Delete("refreshToken", BuildRefreshCookieOptions());
             return Ok(new { message = "Logged out." });
         }
 
@@ -272,12 +289,7 @@ namespace ForumApp.API.Controller
             if (!action.IsSuccess)
                 return BadRequest(new { message = action.Message });
 
-            Response.Cookies.Delete("refreshToken", new CookieOptions
-            {
-                HttpOnly = true,
-                SameSite = SameSiteMode.Lax,
-                Secure = false
-            });
+            Response.Cookies.Delete("refreshToken", BuildRefreshCookieOptions());
 
             return Ok(action.Message);
         }
@@ -285,13 +297,10 @@ namespace ForumApp.API.Controller
         private void SetRefreshTokenCookie(string refreshToken)
         {
             var expiryDays = int.Parse(_configuration["JwtSettings:RefreshTokenExpiryDays"]!);
-            Response.Cookies.Append("refreshToken", refreshToken, new CookieOptions
-            {
-                HttpOnly = true,
-                SameSite = SameSiteMode.Lax,
-                Secure = false, // Set true in production (requires HTTPS)
-                Expires = DateTimeOffset.UtcNow.AddDays(expiryDays)
-            });
+            Response.Cookies.Append(
+                "refreshToken",
+                refreshToken,
+                BuildRefreshCookieOptions(DateTimeOffset.UtcNow.AddDays(expiryDays)));
         }
 
         private int GetCurrentUserId()

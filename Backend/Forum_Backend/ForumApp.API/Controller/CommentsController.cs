@@ -55,12 +55,12 @@ namespace ForumApp.API.Controller
                 return BadRequest(ModelState);
 
             var authorId = GetCurrentUserId();
-            var created = await _commentService.CreateCommentAsync(commentData, authorId, ct);
+            var result = await _commentService.CreateCommentAsync(commentData, authorId, ct);
 
-            if (created == null)
-                return BadRequest("Comment could not be created. Ensure post exists, parent comment is valid, and user is a member of the community.");
+            if (!result.IsSuccess)
+                return BadRequest(new { message = result.Error });
 
-            return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
+            return CreatedAtAction(nameof(GetById), new { id = result.Data!.Id }, result.Data);
         }
 
         // PUT api/comments/{id}
@@ -72,12 +72,12 @@ namespace ForumApp.API.Controller
                 return BadRequest(ModelState);
 
             var requestingUserId = GetCurrentUserId();
-            var updated = await _commentService.UpdateCommentAsync(id, commentData, requestingUserId, ct);
+            var result = await _commentService.UpdateCommentAsync(id, commentData, requestingUserId, ct);
 
-            if (updated == null)
-                return NotFound("Comment not found or you are not the author.");
+            if (!result.IsSuccess)
+                return BadRequest(new { message = result.Error });
 
-            return Ok(updated);
+            return Ok(result.Data);
         }
 
         // DELETE api/comments/{id}

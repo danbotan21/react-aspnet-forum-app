@@ -11,10 +11,10 @@ namespace ForumApp.BusinessLayer.Structure
         public VoteActionExecution(ForumDbContext context, INotificationAction notificationActions)
             : base(context, notificationActions) { }
 
-        public Task<VoteResponseDto?> VoteAsync(CreateVoteRequestDto voteData, int userId, CancellationToken ct = default)
+        public Task<ServiceResult<VoteResponseDto>> VoteAsync(CreateVoteRequestDto voteData, int userId, CancellationToken ct = default)
             => VoteExecution(voteData, userId, ct);
 
-        public Task<VoteResponseDto?> UpdateVoteAsync(UpdateVoteRequestDto voteData, int voteId, int userId, CancellationToken ct = default)
+        public Task<ServiceResult<VoteResponseDto>> UpdateVoteAsync(UpdateVoteRequestDto voteData, int voteId, int userId, CancellationToken ct = default)
             => UpdateVoteExecution(voteData, voteId, userId, ct);
 
         public Task<ActionResponse> RemoveVoteAsync(int voteId, int userId, CancellationToken ct = default)

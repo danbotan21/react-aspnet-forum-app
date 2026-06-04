@@ -13,6 +13,8 @@ namespace ForumApp.Domain.Entities.Draft
         [ForeignKey("Author")]
         public int AuthorId { get; set; }
         public UserData Author { get; set; } = null!;
+        [Required]
+        [StringLength(300)]
         public string Title { get; set; } = string.Empty;
         public string? Body { get; set; }
         public string? LinkUrl { get; set; }

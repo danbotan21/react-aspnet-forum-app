@@ -106,22 +106,28 @@ namespace ForumApp.BusinessLayer.Core
             return comments.Select(MapToDto).ToList().AsReadOnly();
         }
 
-        internal async Task<CommentResponseDto?> CreateCommentExecution(CommentCreateDto commentData, int authorId, CancellationToken ct = default)
+        internal async Task<ServiceResult<CommentResponseDto>> CreateCommentExecution(CommentCreateDto commentData, int authorId, CancellationToken ct = default)
         {
             var normalizedBody = commentData.Body?.Trim();
-            if (string.IsNullOrWhiteSpace(normalizedBody)) return null;
+            if (string.IsNullOrWhiteSpace(normalizedBody))
+                return ServiceResult<CommentResponseDto>.Fail("Comment cannot be empty.");
 
             var postInfo = await _context.Posts
                 .Where(p => p.Id == commentData.PostId)
                 .Select(p => new { p.Id, p.CommunityId, p.AuthorId, p.Title, CommunitySlug = p.Community.Slug })
                 .FirstOrDefaultAsync(ct);
 
-            if (postInfo == null) return null;
+            if (postInfo == null)
+                return ServiceResult<CommentResponseDto>.Fail("Post not found.");
 
             var membership = await _context.CommunityMembers
                 .FirstOrDefaultAsync(m => m.CommunityId == postInfo.CommunityId && m.UserId == authorId, ct);
 
-            if (membership == null || membership.IsBanned) return null;
+            if (membership == null)
+                return ServiceResult<CommentResponseDto>.Fail("You must join this community before commenting.");
+
+            if (membership.IsBanned)
+                return ServiceResult<CommentResponseDto>.Fail("You are banned from this community and cannot comment.");
 
             int? parentCommentAuthorId = null;
             if (commentData.ParentCommentId.HasValue)
@@ -131,7 +137,8 @@ namespace ForumApp.BusinessLayer.Core
                     .Select(c => new { c.AuthorId })
                     .FirstOrDefaultAsync(ct);
 
-                if (parentInfo == null) return null;
+                if (parentInfo == null)
+                    return ServiceResult<CommentResponseDto>.Fail("The comment you're replying to no longer exists.");
                 parentCommentAuthorId = parentInfo.AuthorId;
             }
 
@@ -156,7 +163,7 @@ namespace ForumApp.BusinessLayer.Core
             }
             catch (DbUpdateException)
             {
-                return null;
+                return ServiceResult<CommentResponseDto>.Fail("The comment could not be saved. Please try again.");
             }
 
             await _context.Entry(comment).Reference(c => c.Author).LoadAsync(ct);
@@ -202,20 +209,23 @@ namespace ForumApp.BusinessLayer.Core
                 }
             }
 
-            return MapToDto(comment);
+            return ServiceResult<CommentResponseDto>.Success(MapToDto(comment));
         }
 
-        internal async Task<CommentResponseDto?> UpdateCommentExecution(int commentId, CommentCreateDto commentData, int requestingUserId, CancellationToken ct = default)
+        internal async Task<ServiceResult<CommentResponseDto>> UpdateCommentExecution(int commentId, CommentCreateDto commentData, int requestingUserId, CancellationToken ct = default)
         {
             var comment = await _context.Comments
                 .Include(c => c.Author)
                 .FirstOrDefaultAsync(c => c.Id == commentId, ct);
 
-            if (comment == null) return null;
-            if (comment.AuthorId != requestingUserId) return null;
+            if (comment == null)
+                return ServiceResult<CommentResponseDto>.Fail("Comment not found.");
+            if (comment.AuthorId != requestingUserId)
+                return ServiceResult<CommentResponseDto>.Fail("You can only edit your own comment.");
 
             var normalizedBody = commentData.Body?.Trim();
-            if (string.IsNullOrWhiteSpace(normalizedBody)) return null;
+            if (string.IsNullOrWhiteSpace(normalizedBody))
+                return ServiceResult<CommentResponseDto>.Fail("Comment cannot be empty.");
 
             comment.Body = normalizedBody;
             comment.EditedAt = DateTime.UtcNow;
@@ -226,10 +236,10 @@ namespace ForumApp.BusinessLayer.Core
             }
             catch (DbUpdateException)
             {
-                return null;
+                return ServiceResult<CommentResponseDto>.Fail("The comment could not be saved. Please try again.");
             }
 
-            return MapToDto(comment);
+            return ServiceResult<CommentResponseDto>.Success(MapToDto(comment));
         }
 
         internal async Task<ActionResponse> DeleteCommentExecution(int commentId, int requestingUserId, bool isPrivileged = false, CancellationToken ct = default)
