@@ -339,10 +339,8 @@ export function CommunityPage() {
       return
     }
 
-    const communityLabel = `c/${community.slug ?? community.name ?? ''}`.replace(
-      /\/$/,
-      '',
-    )
+    const communityLabel =
+      `c/${community.slug ?? community.name ?? ''}`.replace(/\/$/, '')
 
     try {
       if (isMember) {
@@ -644,24 +642,36 @@ export function CommunityPage() {
                     </Link>
                   </span>
                 )}
-                {!isBanned && (myRole === 'owner' || myRole === 'moderator' || (isMember && myRole === 'member')) && (
-                  <span
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      marginLeft: '8px',
-                      padding: '2px 8px',
-                      borderRadius: '999px',
-                      fontSize: '12px',
-                      fontWeight: 700,
-                      background: myRole === 'owner' ? '#f59e0b' : myRole === 'moderator' ? '#2563eb' : 'rgba(255,255,255,0.25)',
-                      color: '#fff',
-                    }}
-                  >
-                    {myRole === 'owner' ? '👑 Owner' : myRole === 'moderator' ? '🛡 Moderator' : 'Member'}
-                  </span>
-                )}
+                {!isBanned &&
+                  (myRole === 'owner' ||
+                    myRole === 'moderator' ||
+                    (isMember && myRole === 'member')) && (
+                    <span
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        marginLeft: '8px',
+                        padding: '2px 8px',
+                        borderRadius: '999px',
+                        fontSize: '12px',
+                        fontWeight: 700,
+                        background:
+                          myRole === 'owner'
+                            ? '#f59e0b'
+                            : myRole === 'moderator'
+                              ? '#2563eb'
+                              : 'rgba(255,255,255,0.25)',
+                        color: '#fff',
+                      }}
+                    >
+                      {myRole === 'owner'
+                        ? '👑 Owner'
+                        : myRole === 'moderator'
+                          ? '🛡 Moderator'
+                          : 'Member'}
+                    </span>
+                  )}
               </div>
               <div className='community-head-actions'>
                 {!isBanned &&
@@ -679,7 +689,11 @@ export function CommunityPage() {
                 {isBanned ? (
                   <div
                     className='community-private-badge'
-                    style={{ background: '#dc2626', borderColor: '#dc2626', color: '#fff' }}
+                    style={{
+                      background: '#dc2626',
+                      borderColor: '#dc2626',
+                      color: '#fff',
+                    }}
                   >
                     <FaBan /> Banned
                   </div>
@@ -817,7 +831,10 @@ export function CommunityPage() {
                               to={`/user/${encodeURIComponent(post.authorName)}`}
                             >
                               <img
-                                src={normalizeImageSrc(post.authorAvatarUrl) || avatar}
+                                src={
+                                  normalizeImageSrc(post.authorAvatarUrl) ||
+                                  avatar
+                                }
                                 alt={post.authorName}
                                 className='avatar'
                               />
@@ -902,7 +919,9 @@ export function CommunityPage() {
                                       onClick={() => {
                                         setOpenMorePostId(null)
                                         if (!token) {
-                                          toast.error('Please log in to report.')
+                                          toast.error(
+                                            'Please log in to report.',
+                                          )
                                           return
                                         }
                                         setReportingPost({ id: post.id })
@@ -1107,7 +1126,6 @@ export function CommunityPage() {
           onClose={() => setReportingPost(null)}
         />
       )}
-
     </main>
   )
 }

@@ -100,7 +100,13 @@ export const ChatProvider = ({ children }) => {
 
   return (
     <ChatContext.Provider
-      value={{ totalUnread, setTotalUnread, refreshUnread, subscribe, notifyTyping }}
+      value={{
+        totalUnread,
+        setTotalUnread,
+        refreshUnread,
+        subscribe,
+        notifyTyping,
+      }}
     >
       {children}
     </ChatContext.Provider>
