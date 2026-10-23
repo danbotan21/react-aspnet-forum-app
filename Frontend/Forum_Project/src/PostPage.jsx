@@ -87,6 +87,7 @@ export function PostPage() {
   const [isCommunityOwner, setIsCommunityOwner] = useState(false)
   const [isCommunityModerator, setIsCommunityModerator] = useState(false)
   const [isBanned, setIsBanned] = useState(false)
+  const [communityInfo, setCommunityInfo] = useState(null)
 
   const [showDeletePostModal, setShowDeletePostModal] = useState(false)
   const [isDeletingPost, setIsDeletingPost] = useState(false)
@@ -374,6 +375,20 @@ export function PostPage() {
     communityname ?? 'community',
   ).toLowerCase()
   const postImageSrc = normalizeImageSrc(post?.imageUrl ?? post?.ImageUrl)
+
+  // Community description and member count for the sidebar
+  useEffect(() => {
+    let cancelled = false
+    fetch(`/api/communities/${encodeURIComponent(communitySlug)}`)
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data) => {
+        if (!cancelled) setCommunityInfo(data)
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [communitySlug])
 
   const handlePostVote = async (direction) => {
     if (!token || !post?.id) {
@@ -1427,10 +1442,15 @@ export function PostPage() {
         <aside className='post-page-side'>
           <section className='post-page-side-card'>
             <h3>About r/{communitySlug}</h3>
-            <p>
-              Pagina de postare foloseste ruta dinamica pentru comunitate si
-              id-ul postarii. Datele reale vor fi conectate din backend.
-            </p>
+            <p>{communityInfo?.description || 'No description yet.'}</p>
+            {communityInfo && (
+              <p>
+                {communityInfo.membersCount ?? 0} members ·{' '}
+                <Link to={`/community/${encodeURIComponent(communitySlug)}`}>
+                  View community
+                </Link>
+              </p>
+            )}
           </section>
         </aside>
       </section>
