@@ -108,7 +108,12 @@ builder.Services.AddHttpClient<IAdProviderAction, DummyJsonAdProvider>(client =>
 //  Auth services
 builder.Services.AddScoped<ITokenAction, TokenActionExecution>();
 builder.Services.AddScoped<IUserAction, UserActionExecution>();
-builder.Services.AddScoped<IEmailAction, SmtpEmailService>();
+// Without SMTP credentials, emails (login codes, confirmation links) are written to the console
+if (string.IsNullOrWhiteSpace(builder.Configuration["Email:SenderEmail"])
+    || string.IsNullOrWhiteSpace(builder.Configuration["Email:AppPassword"]))
+    builder.Services.AddScoped<IEmailAction, LoggingEmailService>();
+else
+    builder.Services.AddScoped<IEmailAction, SmtpEmailService>();
 builder.Services.AddScoped<IImageAction, ImageActionExecution>();
 builder.Services.AddScoped<IImageStorageAction, LocalImageStorageService>();
 
