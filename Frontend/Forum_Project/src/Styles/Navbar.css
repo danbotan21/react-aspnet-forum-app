@@ -1,0 +1,414 @@
+.navbar {
+  position: fixed;
+  padding-top: 10px;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--navbar-height, 48px);
+  background-color: #ffffff;
+  border-bottom: 1px solid #e9ecef;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  z-index: 100;
+  font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+}
+
+.navbar-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.navbar-left {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.navbar-center {
+  flex: 0 1 560px; /* Search bar-ul în centru */
+  min-width: 200px;
+  padding-right: 460px;
+}
+
+.navbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* Logo "credit" */
+.navbar-logo {
+  font-size: 2rem;
+  font-weight: 700;
+  color: rgb(15, 67, 199);
+  text-decoration: none;
+  /* text-transform: lowercase; */
+  letter-spacing: -0.02em;
+  flex-shrink: 0;
+  transition: opacity 0.2s ease;
+  margin-left: 46px;
+}
+
+.navbar-logo:hover {
+  opacity: 0.85;
+}
+
+/* Search bar */
+.navbar-search-wrap {
+  flex: 1;
+  min-width: 0;
+  max-width: 560px;
+  height: 36px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  background-color: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 20px;
+  padding: 0 12px 0 14px;
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease;
+  margin-left: 30%;
+}
+
+.navbar-search-wrap:focus-within {
+  background-color: #ffffff;
+  border-color: rgb(15, 67, 199);
+  box-shadow: 0 0 0 1px rgb(15, 67, 199);
+}
+
+.navbar-search-icon-left {
+  color: #7c7c7c;
+  font-size: 0.875rem;
+  margin-right: 10px;
+  flex-shrink: 0;
+}
+
+.navbar-search {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: none;
+  background: transparent;
+  font-size: 0.9375rem;
+  color: #1a1a1b;
+  outline: none;
+}
+
+.navbar-search::placeholder {
+  color: #7c7c7c;
+}
+
+.navbar-search-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  margin-left: 8px;
+  padding-left: 8px;
+  border-left: 1px solid #e9ecef;
+}
+
+.navbar-search-icon-right {
+  color: rgb(15, 67, 199);
+  font-size: 0.75rem;
+}
+
+.navbar-search-ask {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #7c7c7c;
+}
+
+/* Search dropdown */
+.navbar-search-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  background: #fff;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  z-index: 100;
+  overflow: hidden;
+}
+
+.navbar-search-dropdown-label {
+  padding: 6px 12px 4px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #adb5bd;
+}
+
+.navbar-search-dropdown-item {
+  padding: 8px 12px;
+  cursor: pointer;
+  border-bottom: 1px solid #f1f3f5;
+  transition: background 0.1s;
+}
+
+.navbar-search-dropdown-item:last-child {
+  border-bottom: none;
+}
+
+.navbar-search-dropdown-item:hover {
+  background: #f8f9fa;
+}
+
+.navbar-search-dropdown-item strong {
+  display: block;
+  font-size: 0.875rem;
+  color: #212529;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.navbar-search-dropdown-item span {
+  font-size: 0.75rem;
+  color: #6c757d;
+}
+
+.navbar-search-dropdown-all {
+  text-align: center;
+  color: #0f43c7 !important;
+  font-size: 0.85rem;
+  font-weight: 500;
+  padding: 10px 12px;
+}
+
+/* Right: icon buttons + profile */
+.navbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.navbar-icon-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: #1a1a1b;
+  font-size: 1rem;
+  border-radius: 50%;
+  cursor: pointer;
+  text-decoration: none;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.navbar-icon-btn:hover {
+  background-color: #f8f9fa;
+  color: rgb(15, 67, 199);
+}
+
+.navbar-icon-btn-plus {
+  color: rgb(15, 67, 199);
+  font-size: 1.125rem;
+}
+
+.navbar-icon-btn-plus:hover {
+  background-color: rgba(15, 67, 199, 0.08);
+  color: rgb(15, 67, 199);
+}
+
+/* Profile */
+.navbar-profile {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 8px;
+  padding: 2px 6px 2px 2px;
+  border-radius: 24px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.navbar-profile:hover {
+  background-color: #f8f9fa;
+}
+
+.navbar-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%);
+  border: 2px solid rgb(15, 67, 199);
+}
+
+.navbar-avatar-chevron {
+  color: #7c7c7c;
+  font-size: 0.625rem;
+  transition: color 0.2s ease;
+}
+
+.navbar-profile:hover .navbar-avatar-chevron {
+  color: #1a1a1b;
+}
+
+.navbar-avatar {
+  margin-right: 15px;
+}
+
+/* ===== Profile Dropdown ===== */
+.profile-dropdown {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  background: #ffffff;
+  border: 1px solid #e9ecef;
+  border-radius: 16px;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.12),
+    0 2px 8px rgba(0, 0, 0, 0.08);
+  min-width: 264px;
+  z-index: 200;
+  overflow: hidden;
+  padding: 8px 0;
+}
+
+.profile-dropdown-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px 16px 16px;
+  gap: 6px;
+}
+
+.profile-dropdown-avatar {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  border: 2px solid rgb(15, 67, 199);
+  object-fit: cover;
+}
+
+.profile-dropdown-username {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #1a1a1b;
+  margin-top: 4px;
+}
+
+a {
+  text-decoration: none;
+  color: #e74c3c;
+}
+
+.profile-dropdown-karma {
+  font-size: 0.8125rem;
+  color: #7c7c7c;
+}
+
+.profile-dropdown-divider {
+  height: 1px;
+  background-color: #e9ecef;
+  margin: 4px 0;
+}
+
+.profile-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 16px;
+  font-size: 0.9375rem;
+  color: #1a1a1b;
+  text-decoration: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+  font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+  box-sizing: border-box;
+}
+
+.profile-dropdown-item:hover {
+  background-color: #f8f9fa;
+  color: rgb(15, 67, 199);
+}
+
+.profile-dropdown-item:hover .profile-dropdown-item-icon {
+  color: rgb(15, 67, 199);
+}
+
+.profile-dropdown-item-icon {
+  font-size: 1rem;
+  color: #7c7c7c;
+  flex-shrink: 0;
+  transition: color 0.15s ease;
+}
+
+.profile-dropdown-logout {
+  color: #e74c3c;
+}
+
+.profile-dropdown-logout .profile-dropdown-item-icon {
+  color: #e74c3c;
+}
+
+.profile-dropdown-logout:hover {
+  background-color: #fff5f5;
+  color: #c0392b;
+}
+
+.profile-dropdown-logout:hover .profile-dropdown-item-icon {
+  color: #c0392b;
+}
+
+/* ===== Premium indicator on the navbar avatar ===== */
+.navbar-avatar-wrap {
+  position: relative;
+  display: inline-flex;
+  line-height: 0;
+}
+/* Premium = a thin gold gradient ring around the avatar (no blue ring, no crown).
+   The ring is the wrapper's gradient background showing through 2px of padding. */
+.navbar-avatar-wrap--premium {
+  padding: 2px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ffe9a8 0%, #f3c24a 50%, #d99a16 100%);
+  margin-right: 15px; /* carries the avatar's right spacing so the ring stays circular */
+}
+.navbar-avatar-wrap--premium .navbar-avatar {
+  border: 0; /* drop the default blue ring — the gold gradient is the ring now */
+  margin-right: 0;
+}
+
+/* ===== Premium styling inside the profile dropdown ===== */
+.profile-dropdown-header--premium {
+  /* Pull up over the dropdown's 8px top padding so the gold gradient reaches the
+     very top edge (no white strip); compensate with extra top padding. */
+  margin-top: -8px;
+  padding-top: 28px;
+  background: linear-gradient(180deg, #fff7e6 0%, #ffffff 100%);
+  border-bottom: 1px solid #f1e2bb;
+}
+.profile-dropdown-avatar-wrap {
+  display: inline-flex;
+  line-height: 0;
+  border-radius: 50%;
+}
+.profile-dropdown-avatar-wrap--premium {
+  padding: 3px;
+  background: linear-gradient(135deg, #ffe9a8 0%, #f3c24a 50%, #d99a16 100%);
+  box-shadow: 0 4px 12px rgba(224, 165, 27, 0.3);
+}
+.profile-dropdown-avatar-wrap--premium .profile-dropdown-avatar {
+  border: 2px solid #ffffff; /* white gap makes the gold read as a clean ring */
+}

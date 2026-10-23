@@ -1,0 +1,36 @@
+#root {
+  min-height: 100vh;
+}
+
+/* * {
+
+} */
+
+:root {
+  --navbar-height: 48px;
+  --sidebar-width: 280px;
+}
+
+.app-layout {
+  min-height: 100vh;
+  background-color: #dae0e6;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-main {
+  padding-top: var(--navbar-height);
+  margin-left: var(--sidebar-width);
+  min-height: calc(100vh - var(--navbar-height));
+  background-color: #ffffff;
+  width: calc(100% - var(--sidebar-width));
+  overflow-x: hidden;
+}
+
+/* Responsive pentru mobil */
+@media (max-width: 768px) {
+  .app-main {
+    margin-left: 0;
+    width: 100%;
+  }
+}

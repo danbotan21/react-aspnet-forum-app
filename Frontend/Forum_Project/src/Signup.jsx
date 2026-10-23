@@ -1,0 +1,274 @@
+import { useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { FaGoogle, FaStar, FaCheckCircle, FaLock } from 'react-icons/fa'
+import { useGoogleLogin } from '@react-oauth/google'
+import { useAuth } from './AuthContext'
+import './Styles/Signup.css'
+
+export const Signup = () => {
+  const navigate = useNavigate()
+  const { login } = useAuth()
+
+  const [email, setEmail] = useState('')
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [submittedEmail, setSubmittedEmail] = useState('')
+  const [resendInfo, setResendInfo] = useState('')
+
+  const handleGoogleSignup = useGoogleLogin({
+    flow: 'implicit',
+    onSuccess: async (tokenResponse) => {
+      setError('')
+      setLoading(true)
+      try {
+        const res = await fetch('/api/auth/google', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ accessToken: tokenResponse.access_token }),
+        })
+
+        if (res.ok) {
+          const data = await res.json()
+          login(data.token, data.user)
+          navigate('/home')
+        } else {
+          setError('Inregistrarea cu Google a esuat. Incearca din nou.')
+        }
+      } catch {
+        setError('Nu s-a putut contacta serverul. Verifica conexiunea.')
+      } finally {
+        setLoading(false)
+      }
+    },
+    onError: () => setError('Inregistrarea cu Google a esuat.'),
+  })
+
+  const handleSubmit = async (event) => {
+    event.preventDefault()
+    setError('')
+
+    // Validare pe frontend
+    if (password !== confirmPassword) {
+      setError('Parolele nu coincid.')
+      return
+    }
+
+    if (password.length < 6) {
+      setError('Parola trebuie sa aiba minim 6 caractere.')
+      return
+    }
+
+    if (username.length < 6) {
+      setError('Numele de utilizator trebuie sa aiba minim 6 caractere.')
+      return
+    }
+
+    setLoading(true)
+
+    try {
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userName: username,
+          email: email,
+          password: password,
+        }),
+      })
+
+      if (response.status === 201) {
+        // Contul NU e creat încă — îl ținem aici până confirmă pe email.
+        setSubmittedEmail(email)
+      } else if (response.status === 400) {
+        const data = await response.json()
+        setError(data.message || 'Email-ul sau username-ul este deja folosit.')
+      } else {
+        setError('A aparut o eroare neasteptata. Incearca din nou.')
+      }
+    } catch (err) {
+      setError('Nu s-a putut contacta serverul. Verifica conexiunea.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleResend = async () => {
+    setResendInfo('')
+    try {
+      await fetch('/api/auth/resend-confirmation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: submittedEmail }),
+      })
+      setResendInfo('Ți-am retrimis emailul de confirmare.')
+    } catch {
+      setResendInfo('Nu s-a putut retrimite. Verifică conexiunea.')
+    }
+  }
+
+  return (
+    <main className='signup-page'>
+      <div className='signup-shell'>
+        <section className='signup-showcase'>
+          <p className='signup-showcase-kicker'>GET STARTED</p>
+          <h1>Creeaza-ti un cont nou</h1>
+          <p className='signup-showcase-text'>
+            Intra in conversatii relevante, descopera comunitati active si
+            publica usor continut de calitate.
+          </p>
+          <ul className='signup-showcase-list'>
+            <li>
+              <FaStar />
+              Onboarding rapid in mai putin de 1 minut
+            </li>
+            <li>
+              <FaCheckCircle />
+              Control complet asupra profilului
+            </li>
+            <li>
+              <FaLock />
+              Setari de securitate si confidentialitate
+            </li>
+          </ul>
+        </section>
+
+        <section className='signup-card'>
+          {submittedEmail ? (
+            <>
+              <h2 className='signup-title'>Verifică-ți emailul</h2>
+              <p className='signup-subtitle'>
+                Ți-am trimis un link de confirmare la{' '}
+                <strong>{submittedEmail}</strong>. Deschide-l ca să-ți activezi
+                contul — abia după confirmare contul este creat.
+              </p>
+
+              <div className='signup-message signup-success'>
+                Nu închide pagina până nu confirmi. Verifică și folderul Spam.
+              </div>
+
+              {resendInfo && (
+                <div
+                  className='signup-message signup-success'
+                  style={{ marginTop: '0.6rem' }}
+                >
+                  {resendInfo}
+                </div>
+              )}
+
+              <button
+                type='button'
+                className='signup-btn'
+                style={{ marginTop: '0.8rem' }}
+                onClick={handleResend}
+              >
+                Retrimite emailul de confirmare
+              </button>
+
+              <section className='auth-section auth-section-login'>
+                <p className='auth-section-text'>Ai confirmat deja?</p>
+                <Link to='/Login' className='auth-section-btn'>
+                  Mergi la autentificare
+                </Link>
+              </section>
+            </>
+          ) : (
+            <>
+          <h2 className='signup-title'>Creeaza cont</h2>
+          <p className='signup-subtitle'>
+            Completeaza campurile pentru a te inregistra.
+          </p>
+
+          <form className='signup-form' onSubmit={handleSubmit}>
+            <label className='signup-label' htmlFor='signup-email'>
+              Email
+            </label>
+            <input
+              id='signup-email'
+              type='email'
+              className='signup-input'
+              placeholder='ex: nume@email.com'
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              autoComplete='email'
+            />
+
+            <label className='signup-label' htmlFor='signup-username'>
+              Nume de utilizator
+            </label>
+            <input
+              id='signup-username'
+              type='text'
+              className='signup-input'
+              placeholder='Alege un nume unic'
+              value={username}
+              onChange={(event) => setUsername(event.target.value)}
+              autoComplete='username'
+            />
+
+            <label className='signup-label' htmlFor='signup-password'>
+              Parola
+            </label>
+            <input
+              id='signup-password'
+              type='password'
+              className='signup-input'
+              placeholder='••••••••'
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              autoComplete='new-password'
+            />
+
+            <label className='signup-label' htmlFor='signup-confirm'>
+              Confirma parola
+            </label>
+            <input
+              id='signup-confirm'
+              type='password'
+              className='signup-input'
+              placeholder='••••••••'
+              value={confirmPassword}
+              onChange={(event) => setConfirmPassword(event.target.value)}
+              autoComplete='new-password'
+            />
+
+            {error && (
+              <div className='signup-message signup-error'>{error}</div>
+            )}
+
+            <button type='submit' className='signup-btn' disabled={loading}>
+              {loading ? 'Se creeaza contul...' : 'Creeaza cont'}
+            </button>
+
+            <div className='signup-divider'>sau continua cu</div>
+            <button
+              type='button'
+              className='signup-google-btn'
+              aria-label='Continua cu Google'
+              onClick={() => handleGoogleSignup()}
+              disabled={loading}
+            >
+              <FaGoogle className='signup-google-icon' />
+              Google
+            </button>
+          </form>
+
+          <section className='auth-section auth-section-login'>
+            <p className='auth-section-text'>Ai deja cont?</p>
+            <Link to='/Login' className='auth-section-btn'>
+              Autentifica-te
+            </Link>
+          </section>
+            </>
+          )}
+        </section>
+      </div>
+    </main>
+  )
+}
+
+export default Signup

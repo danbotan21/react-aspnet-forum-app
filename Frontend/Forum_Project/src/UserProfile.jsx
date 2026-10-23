@@ -1,0 +1,1764 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import {
+  FaShieldAlt,
+  FaChevronRight,
+  FaUsers,
+  FaBan,
+} from 'react-icons/fa'
+import './Styles/UserProfile.css'
+import avatar from './img/avatar.webp'
+import nature from './img/nature.jpg'
+import { ProfileOverviewTab } from './ProfileOverviewTab'
+import { ProfilePostsTab } from './ProfilePostsTab'
+import { ProfileCommentsTab } from './ProfileCommentsTab'
+import { ProfileSavedTab } from './ProfileSavedTab'
+import { ProfileVotedTab } from './ProfileVotedTab'
+import { useAuth, apiFetch } from './AuthContext'
+import { useToast } from './ToastContext'
+import { PremiumBadge } from './PremiumBadge'
+import { ReportModal } from './ReportModal'
+import { normalizeImageSrc } from './utils/media'
+import { uploadImage } from './utils/imageUpload'
+import { fetchUserPostsPage } from './utils/postFeedApi'
+import { fetchMySavedItems, unsaveItem, savePost } from './utils/savedItemApi'
+import {
+  fetchMyVotes,
+  fetchUserPostVotes,
+  submitPostVote,
+  deletePostVote,
+  voteValueFromDirection,
+} from './utils/voteApi'
+import { fetchMyCommunities } from './utils/modApi'
+import {
+  followUser,
+  unfollowUser,
+  fetchFollowStatus,
+  fetchFollowers,
+  fetchFollowing,
+} from './utils/followApi'
+
+const PROFILE_TABS = [
+  'Overview',
+  'Posts',
+  'Comments',
+  'Saved',
+  'Upvoted',
+  'Downvoted',
+]
+
+const getCommunitySlug = (community) => community.replace(/^r\//, '')
+const getCommentPostRoute = (comment) =>
+  `/community/${encodeURIComponent(getCommunitySlug(comment.community))}/post/${comment.postId}`
+
+const formatDate = (value) => {
+  if (!value) return 'Unknown date'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return 'Unknown date'
+  return date.toLocaleDateString()
+}
+
+const formatCakeDay = (value) => {
+  if (!value) return '-'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return '-'
+  return date.toLocaleDateString(undefined, { month: 'short', year: 'numeric' })
+}
+
+const mapPostToProfilePost = (post) => ({
+  id: post.id,
+  community: `r/${post.communitySlug}`,
+  communityAvatarUrl: post.communityAvatarUrl,
+  time: formatDate(post.createdAt),
+  title: post.title,
+  text: post.body || '',
+  image: normalizeImageSrc(post.imageUrl),
+  votes: post.votes ?? 0,
+  comments: post.commentsCount ?? 0,
+})
+
+const mapPostToVotedItem = (vote, post) => {
+  if (!post) return null
+  return {
+    id: `vote-${vote.id}`,
+    community: `r/${post.communitySlug}`,
+    communityAvatarUrl: post.communityAvatarUrl,
+    author: `u/${post.authorName}`,
+    time: formatDate(vote.votedAt),
+    title: post.title,
+    text: post.body || '',
+    image: normalizeImageSrc(post.imageUrl),
+    votes: post.votes ?? 0,
+    comments: post.commentsCount ?? 0,
+    postId: post.id,
+  }
+}
+
+export function UserProfile() {
+  const { username } = useParams()
+  const navigate = useNavigate()
+  const { user: authUser, token, updateUser } = useAuth()
+  const toast = useToast()
+  const bannerInputRef = useRef(null)
+  const [bannerUploading, setBannerUploading] = useState(false)
+
+  const loggedUser = authUser?.userName?.trim() || ''
+  const displayName = decodeURIComponent(username ?? 'guest').trim() || 'guest'
+  const isOwnProfile =
+    loggedUser.length > 0 &&
+    displayName.toLowerCase() === loggedUser.toLowerCase()
+
+  const tabs = useMemo(() => {
+    const base = [...PROFILE_TABS]
+    if (isOwnProfile) base.push('Communities')
+    return base
+  }, [isOwnProfile])
+
+  const [activeTab, setActiveTab] = useState('Overview')
+  const [profileUser, setProfileUser] = useState(null)
+  const [followStatus, setFollowStatus] = useState(null)
+  const [followBusy, setFollowBusy] = useState(false)
+  const [listModal, setListModal] = useState(null) // 'followers' | 'following' | null
+  const [listUsers, setListUsers] = useState([])
+  const [listLoading, setListLoading] = useState(false)
+  const [reporting, setReporting] = useState(false)
+
+  // Load follow status + counts whenever the viewed profile changes.
+  useEffect(() => {
+    if (!profileUser?.id) {
+      setFollowStatus(null)
+      return
+    }
+    let cancelled = false
+    fetchFollowStatus(profileUser.id)
+      .then((s) => {
+        if (!cancelled) setFollowStatus(s)
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [profileUser?.id])
+
+  const handleToggleFollow = async () => {
+    if (!profileUser?.id || followBusy) return
+    setFollowBusy(true)
+    try {
+      if (followStatus?.isFollowing) {
+        await unfollowUser(profileUser.id)
+        setFollowStatus((s) => ({
+          ...s,
+          isFollowing: false,
+          followersCount: Math.max(0, (s?.followersCount || 1) - 1),
+        }))
+      } else {
+        await followUser(profileUser.id)
+        setFollowStatus((s) => ({
+          ...s,
+          isFollowing: true,
+          followersCount: (s?.followersCount || 0) + 1,
+        }))
+      }
+    } catch (e) {
+      toast.error(e.message)
+    } finally {
+      setFollowBusy(false)
+    }
+  }
+
+  const handleStartChat = () => {
+    if (profileUser?.id) navigate('/messages', { state: { userId: profileUser.id } })
+  }
+
+  const openFollowList = async (type) => {
+    if (!profileUser?.id) return
+    setListModal(type)
+    setListLoading(true)
+    setListUsers([])
+    try {
+      const data =
+        type === 'followers'
+          ? await fetchFollowers(profileUser.id)
+          : await fetchFollowing(profileUser.id)
+      setListUsers(data)
+    } catch {
+      /* ignore */
+    } finally {
+      setListLoading(false)
+    }
+  }
+
+  const handleFollowInList = async (u) => {
+    try {
+      if (u.isFollowedByMe) await unfollowUser(u.id)
+      else await followUser(u.id)
+      setListUsers((prev) =>
+        prev.map((x) =>
+          x.id === u.id ? { ...x, isFollowedByMe: !x.isFollowedByMe } : x,
+        ),
+      )
+      if (profileUser?.id) {
+        fetchFollowStatus(profileUser.id).then(setFollowStatus).catch(() => {})
+      }
+    } catch (e) {
+      toast.error(e.message)
+    }
+  }
+  const [posts, setPosts] = useState([])
+  const [totalPostsCount, setTotalPostsCount] = useState(0)
+  const [comments, setComments] = useState([])
+  const [savedItems, setSavedItems] = useState([])
+  const [upvotedPosts, setUpvotedPosts] = useState([])
+  const [downvotedPosts, setDownvotedPosts] = useState([])
+  const [isProfileLoading, setIsProfileLoading] = useState(true)
+  const [isActivityLoading, setIsActivityLoading] = useState(false)
+  const [isPostsLoading, setIsPostsLoading] = useState(false)
+  const [isPostsLoadingMore, setIsPostsLoadingMore] = useState(false)
+  const [postsPage, setPostsPage] = useState(1)
+  const [hasMorePosts, setHasMorePosts] = useState(true)
+  const [postsError, setPostsError] = useState(null)
+  const [isProfileDataLoading, setIsProfileDataLoading] = useState(false)
+  const [profileError, setProfileError] = useState(null)
+
+  const [openMorePostId, setOpenMorePostId] = useState(null)
+  const [postMenuPos, setPostMenuPos] = useState({ top: 0, right: 0 })
+  const [openMoreCommentId, setOpenMoreCommentId] = useState(null)
+  const [commentMenuPos, setCommentMenuPos] = useState({ top: 0, right: 0 })
+  const [openMoreSavedId, setOpenMoreSavedId] = useState(null)
+  const [savedMenuPos, setSavedMenuPos] = useState({ top: 0, right: 0 })
+  const [openMoreUpvotedId, setOpenMoreUpvotedId] = useState(null)
+  const [upvotedMenuPos, setUpvotedMenuPos] = useState({ top: 0, right: 0 })
+  const [openMoreDownvotedId, setOpenMoreDownvotedId] = useState(null)
+  const [downvotedMenuPos, setDownvotedMenuPos] = useState({ top: 0, right: 0 })
+
+  const [showDeletePostModal, setShowDeletePostModal] = useState(false)
+  const [postToDeleteId, setPostToDeleteId] = useState(null)
+  const [isDeletingPost, setIsDeletingPost] = useState(false)
+  const [deletePostError, setDeletePostError] = useState('')
+  const [profilePostSavedMap, setProfilePostSavedMap] = useState({})
+
+  const [myCommunities, setMyCommunities] = useState([])
+  const [communitiesLoading, setCommunitiesLoading] = useState(false)
+  const [communitiesError, setCommunitiesError] = useState('')
+
+  const [postVotesById, setPostVotesById] = useState({})
+  const [pendingPostVotes, setPendingPostVotes] = useState({})
+
+  const postsLoadMoreRef = useRef(null)
+
+  useEffect(() => {
+    const close = (e) => {
+      if (
+        !e.target.closest('.pp-more-button') &&
+        !e.target.closest('.pp-global-menu')
+      ) {
+        setOpenMorePostId(null)
+        setOpenMoreCommentId(null)
+        setOpenMoreSavedId(null)
+        setOpenMoreUpvotedId(null)
+        setOpenMoreDownvotedId(null)
+      }
+    }
+    document.addEventListener('mousedown', close)
+    return () => document.removeEventListener('mousedown', close)
+  }, [])
+
+  useEffect(() => {
+    setActiveTab('Overview')
+    setOpenMorePostId(null)
+    setOpenMoreCommentId(null)
+    setOpenMoreSavedId(null)
+    setOpenMoreUpvotedId(null)
+    setOpenMoreDownvotedId(null)
+  }, [displayName, isOwnProfile])
+
+  useEffect(() => {
+    if (!tabs.includes(activeTab)) {
+      setActiveTab('Overview')
+    }
+  }, [activeTab, tabs])
+
+  useEffect(() => {
+    if (!displayName) return
+
+    let cancelled = false
+
+    const loadProfile = async () => {
+      setIsProfileLoading(true)
+      setProfileError(null)
+      setProfileUser(null)
+
+      try {
+        const response = await fetch(
+          `/api/users/by-username/${encodeURIComponent(displayName)}`,
+        )
+
+        if (!response.ok) {
+          throw new Error('Profile not found')
+        }
+
+        const data = await response.json()
+        if (!cancelled) {
+          setProfileUser(data)
+        }
+      } catch {
+        if (!cancelled) {
+          setProfileError('Profile not found')
+          setProfileUser(null)
+        }
+      } finally {
+        if (!cancelled) {
+          setIsProfileLoading(false)
+        }
+      }
+    }
+
+    loadProfile()
+
+    return () => {
+      cancelled = true
+    }
+  }, [displayName])
+
+  useEffect(() => {
+    if (!profileUser?.id) {
+      setPosts([])
+      setTotalPostsCount(0)
+      setComments([])
+      setPostsPage(1)
+      setHasMorePosts(true)
+      setPostsError(null)
+      return
+    }
+
+    let cancelled = false
+
+    const loadUserActivity = async () => {
+      setIsActivityLoading(true)
+      try {
+        const commentsResponse = await apiFetch(
+          `/api/comments/user/${profileUser.id}`,
+        )
+        const fetchedComments = commentsResponse.ok
+          ? await commentsResponse.json()
+          : []
+
+        const commentPostIds = [
+          ...new Set(fetchedComments.map((comment) => comment.postId)),
+        ].filter(Boolean)
+
+        const commentPosts = await Promise.all(
+          commentPostIds.map(async (postId) => {
+            try {
+              const response = await apiFetch(`/api/posts/${postId}`)
+              if (!response.ok) return [postId, null]
+              return [postId, await response.json()]
+            } catch {
+              return [postId, null]
+            }
+          }),
+        )
+
+        const commentPostsById = new Map(
+          commentPosts.filter(([, post]) => post !== null),
+        )
+
+        if (cancelled) return
+
+        setComments(
+          fetchedComments.map((comment) => {
+            const relatedPost = commentPostsById.get(comment.postId)
+            return {
+              id: comment.id,
+              community: relatedPost
+                ? `r/${relatedPost.communitySlug}`
+                : 'r/unknown',
+              postTitle: relatedPost?.title || `Post #${comment.postId}`,
+              postId: comment.postId,
+              content: comment.body,
+              votes: comment.votes ?? 0,
+              time: formatDate(comment.createdAt),
+            }
+          }),
+        )
+      } catch {
+        if (!cancelled) {
+          setComments([])
+        }
+      } finally {
+        if (!cancelled) {
+          setIsActivityLoading(false)
+        }
+      }
+    }
+
+    loadUserActivity()
+
+    return () => {
+      cancelled = true
+    }
+  }, [profileUser?.id])
+
+  useEffect(() => {
+    if (!profileUser?.id) return
+
+    let cancelled = false
+    const isInitialPage = postsPage === 1
+
+    const loadPostsPage = async () => {
+      if (isInitialPage) {
+        setIsPostsLoading(true)
+      } else {
+        setIsPostsLoadingMore(true)
+      }
+
+      try {
+        const batch = await fetchUserPostsPage({
+          userId: profileUser.id,
+          page: postsPage,
+          pageSize: 15,
+          token,
+        })
+
+        if (cancelled) return
+
+        const mappedPosts = batch.items.map(mapPostToProfilePost)
+        setPosts((currentPosts) => {
+          if (isInitialPage) return mappedPosts
+          const existingIds = new Set(currentPosts.map((post) => post.id))
+          const nextItems = mappedPosts.filter(
+            (post) => !existingIds.has(post.id),
+          )
+          return [...currentPosts, ...nextItems]
+        })
+        if (isInitialPage) {
+          setTotalPostsCount(mappedPosts.length)
+        } else {
+          setTotalPostsCount(
+            (currentTotal) => currentTotal + mappedPosts.length,
+          )
+        }
+        setHasMorePosts(batch.hasMore)
+        setPostsError(null)
+      } catch (error) {
+        if (!cancelled) {
+          setPostsError(error?.message || 'Failed to load posts')
+          setHasMorePosts(false)
+        }
+      } finally {
+        if (!cancelled) {
+          setIsPostsLoading(false)
+          setIsPostsLoadingMore(false)
+        }
+      }
+    }
+
+    loadPostsPage()
+
+    return () => {
+      cancelled = true
+    }
+  }, [postsPage, profileUser?.id])
+
+  const loadNextPostsPage = useCallback(() => {
+    if (isPostsLoading || isPostsLoadingMore || !hasMorePosts || postsError)
+      return
+    setPostsPage((currentPage) => currentPage + 1)
+  }, [hasMorePosts, isPostsLoading, isPostsLoadingMore, postsError])
+
+  useEffect(() => {
+    const target = postsLoadMoreRef.current
+    if (
+      !target ||
+      isPostsLoading ||
+      isPostsLoadingMore ||
+      !hasMorePosts ||
+      postsError
+    )
+      return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          loadNextPostsPage()
+        }
+      },
+      { rootMargin: '400px 0px' },
+    )
+
+    observer.observe(target)
+    return () => observer.disconnect()
+  }, [
+    hasMorePosts,
+    isPostsLoading,
+    isPostsLoadingMore,
+    loadNextPostsPage,
+    postsError,
+  ])
+
+  useEffect(() => {
+    if (!profileUser?.id) {
+      setSavedItems([])
+      setUpvotedPosts([])
+      setDownvotedPosts([])
+      setProfilePostSavedMap({})
+      setIsProfileDataLoading(false)
+      return
+    }
+
+    let cancelled = false
+
+    const loadProfileData = async () => {
+      setIsProfileDataLoading(true)
+
+      try {
+        const [fetchedSaved, allVotes] =
+          isOwnProfile && token
+            ? await Promise.all([fetchMySavedItems(token), fetchMyVotes(token)])
+            : await Promise.all([
+                apiFetch(`/api/saveditem/user/${profileUser.id}`).then((r) =>
+                  r.ok ? r.json() : [],
+                ),
+                apiFetch(`/api/vote/user/${profileUser.id}`).then((r) =>
+                  r.ok ? r.json() : [],
+                ),
+              ])
+
+        const userPostVotes = allVotes.filter((vote) => Boolean(vote.postId))
+
+        const savedCommentIds = [
+          ...new Set(
+            fetchedSaved
+              .map((item) => item.commentId)
+              .filter((commentId) => commentId !== null),
+          ),
+        ]
+        const savedPostIds = fetchedSaved
+          .map((item) => item.postId)
+          .filter((postId) => postId !== null)
+
+        const votedPostIds = userPostVotes
+          .map((vote) => vote.postId)
+          .filter((postId) => postId !== null)
+
+        const savedComments = await Promise.all(
+          savedCommentIds.map(async (commentId) => {
+            try {
+              const response = await apiFetch(`/api/comments/${commentId}`)
+              if (!response.ok) return [commentId, null]
+              return [commentId, await response.json()]
+            } catch {
+              return [commentId, null]
+            }
+          }),
+        )
+
+        const savedCommentsById = new Map(
+          savedComments.filter(([, comment]) => comment !== null),
+        )
+
+        const postIdsFromComments = [
+          ...new Set(
+            Array.from(savedCommentsById.values())
+              .map((comment) => comment.postId)
+              .filter(Boolean),
+          ),
+        ]
+
+        const allPostIds = [
+          ...new Set([
+            ...savedPostIds,
+            ...postIdsFromComments,
+            ...votedPostIds,
+          ]),
+        ]
+
+        const fetchedPosts = await Promise.all(
+          allPostIds.map(async (postId) => {
+            try {
+              const response = await apiFetch(`/api/posts/${postId}`)
+              if (!response.ok) return [postId, null]
+              return [postId, await response.json()]
+            } catch {
+              return [postId, null]
+            }
+          }),
+        )
+
+        const postsById = new Map(
+          fetchedPosts.filter(([, post]) => post !== null),
+        )
+
+        const mappedSavedItems = fetchedSaved
+          .map((savedItem) => {
+            if (savedItem.postId) {
+              const post = postsById.get(savedItem.postId)
+              if (!post) return null
+              return {
+                id: `saved-${savedItem.id}`,
+                savedItemId: savedItem.id,
+                type: 'post',
+                community: `r/${post.communitySlug}`,
+                author: `u/${post.authorName}`,
+                time: formatDate(savedItem.createdAt),
+                title: post.title,
+                text: post.body || '',
+                image: normalizeImageSrc(post.imageUrl),
+                votes: post.votes ?? 0,
+                comments: post.commentsCount ?? 0,
+                postId: post.id,
+              }
+            }
+
+            if (savedItem.commentId) {
+              const comment = savedCommentsById.get(savedItem.commentId)
+              if (!comment) return null
+
+              const post = postsById.get(comment.postId)
+              if (!post) return null
+
+              return {
+                id: `saved-${savedItem.id}`,
+                savedItemId: savedItem.id,
+                type: 'comment',
+                community: `r/${post.communitySlug}`,
+                author: `u/${comment.authorName}`,
+                postTitle:
+                  post.title || savedItem.postTitle || `Post #${post.id}`,
+                postId: post.id,
+                content: comment.body || savedItem.commentBody || '',
+                votes: comment.votes ?? 0,
+                time: formatDate(savedItem.createdAt),
+              }
+            }
+
+            return null
+          })
+          .filter(Boolean)
+
+        const mappedUpvoted = userPostVotes
+          .filter((vote) => vote.type === 1)
+          .map((vote) => mapPostToVotedItem(vote, postsById.get(vote.postId)))
+          .filter(Boolean)
+
+        const mappedDownvoted = userPostVotes
+          .filter((vote) => vote.type === -1)
+          .map((vote) => mapPostToVotedItem(vote, postsById.get(vote.postId)))
+          .filter(Boolean)
+
+        if (!cancelled) {
+          setSavedItems(mappedSavedItems)
+          setUpvotedPosts(mappedUpvoted)
+          setDownvotedPosts(mappedDownvoted)
+
+          if (isOwnProfile) {
+            const postSavedMap = {}
+            mappedSavedItems.forEach((item) => {
+              if (item.type === 'post') postSavedMap[item.postId] = item.savedItemId
+            })
+            setProfilePostSavedMap(postSavedMap)
+
+            // Seed the current user's known vote state for these posts so the
+            // up/down chips highlight correctly and toggling can delete the vote.
+            const seededVotes = {}
+            userPostVotes.forEach((vote) => {
+              if (vote.postId)
+                seededVotes[vote.postId] = { id: vote.id, type: vote.type }
+            })
+            setPostVotesById((prev) => ({ ...prev, ...seededVotes }))
+          }
+        }
+      } catch {
+        if (!cancelled) {
+          setSavedItems([])
+          setUpvotedPosts([])
+          setDownvotedPosts([])
+        }
+      } finally {
+        if (!cancelled) {
+          setIsProfileDataLoading(false)
+        }
+      }
+    }
+
+    loadProfileData()
+
+    return () => {
+      cancelled = true
+    }
+  }, [profileUser?.id, isOwnProfile, token])
+
+  useEffect(() => {
+    if (!token || posts.length === 0) {
+      setPostVotesById({})
+      return
+    }
+    let cancelled = false
+    setPostVotesById((currentVotes) => {
+      const missingIds = posts
+        .map((post) => post.id)
+        .filter((id) => currentVotes[id] === undefined)
+      if (missingIds.length === 0) return currentVotes
+      fetchUserPostVotes(missingIds, token).then((votesMap) => {
+        if (!cancelled) setPostVotesById((prev) => ({ ...prev, ...votesMap }))
+      })
+      const loadingEntries = Object.fromEntries(missingIds.map((id) => [id, null]))
+      return { ...currentVotes, ...loadingEntries }
+    })
+    return () => { cancelled = true }
+  }, [posts, token])
+
+  useEffect(() => {
+    if (activeTab !== 'Communities' || !token || !isOwnProfile) return
+    let cancelled = false
+    setCommunitiesLoading(true)
+    setCommunitiesError('')
+    fetchMyCommunities(token)
+      .then((data) => { if (!cancelled) setMyCommunities(data) })
+      .catch((e) => { if (!cancelled) setCommunitiesError(e.message) })
+      .finally(() => { if (!cancelled) setCommunitiesLoading(false) })
+    return () => { cancelled = true }
+  }, [activeTab, token, isOwnProfile])
+
+  const hasPosts = totalPostsCount > 0
+  const hasComments = comments.length > 0
+  const hasSaved = savedItems.length > 0
+  const hasUpvoted = upvotedPosts.length > 0
+  const hasDownvoted = downvotedPosts.length > 0
+
+  const statCards = useMemo(
+    () => [
+      { label: 'Karma', value: `${profileUser?.karma ?? 0}` },
+      { label: 'Posts', value: `${totalPostsCount}` },
+      { label: 'Comments', value: `${comments.length}` },
+      { label: 'Cake Day', value: formatCakeDay(profileUser?.createdAt) },
+    ],
+    [comments.length, posts.length, profileUser?.createdAt, profileUser?.karma],
+  )
+
+  const handlePostMenu = (e, postId) => {
+    if (openMorePostId === postId) {
+      setOpenMorePostId(null)
+      return
+    }
+    const rect = e.currentTarget.getBoundingClientRect()
+    setPostMenuPos({
+      top: rect.bottom + 6,
+      right: window.innerWidth - rect.right,
+    })
+    setOpenMorePostId(postId)
+  }
+
+  const handleCommentMenu = (e, commentId) => {
+    if (openMoreCommentId === commentId) {
+      setOpenMoreCommentId(null)
+      return
+    }
+    const rect = e.currentTarget.getBoundingClientRect()
+    setCommentMenuPos({
+      top: rect.bottom + 6,
+      right: window.innerWidth - rect.right,
+    })
+    setOpenMoreCommentId(commentId)
+  }
+
+  const handleSavedMenu = (e, savedId) => {
+    if (openMoreSavedId === savedId) {
+      setOpenMoreSavedId(null)
+      return
+    }
+    const rect = e.currentTarget.getBoundingClientRect()
+    setSavedMenuPos({
+      top: rect.bottom + 6,
+      right: window.innerWidth - rect.right,
+    })
+    setOpenMoreSavedId(savedId)
+  }
+
+  const handleUpvotedMenu = (e, itemId) => {
+    if (openMoreUpvotedId === itemId) {
+      setOpenMoreUpvotedId(null)
+      return
+    }
+    const rect = e.currentTarget.getBoundingClientRect()
+    setUpvotedMenuPos({
+      top: rect.bottom + 6,
+      right: window.innerWidth - rect.right,
+    })
+    setOpenMoreUpvotedId(itemId)
+  }
+
+  const handleDownvotedMenu = (e, itemId) => {
+    if (openMoreDownvotedId === itemId) {
+      setOpenMoreDownvotedId(null)
+      return
+    }
+    const rect = e.currentTarget.getBoundingClientRect()
+    setDownvotedMenuPos({
+      top: rect.bottom + 6,
+      right: window.innerWidth - rect.right,
+    })
+    setOpenMoreDownvotedId(itemId)
+  }
+
+  // Apply a vote-count delta to a post wherever it appears across the profile
+  // tabs (own posts, upvoted, downvoted, saved) so the displayed count stays in
+  // sync no matter which list the user is voting from.
+  const applyVoteDelta = (postId, delta) => {
+    if (!delta) return
+    const bump = (list) =>
+      list.map((it) =>
+        it.postId === postId ? { ...it, votes: (it.votes ?? 0) + delta } : it,
+      )
+    setPosts((prev) =>
+      prev.map((p) =>
+        p.id === postId ? { ...p, votes: (p.votes ?? 0) + delta } : p,
+      ),
+    )
+    setUpvotedPosts(bump)
+    setDownvotedPosts(bump)
+    setSavedItems((prev) =>
+      prev.map((it) =>
+        it.type === 'post' && it.postId === postId
+          ? { ...it, votes: (it.votes ?? 0) + delta }
+          : it,
+      ),
+    )
+  }
+
+  // After a vote changes, drop the post from the Upvoted/Downvoted tab it no longer
+  // belongs to — so the UI matches the filter immediately, without a refresh.
+  const reconcileVoteLists = (postId, newType) => {
+    setUpvotedPosts((prev) =>
+      newType === 1 ? prev : prev.filter((it) => it.postId !== postId),
+    )
+    setDownvotedPosts((prev) =>
+      newType === -1 ? prev : prev.filter((it) => it.postId !== postId),
+    )
+  }
+
+  const handlePostVote = async (postId, direction) => {
+    if (!token) {
+      toast.error('Please login to vote.')
+      return
+    }
+    if (pendingPostVotes[postId]) return
+
+    const nextVoteType = voteValueFromDirection(direction)
+    const previousVote = postVotesById[postId] || { id: null, type: 0 }
+    const previousVoteType = previousVote.type ?? 0
+
+    if (previousVoteType === nextVoteType && !previousVote.id) return
+
+    setPendingPostVotes((prev) => ({ ...prev, [postId]: true }))
+
+    if (previousVoteType === nextVoteType && previousVote.id) {
+      applyVoteDelta(postId, -previousVoteType)
+      setPostVotesById((prev) => ({ ...prev, [postId]: { id: null, type: 0 } }))
+
+      try {
+        await deletePostVote({ voteId: previousVote.id, token })
+        reconcileVoteLists(postId, 0)
+      } catch (err) {
+        applyVoteDelta(postId, previousVoteType)
+        setPostVotesById((prev) => ({ ...prev, [postId]: previousVote }))
+        toast.error(err.message)
+      } finally {
+        setPendingPostVotes((prev) => ({ ...prev, [postId]: false }))
+      }
+      return
+    }
+
+    const voteDelta = nextVoteType - previousVoteType
+
+    applyVoteDelta(postId, voteDelta)
+    setPostVotesById((prev) => ({
+      ...prev,
+      [postId]: { ...(prev[postId] || {}), type: nextVoteType },
+    }))
+
+    try {
+      const vote = await submitPostVote({ postId, voteType: nextVoteType, token })
+      setPostVotesById((prev) => ({ ...prev, [postId]: { id: vote.id, type: vote.type } }))
+      reconcileVoteLists(postId, nextVoteType)
+    } catch (err) {
+      applyVoteDelta(postId, -voteDelta)
+      setPostVotesById((prev) => ({
+        ...prev,
+        [postId]: { ...(prev[postId] || {}), type: previousVoteType },
+      }))
+      toast.error(err.message)
+    } finally {
+      setPendingPostVotes((prev) => ({ ...prev, [postId]: false }))
+    }
+  }
+
+  const handleDeletePost = async () => {
+    if (!token || !postToDeleteId) return
+    setIsDeletingPost(true)
+    setDeletePostError('')
+    try {
+      const response = await fetch(`/api/posts/${postToDeleteId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!response.ok) {
+        const text = await response.text()
+        throw new Error(text || 'Failed to delete post.')
+      }
+      setPosts((prev) => prev.filter((p) => p.id !== postToDeleteId))
+      setShowDeletePostModal(false)
+      setPostToDeleteId(null)
+    } catch (err) {
+      setDeletePostError(err.message)
+    } finally {
+      setIsDeletingPost(false)
+    }
+  }
+
+  const handleDeleteComment = async (commentId) => {
+    if (!token) return
+    setOpenMoreCommentId(null)
+    try {
+      const response = await fetch(`/api/comments/${commentId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!response.ok) throw new Error('Failed to delete comment')
+      setComments((prev) => prev.filter((c) => c.id !== commentId))
+    } catch (err) {
+      toast.error(err.message)
+    }
+  }
+
+  const handleRemoveSaved = async (savedId) => {
+    if (!token) return
+    const item = savedItems.find((i) => i.id === savedId)
+    if (!item) return
+
+    setOpenMoreSavedId(null)
+    setSavedItems((prev) => prev.filter((i) => i.id !== savedId))
+    if (item.type === 'post') {
+      setProfilePostSavedMap((prev) => {
+        const next = { ...prev }
+        delete next[item.postId]
+        return next
+      })
+    }
+
+    try {
+      await unsaveItem({ savedItemId: item.savedItemId, token })
+    } catch (err) {
+      setSavedItems((prev) => [...prev, item])
+      if (item.type === 'post') {
+        setProfilePostSavedMap((prev) => ({
+          ...prev,
+          [item.postId]: item.savedItemId,
+        }))
+      }
+      toast.error(err.message)
+    }
+  }
+
+  const handleToggleSavePostInProfile = async (postId) => {
+    if (!token) {
+      toast.error('Please login to save posts.')
+      return
+    }
+    setOpenMorePostId(null)
+
+    const existingSavedItemId = profilePostSavedMap[postId]
+
+    if (existingSavedItemId) {
+      setProfilePostSavedMap((prev) => {
+        const next = { ...prev }
+        delete next[postId]
+        return next
+      })
+      setSavedItems((prev) =>
+        prev.filter((i) => !(i.type === 'post' && i.postId === postId)),
+      )
+      try {
+        await unsaveItem({ savedItemId: existingSavedItemId, token })
+      } catch (err) {
+        setProfilePostSavedMap((prev) => ({
+          ...prev,
+          [postId]: existingSavedItemId,
+        }))
+        toast.error(err.message)
+      }
+    } else {
+      try {
+        const created = await savePost({ postId, token })
+        const targetPost = posts.find((p) => p.id === postId)
+        setProfilePostSavedMap((prev) => ({ ...prev, [postId]: created.id }))
+        if (targetPost) {
+          setSavedItems((prev) => [
+            ...prev,
+            {
+              id: `saved-${created.id}`,
+              savedItemId: created.id,
+              type: 'post',
+              community: targetPost.community,
+              author: `u/${profileUser?.userName || ''}`,
+              time: formatDate(new Date().toISOString()),
+              title: targetPost.title,
+              text: targetPost.text || '',
+              image: targetPost.image,
+              votes: targetPost.votes,
+              comments: targetPost.comments,
+              postId,
+            },
+          ])
+        }
+      } catch (err) {
+        toast.error(err.message)
+      }
+    }
+  }
+
+  const renderTab = () => {
+    if (activeTab === 'Overview')
+      return (
+        <ProfileOverviewTab
+          displayName={profileUser?.userName || displayName}
+          statCards={statCards}
+          isOwnProfile={isOwnProfile}
+          bio={profileUser?.bio || (isOwnProfile ? authUser?.bio : null)}
+        />
+      )
+
+    if (activeTab === 'Posts')
+      return isPostsLoading && posts.length === 0 ? (
+        <section className='tab-panel'>
+          <p style={{ textAlign: 'center', padding: '1.5rem 0' }}>
+            Loading posts...
+          </p>
+        </section>
+      ) : (
+        <section className='tab-panel'>
+          <div>
+            <ProfilePostsTab
+              posts={posts}
+              hasPosts={hasPosts}
+              openMorePostId={openMorePostId}
+              onMenuOpen={handlePostMenu}
+              isOwnProfile={isOwnProfile}
+              token={token}
+              postVotesById={postVotesById}
+              pendingPostVotes={pendingPostVotes}
+              onVote={handlePostVote}
+            />
+            {postsError && (
+              <p
+                style={{
+                  textAlign: 'center',
+                  padding: '1rem 0',
+                  color: '#c53030',
+                }}
+              >
+                {postsError}
+              </p>
+            )}
+            {!postsError && posts.length > 0 && (
+              <>
+                <div ref={postsLoadMoreRef} style={{ height: '1px' }} />
+                {isPostsLoadingMore && (
+                  <p style={{ textAlign: 'center', padding: '1rem 0' }}>
+                    Loading more posts...
+                  </p>
+                )}
+                {!hasMorePosts && (
+                  <p
+                    style={{
+                      textAlign: 'center',
+                      padding: '1rem 0',
+                      opacity: 0.7,
+                    }}
+                  >
+                    You reached the end.
+                  </p>
+                )}
+              </>
+            )}
+          </div>
+        </section>
+      )
+
+    if (activeTab === 'Comments')
+      return isActivityLoading ? (
+        <section className='tab-panel'>
+          <p style={{ textAlign: 'center', padding: '1.5rem 0' }}>
+            Loading comments...
+          </p>
+        </section>
+      ) : (
+        <ProfileCommentsTab
+          comments={comments}
+          hasComments={hasComments}
+          openMoreCommentId={openMoreCommentId}
+          onMenuOpen={handleCommentMenu}
+          isOwnProfile={isOwnProfile}
+        />
+      )
+
+    if (activeTab === 'Saved')
+      return isProfileDataLoading ? (
+        <section className='tab-panel'>
+          <p style={{ textAlign: 'center', padding: '1.5rem 0' }}>
+            Loading saved items...
+          </p>
+        </section>
+      ) : (
+        <ProfileSavedTab
+          items={savedItems}
+          hasSaved={hasSaved}
+          openMoreSavedId={openMoreSavedId}
+          onMenuOpen={handleSavedMenu}
+          token={isOwnProfile ? token : null}
+          postVotesById={postVotesById}
+          pendingPostVotes={pendingPostVotes}
+          onVote={isOwnProfile ? handlePostVote : undefined}
+        />
+      )
+
+    if (activeTab === 'Upvoted')
+      return isProfileDataLoading ? (
+        <section className='tab-panel'>
+          <p style={{ textAlign: 'center', padding: '1.5rem 0' }}>
+            Loading upvoted posts...
+          </p>
+        </section>
+      ) : (
+        <ProfileVotedTab
+          items={upvotedPosts}
+          voteType='up'
+          hasVoted={hasUpvoted}
+          filterLabel='Upvoted posts'
+          openId={openMoreUpvotedId}
+          onMenuOpen={handleUpvotedMenu}
+          token={isOwnProfile ? token : null}
+          postVotesById={postVotesById}
+          pendingPostVotes={pendingPostVotes}
+          onVote={isOwnProfile ? handlePostVote : undefined}
+        />
+      )
+
+    if (activeTab === 'Downvoted')
+      return isProfileDataLoading ? (
+        <section className='tab-panel'>
+          <p style={{ textAlign: 'center', padding: '1.5rem 0' }}>
+            Loading downvoted posts...
+          </p>
+        </section>
+      ) : (
+        <ProfileVotedTab
+          items={downvotedPosts}
+          voteType='down'
+          hasVoted={hasDownvoted}
+          filterLabel='Downvoted posts'
+          openId={openMoreDownvotedId}
+          onMenuOpen={handleDownvotedMenu}
+          token={isOwnProfile ? token : null}
+          postVotesById={postVotesById}
+          pendingPostVotes={pendingPostVotes}
+          onVote={isOwnProfile ? handlePostVote : undefined}
+        />
+      )
+
+    if (activeTab === 'Communities')
+      return (
+        <section className='tab-panel up-communities-panel'>
+          <div className='up-communities-header'>
+            <h3>Your Communities</h3>
+            <p>Communities you are a member of. Jump to Mod Tools if you manage one.</p>
+          </div>
+          {communitiesLoading && (
+            <p className='up-communities-loading'>Loading communities...</p>
+          )}
+          {communitiesError && (
+            <p className='up-communities-error'>{communitiesError}</p>
+          )}
+          {!communitiesLoading && !communitiesError && myCommunities.length === 0 && (
+            <p className='up-communities-empty'>You haven't joined any communities yet.</p>
+          )}
+          {!communitiesLoading && myCommunities.length > 0 && (
+            <div className='up-communities-list'>
+              {myCommunities.map((c) => (
+                <div key={c.id} className={`up-community-card${c.isBanned ? ' up-community-banned' : ''}`}>
+                  <div className='up-community-avatar'>
+                    {c.avatarUrl
+                      ? <img src={normalizeImageSrc(c.avatarUrl)} alt={c.title} />
+                      : <span className='up-community-avatar-letter'>{c.title[0].toUpperCase()}</span>
+                    }
+                  </div>
+                  <div className='up-community-info'>
+                    <Link to={`/community/${c.slug}`} className='up-community-name'>
+                      c/{c.slug}
+                    </Link>
+                    <span className='up-community-title'>{c.title}</span>
+                    <div className='up-community-meta'>
+                      <span className={`up-community-role up-community-role-${c.isBanned ? 'banned' : c.role}`}>
+                        {c.isBanned ? <><FaBan style={{ marginRight: 4 }} />Banned</> : c.role === 'owner' ? <>👑 Owner</> : c.role === 'moderator' ? <>🛡 Moderator</> : 'Member'}
+                      </span>
+                      <span className='up-community-members'>{(c.membersCount ?? 0).toLocaleString()} members</span>
+                    </div>
+                    {c.isBanned && c.banReason && (
+                      <p className='up-community-ban-reason'>Ban reason: {c.banReason}</p>
+                    )}
+                  </div>
+                  {(c.role === 'owner' || c.role === 'moderator') && !c.isBanned && (
+                    <Link
+                      to={`/community/${c.slug}/mod`}
+                      className='up-community-mod-btn'
+                    >
+                      <FaShieldAlt /> Mod Tools <FaChevronRight />
+                    </Link>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )
+
+    return null
+  }
+
+  const profileAvatarSrc =
+    normalizeImageSrc(
+      profileUser?.avatarUrl || (isOwnProfile ? authUser?.avatarUrl : null),
+    ) || avatar
+
+  if (isProfileLoading) {
+    return (
+      <main className='user-profile-page'>
+        <section className='user-profile-shell'>
+          <div className='user-profile-main'>
+            <section className='user-feed-card'>
+              <p style={{ textAlign: 'center', padding: '2rem' }}>
+                Loading profile...
+              </p>
+            </section>
+          </div>
+        </section>
+      </main>
+    )
+  }
+
+  if (profileError || !profileUser) {
+    return (
+      <main className='user-profile-page'>
+        <section className='user-profile-shell'>
+          <div className='user-profile-main'>
+            <section className='user-feed-card'>
+              <p
+                style={{
+                  textAlign: 'center',
+                  padding: '2rem',
+                  color: '#c53030',
+                }}
+              >
+                {profileError || 'Profile not found'}
+              </p>
+            </section>
+          </div>
+        </section>
+      </main>
+    )
+  }
+
+  if (profileUser.userName === '[deleted]') {
+    return (
+      <main className='user-profile-page'>
+        <section className='user-profile-shell'>
+          <div className='user-profile-main'>
+            <section className='user-feed-card'>
+              <p
+                style={{
+                  textAlign: 'center',
+                  padding: '2rem',
+                  color: '#7c7c7c',
+                }}
+              >
+                This account has been deleted.
+              </p>
+            </section>
+          </div>
+        </section>
+      </main>
+    )
+  }
+
+  const handleBannerChange = async (e) => {
+    const file = e.target.files?.[0]
+    if (e.target) e.target.value = ''
+    if (!file || !file.type.startsWith('image/') || !token) return
+    setBannerUploading(true)
+    try {
+      const bannerUrl = await uploadImage(file, 'banners')
+      const response = await apiFetch('/api/auth/me', {
+        method: 'PUT',
+        body: JSON.stringify({ bannerUrl }),
+      })
+      if (!response.ok) throw new Error('Failed to update banner')
+      const updated = await response.json()
+      updateUser(updated)
+      setProfileUser((prev) => (prev ? { ...prev, bannerUrl } : prev))
+    } catch (err) {
+      toast.error(err.message || 'Failed to update banner.')
+    } finally {
+      setBannerUploading(false)
+    }
+  }
+
+  // A private profile hides its activity from everyone except the owner and admins.
+  const isPrivateToViewer =
+    (profileUser.profileVisibility || '').toLowerCase() === 'private' &&
+    !isOwnProfile &&
+    authUser?.role !== 'Admin'
+
+  return (
+    <main className='user-profile-page'>
+      <section className='user-profile-shell'>
+        <div className='user-profile-main'>
+          <header className='user-hero'>
+            <div className='user-hero-banner'>
+              <img
+                src={normalizeImageSrc(profileUser.bannerUrl) || nature}
+                alt='Profile banner'
+                className='user-hero-banner-image'
+              />
+              {isOwnProfile && (
+                <>
+                  <input
+                    type='file'
+                    accept='image/*'
+                    ref={bannerInputRef}
+                    style={{ display: 'none' }}
+                    onChange={handleBannerChange}
+                  />
+                  <button
+                    type='button'
+                    className='user-hero-banner-button'
+                    onClick={() => bannerInputRef.current?.click()}
+                    disabled={bannerUploading}
+                  >
+                    {bannerUploading ? 'Uploading…' : 'Change banner'}
+                  </button>
+                </>
+              )}
+            </div>
+
+            <div className='user-hero-body'>
+              <span
+                className={`user-hero-avatar-wrap ${profileUser.isPremium ? 'user-hero-avatar-wrap--premium' : ''}`}
+              >
+                <img
+                  src={profileAvatarSrc}
+                  alt='Avatar'
+                  className='user-hero-avatar'
+                />
+              </span>
+              <div className='user-hero-meta'>
+                <h1 className='user-hero-name'>
+                  {profileUser.userName || displayName}
+                  {profileUser.isPremium && <PremiumBadge size='md' />}
+                </h1>
+                <p>u/{profileUser.userName || displayName}</p>
+                <div className='user-hero-follow-stats'>
+                  <button type='button' onClick={() => openFollowList('followers')}>
+                    <strong>{followStatus?.followersCount ?? 0}</strong> Followers
+                  </button>
+                  <button type='button' onClick={() => openFollowList('following')}>
+                    <strong>{followStatus?.followingCount ?? 0}</strong> Following
+                  </button>
+                </div>
+              </div>
+              <div className='user-hero-actions'>
+                {isOwnProfile ? (
+                  <>
+                    <Link
+                      to='/create-post'
+                      className='profile-btn profile-btn-primary'
+                    >
+                      Create Post
+                    </Link>
+                    <Link
+                      to='/settings'
+                      className='profile-btn profile-btn-secondary'
+                    >
+                      Update Profile
+                    </Link>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      type='button'
+                      className={`profile-btn ${followStatus?.isFollowing ? 'profile-btn-secondary' : 'profile-btn-primary'}`}
+                      onClick={handleToggleFollow}
+                      disabled={followBusy}
+                    >
+                      {followStatus?.isFollowing
+                        ? 'Following'
+                        : followStatus?.followsMe
+                          ? 'Follow back'
+                          : 'Follow'}
+                    </button>
+                    <button
+                      type='button'
+                      className='profile-btn profile-btn-secondary'
+                      onClick={handleStartChat}
+                    >
+                      Message
+                    </button>
+                    {profileUser.role !== 'Admin' && (
+                      <button
+                        type='button'
+                        className='profile-btn profile-btn-danger'
+                        onClick={() => {
+                          if (!token) {
+                            toast.error('Please log in to report.')
+                            return
+                          }
+                          setReporting(true)
+                        }}
+                      >
+                        Report
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+
+            {!isPrivateToViewer && (
+              <nav className='user-tabs' aria-label='Profile sections'>
+                {tabs.map((tab) => (
+                  <button
+                    key={tab}
+                    type='button'
+                    onClick={() => setActiveTab(tab)}
+                    className={`user-tab ${activeTab === tab ? 'user-tab-active' : ''}`}
+                  >
+                    {tab}
+                  </button>
+                ))}
+              </nav>
+            )}
+          </header>
+
+          {listModal && (
+            <div
+              className='follow-modal-overlay'
+              onClick={() => setListModal(null)}
+            >
+              <div
+                className='follow-modal'
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className='follow-modal-head'>
+                  <h3>{listModal === 'followers' ? 'Followers' : 'Following'}</h3>
+                  <button
+                    type='button'
+                    onClick={() => setListModal(null)}
+                    aria-label='Close'
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div className='follow-modal-body'>
+                  {listLoading ? (
+                    <p className='follow-modal-empty'>Loading…</p>
+                  ) : listUsers.length === 0 ? (
+                    <p className='follow-modal-empty'>Nobody here yet.</p>
+                  ) : (
+                    listUsers.map((u) => (
+                      <div key={u.id} className='follow-modal-item'>
+                        <Link
+                          to={`/user/${encodeURIComponent(u.userName)}`}
+                          className='follow-modal-user'
+                          onClick={() => setListModal(null)}
+                        >
+                          <img
+                            src={normalizeImageSrc(u.avatarUrl) || avatar}
+                            alt=''
+                          />
+                          <div className='follow-modal-user-meta'>
+                            <span className='follow-modal-name'>
+                              {u.userName}
+                              {u.isPremium && <PremiumBadge size='sm' />}
+                            </span>
+                            {u.bio && (
+                              <span className='follow-modal-bio'>{u.bio}</span>
+                            )}
+                          </div>
+                        </Link>
+                        {u.id !== authUser?.id && (
+                          <button
+                            type='button'
+                            className={`profile-btn ${u.isFollowedByMe ? 'profile-btn-secondary' : 'profile-btn-primary'} follow-modal-btn`}
+                            onClick={() => handleFollowInList(u)}
+                          >
+                            {u.isFollowedByMe ? 'Following' : 'Follow'}
+                          </button>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {reporting && profileUser?.id && (
+            <ReportModal
+              type={2}
+              reportedItemId={profileUser.id}
+              label='User'
+              token={token}
+              onClose={() => setReporting(false)}
+            />
+          )}
+
+          {isPrivateToViewer ? (
+            <section
+              className='user-feed-card'
+              style={{ textAlign: 'center', padding: '3rem 1.5rem' }}
+            >
+              <div style={{ fontSize: '40px', marginBottom: '0.5rem' }}>🔒</div>
+              <h3 style={{ margin: '0 0 0.5rem' }}>This profile is private</h3>
+              <p style={{ color: '#7c7c7c', margin: 0 }}>
+                u/{profileUser.userName || displayName} keeps their posts,
+                comments and activity private.
+              </p>
+            </section>
+          ) : (
+            <section className='user-feed-card'>{renderTab()}</section>
+          )}
+        </div>
+
+        <aside className='user-profile-side'>
+          <section className='side-card'>
+            <h4>ADS in here?</h4>
+            <div className='badge-row'>
+              <span className='badge-pill'>Contributor</span>
+              <span className='badge-pill'>Top Commenter</span>
+              <span className='badge-pill'>Verified</span>
+            </div>
+          </section>
+        </aside>
+      </section>
+
+      {openMorePostId !== null &&
+        (() => {
+          const targetPost = posts.find((p) => p.id === openMorePostId)
+          const postRoute = targetPost
+            ? `/community/${encodeURIComponent(getCommunitySlug(targetPost.community))}/post/${targetPost.id}`
+            : null
+
+          return (
+            <div
+              className='pp-more-menu pp-global-menu'
+              role='menu'
+              style={{
+                position: 'fixed',
+                top: postMenuPos.top,
+                right: postMenuPos.right,
+              }}
+            >
+              <button
+                className='pp-more-item'
+                role='menuitem'
+                onClick={() => {
+                  setOpenMorePostId(null)
+                  if (postRoute) navigate(`${postRoute}?edit=true`)
+                }}
+              >
+                Edit post
+              </button>
+              <button
+                className='pp-more-item'
+                role='menuitem'
+                onClick={() => handleToggleSavePostInProfile(openMorePostId)}
+              >
+                {profilePostSavedMap[openMorePostId] ? 'Unsave' : 'Save'}
+              </button>
+              <button
+                className='pp-more-item pp-more-item-danger'
+                role='menuitem'
+                onClick={() => {
+                  setOpenMorePostId(null)
+                  setDeletePostError('')
+                  setPostToDeleteId(openMorePostId)
+                  setShowDeletePostModal(true)
+                }}
+              >
+                Delete
+              </button>
+            </div>
+          )
+        })()}
+
+      {openMoreCommentId !== null &&
+        (() => {
+          const comment = comments.find(
+            (entry) => entry.id === openMoreCommentId,
+          )
+          return comment ? (
+            <div
+              className='pp-more-menu pp-global-menu'
+              role='menu'
+              style={{
+                position: 'fixed',
+                top: commentMenuPos.top,
+                right: commentMenuPos.right,
+              }}
+            >
+              <Link
+                to={getCommentPostRoute(comment)}
+                className='pp-more-item pc-more-link'
+                role='menuitem'
+                onClick={() => setOpenMoreCommentId(null)}
+              >
+                Edit Comment
+              </Link>
+              <button
+                className='pp-more-item'
+                role='menuitem'
+                onClick={() => setOpenMoreCommentId(null)}
+              >
+                Save
+              </button>
+              <button
+                className='pp-more-item pp-more-item-danger'
+                role='menuitem'
+                onClick={() => handleDeleteComment(openMoreCommentId)}
+              >
+                Delete Comment
+              </button>
+            </div>
+          ) : null
+        })()}
+
+      {openMoreSavedId !== null &&
+        (() => {
+          const savedItem = savedItems.find(
+            (entry) => entry.id === openMoreSavedId,
+          )
+          return savedItem ? (
+            <div
+              className='pp-more-menu pp-global-menu'
+              role='menu'
+              style={{
+                position: 'fixed',
+                top: savedMenuPos.top,
+                right: savedMenuPos.right,
+              }}
+            >
+              <button
+                className='pp-more-item pp-more-item-danger'
+                role='menuitem'
+                onClick={() => handleRemoveSaved(openMoreSavedId)}
+              >
+                Remove from saved
+              </button>
+            </div>
+          ) : null
+        })()}
+
+      {openMoreUpvotedId !== null &&
+        (() => {
+          const item = upvotedPosts.find((i) => i.id === openMoreUpvotedId)
+          if (!item) return null
+          return (
+            <div
+              className='pp-more-menu pp-global-menu'
+              role='menu'
+              style={{
+                position: 'fixed',
+                top: upvotedMenuPos.top,
+                right: upvotedMenuPos.right,
+              }}
+            >
+              <button
+                className='pp-more-item'
+                role='menuitem'
+                onClick={() => {
+                  setOpenMoreUpvotedId(null)
+                  handleToggleSavePostInProfile(item.postId)
+                }}
+              >
+                {profilePostSavedMap[item.postId] ? 'Unsave' : 'Save'}
+              </button>
+            </div>
+          )
+        })()}
+
+      {openMoreDownvotedId !== null &&
+        (() => {
+          const item = downvotedPosts.find((i) => i.id === openMoreDownvotedId)
+          if (!item) return null
+          return (
+            <div
+              className='pp-more-menu pp-global-menu'
+              role='menu'
+              style={{
+                position: 'fixed',
+                top: downvotedMenuPos.top,
+                right: downvotedMenuPos.right,
+              }}
+            >
+              <button
+                className='pp-more-item'
+                role='menuitem'
+                onClick={() => {
+                  setOpenMoreDownvotedId(null)
+                  handleToggleSavePostInProfile(item.postId)
+                }}
+              >
+                {profilePostSavedMap[item.postId] ? 'Unsave' : 'Save'}
+              </button>
+            </div>
+          )
+        })()}
+
+      {showDeletePostModal && (
+        <div className='post-delete-overlay'>
+          <div className='post-delete-modal'>
+            <h2 className='post-delete-modal-title'>Delete post?</h2>
+            <p className='post-delete-modal-body'>
+              Are you sure you want to delete this post? This cannot be undone.
+            </p>
+            {deletePostError && (
+              <p className='post-delete-modal-error'>{deletePostError}</p>
+            )}
+            <div className='post-delete-modal-actions'>
+              <button
+                type='button'
+                className='pp-more-item pp-more-item-danger'
+                onClick={handleDeletePost}
+                disabled={isDeletingPost}
+                style={{ borderRadius: '999px', padding: '6px 18px' }}
+              >
+                {isDeletingPost ? 'Deleting...' : 'Delete'}
+              </button>
+              <button
+                type='button'
+                className='pp-more-item'
+                onClick={() => {
+                  setShowDeletePostModal(false)
+                  setPostToDeleteId(null)
+                }}
+                disabled={isDeletingPost}
+                style={{ borderRadius: '999px', padding: '6px 18px' }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </main>
+  )
+}

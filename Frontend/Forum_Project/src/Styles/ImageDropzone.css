@@ -1,0 +1,180 @@
+/* Shared drag-and-drop image picker (community icon + banner, create-post image).
+   Uses concrete colors that match the blue forum palette so the three pickers
+   look identical regardless of which page hosts them. */
+.image-dropzone {
+  width: 100%;
+}
+
+.image-dropzone__zone {
+  position: relative;
+  box-sizing: border-box;
+  width: 100%;
+  border: 2px dashed #bfd1ec;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #f8fbff 0%, #f2f8ff 100%);
+  cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    background-color 0.18s ease,
+    box-shadow 0.18s ease;
+  outline: none;
+}
+
+.image-dropzone__zone:hover,
+.image-dropzone__zone:focus-visible {
+  border-color: #8fb0e6;
+  background: linear-gradient(135deg, #f0f6ff 0%, #e8f1ff 100%);
+}
+
+/* Immediate drag feedback: clear accent ring + tint the instant a file is dragged over. */
+.image-dropzone__zone.is-dragging {
+  border-color: #295ad6;
+  background: linear-gradient(
+    135deg,
+    rgba(15, 67, 199, 0.08) 0%,
+    rgba(137, 179, 255, 0.18) 100%
+  );
+  box-shadow: 0 0 0 4px rgba(41, 90, 214, 0.12);
+}
+
+.image-dropzone__zone.has-preview {
+  cursor: default;
+  padding: 0;
+  border-style: solid;
+  border-color: #d1def1;
+  background: #edf4ff;
+  overflow: hidden;
+}
+
+/* ── Placeholder (no image chosen yet) ── */
+.image-dropzone__placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 2rem 1rem;
+  color: #5f7394;
+  text-align: center;
+}
+
+.image-dropzone__icon {
+  font-size: 30px;
+  color: #4d73c7;
+}
+
+.image-dropzone__hint {
+  margin: 0;
+  font-size: 14px;
+}
+
+.image-dropzone__cta {
+  color: #295ad6;
+  font-weight: 600;
+}
+
+.image-dropzone__input {
+  display: none;
+}
+
+/* ── Preview ── */
+.image-dropzone__preview-wrap {
+  position: relative;
+  width: 100%;
+  line-height: 0;
+}
+
+.image-dropzone__preview {
+  display: block;
+  width: 100%;
+}
+
+/* Avatar: square, cropped (cover) — echoes the round community avatar.
+   Constrain the wrap to the image so the remove button hugs the square. */
+.image-dropzone--avatar .image-dropzone__zone.has-preview {
+  width: 176px;
+  margin: 0 auto;
+}
+
+.image-dropzone--avatar .image-dropzone__preview {
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+}
+
+/* Banner: wide and cropped exactly like the community page banner (object-fit: cover). */
+.image-dropzone--banner .image-dropzone__preview {
+  height: 150px;
+  object-fit: cover;
+}
+
+/* Post: show the whole image, contained, never stretched. */
+.image-dropzone--post .image-dropzone__preview {
+  max-height: 320px;
+  object-fit: contain;
+  background: #edf4ff;
+}
+
+/* Hover overlay with a "Change" button on the preview. */
+.image-dropzone__overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(16, 35, 63, 0);
+  opacity: 0;
+  transition:
+    opacity 0.18s ease,
+    background-color 0.18s ease;
+}
+
+.image-dropzone__preview-wrap:hover .image-dropzone__overlay {
+  opacity: 1;
+  background: rgba(16, 35, 63, 0.32);
+}
+
+.image-dropzone__action {
+  border: none;
+  background: #ffffff;
+  color: #173464;
+  font-weight: 600;
+  font-size: 13px;
+  padding: 7px 16px;
+  border-radius: 999px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(12, 28, 61, 0.2);
+}
+
+.image-dropzone__action:hover {
+  background: #eaf1ff;
+}
+
+.image-dropzone__remove {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: rgba(16, 35, 63, 0.78);
+  color: #ffffff;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.image-dropzone__remove:hover {
+  background: #c0392b;
+}
+
+.image-dropzone__filename {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: #5f7394;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

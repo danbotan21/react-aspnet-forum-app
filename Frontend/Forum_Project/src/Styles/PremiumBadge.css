@@ -1,0 +1,47 @@
+.premium-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 800;
+  color: #7a5200;
+  background: linear-gradient(135deg, #ffe49a 0%, #f6c44b 45%, #e0a51b 100%);
+  border: 1px solid #e9b73c;
+  border-radius: 999px;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  box-shadow:
+    0 2px 6px rgba(224, 165, 27, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  white-space: nowrap;
+  vertical-align: middle;
+  margin-top: 10px;
+}
+
+.premium-badge-icon {
+  color: #8a5e00;
+}
+
+/* Sizes */
+.premium-badge--sm {
+  font-size: 10px;
+  padding: 3px 8px;
+}
+.premium-badge--sm .premium-badge-icon {
+  font-size: 9px;
+}
+
+.premium-badge--md {
+  font-size: 12px;
+  padding: 5px 11px;
+}
+.premium-badge--md .premium-badge-icon {
+  font-size: 11px;
+}
+
+.premium-badge--lg {
+  font-size: 14px;
+  padding: 7px 14px;
+}
+.premium-badge--lg .premium-badge-icon {
+  font-size: 13px;
+}
