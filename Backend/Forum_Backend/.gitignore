@@ -33,7 +33,6 @@ packages/
 *.tmp
 *.temp
 
-ForumApp.DataAccess/Migrations/
 ForumApp.API/wwwroot/uploads/
 
 # Sensitive config — keep secrets out of git

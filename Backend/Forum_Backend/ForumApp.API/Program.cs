@@ -167,8 +167,14 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 var app = builder.Build();
 
+// create / update the database schema on startup
+using (var scope = app.Services.CreateScope())
+{
+    scope.ServiceProvider.GetRequiredService<ForumDbContext>().Database.Migrate();
+}
+
 //  Seed mock data is DISABLED - use SQL script instead to avoid FK constraint issues
-// See: SeedMockDataComplete.sql for manual seeding
+// See: database/seed_demo_data.sql for manual seeding
 
 if (app.Environment.IsDevelopment())
 {
